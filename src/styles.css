@@ -102,7 +102,7 @@ h2 {
 }
 
 button[type='submit'],
-button[type='button']:not(.date-row button) {
+button[type='button']:not(.date-row button):not(.calendar button) {
   background: var(--accent);
   color: var(--accent-contrast);
   border: none;
@@ -176,6 +176,166 @@ button:disabled {
   padding: 0.7rem 1rem;
   border-radius: 6px;
   display: inline-block;
+}
+
+.calendar {
+  margin-top: 1.5rem;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-header button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.calendar-title {
+  font-family: Georgia, 'Iowan Old Style', serif;
+  font-size: 1.15rem;
+}
+
+/* De flip-animatie: bij maandwissel krijgt de nieuwe maand-"pagina" een
+   nieuwe key, waardoor de browser ze als een vers DOM-element behandelt
+   en de keyframe-animatie altijd opnieuw afspeelt — net als het
+   omslaan van een blaadje op een bureaukalender. */
+.calendar-flip-stage {
+  perspective: 1400px;
+}
+
+.calendar-page {
+  transform-origin: top center;
+  backface-visibility: hidden;
+}
+
+.calendar-page.flip-next {
+  animation: flip-next 0.45s ease;
+}
+
+.calendar-page.flip-prev {
+  animation: flip-prev 0.45s ease;
+}
+
+@keyframes flip-next {
+  0% {
+    transform: rotateX(-95deg);
+    opacity: 0;
+  }
+  65% {
+    transform: rotateX(10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes flip-prev {
+  0% {
+    transform: rotateX(95deg);
+    opacity: 0;
+  }
+  65% {
+    transform: rotateX(-10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.3rem;
+}
+
+.calendar-cell {
+  aspect-ratio: 1;
+  display: flex;
+}
+
+.calendar-cell--empty {
+  visibility: hidden;
+}
+
+.calendar-day-button {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  font-size: 0.95rem;
+  padding: 0.2rem;
+}
+
+.calendar-day-button.is-selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.calendar-day-plain {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.calendar-day-button--vote {
+  font-size: 0.85rem;
+}
+
+.calendar-day-vote {
+  font-size: 0.65rem;
+}
+
+.calendar-day-button.vote-yes {
+  background: #e3efe9;
+  border-color: var(--accent);
+}
+
+.calendar-day-button.vote-maybe {
+  background: #faf3df;
+  border-color: #c99a2e;
+}
+
+.calendar-day-button.vote-no {
+  background: #f7e7e4;
+  border-color: var(--error);
+}
+
+.selected-dates-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 1rem;
 }
 
 .share-hint {
