@@ -1,15 +1,13 @@
 import React from 'react';
-import { VOTE_LABELS, nextVoteValue, parseVotes } from '../utils/votes.js';
+import { VOTE_LABELS, parseVotes } from '../utils/votes.js';
 
 function sortDateEntries(dates) {
-  return Object.entries(dates).sort(([, a], [, b]) => {
-    const aKey = `${a.date}T${a.time || '00:00'}`;
-    const bKey = `${b.date}T${b.time || '00:00'}`;
-    return aKey.localeCompare(bKey);
-  });
+  return Object.entries(dates).sort(([a], [b]) => a.localeCompare(b));
 }
 
-export default function VoteGrid({ dates, votes, currentVoterId, onCellClick }) {
+// Alleen-lezen overzicht: wie heeft wat gestemd. Het aanpassen van je eigen
+// stem gebeurt via <VoteCalendar>, niet in deze tabel.
+export default function VoteGrid({ dates, votes, currentVoterId }) {
   const dateEntries = sortDateEntries(dates);
   const voterEntries = Object.entries(votes);
 
@@ -38,17 +36,7 @@ export default function VoteGrid({ dates, votes, currentVoterId, onCellClick }) 
               </td>
               {dateEntries.map(([dateId]) => {
                 const value = myVotes[dateId] || 'none';
-                return (
-                  <td key={dateId}>
-                    {isMe ? (
-                      <button type="button" onClick={() => onCellClick(dateId, nextVoteValue(value))}>
-                        {VOTE_LABELS[value]}
-                      </button>
-                    ) : (
-                      <span>{VOTE_LABELS[value]}</span>
-                    )}
-                  </td>
-                );
+                return <td key={dateId}>{VOTE_LABELS[value]}</td>;
               })}
             </tr>
           );

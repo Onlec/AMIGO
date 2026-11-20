@@ -5,6 +5,7 @@ import { parseVotes } from '../utils/votes.js';
 import { useGunNode } from '../hooks/useGunNode.js';
 import { useGunList } from '../hooks/useGunList.js';
 import VoterForm from './VoterForm.jsx';
+import VoteCalendar from './VoteCalendar.jsx';
 import VoteGrid from './VoteGrid.jsx';
 import OrganizerPanel from './OrganizerPanel.jsx';
 
@@ -80,7 +81,17 @@ export default function PollPage({ pollId }) {
       {!hasJoined && <VoterForm onJoin={handleJoin} />}
 
       {hasJoined && hasDates && (
-        <VoteGrid dates={dates} votes={votes} currentVoterId={voterId} onCellClick={handleCellClick} />
+        <>
+          <h2>Jouw stem — klik een datum aan</h2>
+          <VoteCalendar
+            dates={dates}
+            myVotes={parseVotes(votes[voterId]?.votesJson)}
+            onVote={handleCellClick}
+          />
+
+          <h2>Overzicht</h2>
+          <VoteGrid dates={dates} votes={votes} currentVoterId={voterId} />
+        </>
       )}
 
       {hasJoined && isOrganizer && poll.status === 'open' && hasDates && (
