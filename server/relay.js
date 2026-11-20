@@ -16,10 +16,7 @@ app.get('/', (req, res) => {
 });
 
 const server = app.listen(port, () => {
-  const url = process.env.RENDER_EXTERNAL_URL
-    ? `${process.env.RENDER_EXTERNAL_URL}/gun`
-    : `http://localhost:${port}/gun`;
-  console.log(`Gun relay draait op ${url}`);
+  console.log(`Gun relay draait op http://localhost:${port}/gun`);
 });
 
 // DATA_DIR laat toe om op een platform met persistent disk (zie README,

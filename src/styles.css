@@ -102,7 +102,7 @@ h2 {
 }
 
 button[type='submit'],
-button[type='button']:not(.date-row button):not(.calendar button) {
+button[type='button']:not(:where(.date-row button, .calendar button, .vote-grid button)) {
   background: var(--accent);
   color: var(--accent-contrast);
   border: none;
@@ -176,6 +176,17 @@ button:disabled {
   padding: 0.7rem 1rem;
   border-radius: 6px;
   display: inline-block;
+}
+
+.final-date-block {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.share-actions {
+  margin-top: 1rem;
 }
 
 .calendar {
@@ -338,9 +349,31 @@ button:disabled {
   margin-top: 1rem;
 }
 
+.unlock-form {
+  margin-top: 1rem;
+  max-width: 320px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.copy-button {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.7rem !important;
+}
+
 .share-hint {
   margin-top: 2.5rem;
   color: var(--muted);
   font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.share-hint code {
   word-break: break-all;
 }

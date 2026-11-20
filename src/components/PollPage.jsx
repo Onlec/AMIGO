@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import gun from '../gun.js';
 import { generateId } from '../utils/id.js';
-import { parseVotes } from '../utils/votes.js';
+import { parseVotes, buildShareText } from '../utils/votes.js';
 import { useGunNode } from '../hooks/useGunNode.js';
 import { useGunList } from '../hooks/useGunList.js';
 import VoterForm from './VoterForm.jsx';
 import VoteCalendar from './VoteCalendar.jsx';
 import VoteGrid from './VoteGrid.jsx';
 import OrganizerPanel from './OrganizerPanel.jsx';
+import OrganizerUnlock from './OrganizerUnlock.jsx';
+import EditPollPanel from './EditPollPanel.jsx';
+import CopyButton from './CopyButton.jsx';
 
 function getStoredVoterId(pollId) {
   return window.localStorage.getItem(`poll-voter-${pollId}`);
@@ -15,6 +18,10 @@ function getStoredVoterId(pollId) {
 
 function storeVoterId(pollId, voterId) {
   window.localStorage.setItem(`poll-voter-${pollId}`, voterId);
+}
+
+function isUnlockedInStorage(pollId) {
+  return window.localStorage.getItem(`poll-unlocked-${pollId}`) === 'true';
 }
 
 export default function PollPage({ pollId }) {
@@ -30,9 +37,11 @@ export default function PollPage({ pollId }) {
   const votes = useGunList(votesNode);
 
   const [voterId, setVoterId] = useState(() => getStoredVoterId(pollId));
+  const [isUnlocked, setIsUnlocked] = useState(() => isUnlockedInStorage(pollId));
 
   useEffect(() => {
     setVoterId(getStoredVoterId(pollId));
+    setIsUnlocked(isUnlockedInStorage(pollId));
   }, [pollId]);
 
   function handleJoin(name, email) {
@@ -58,29 +67,57 @@ export default function PollPage({ pollId }) {
     pollNode.put({ status: 'closed', finalDateId: dateId });
   }
 
+  function handleUnlock() {
+    window.localStorage.setItem(`poll-unlocked-${pollId}`, 'true');
+    setIsUnlocked(true);
+  }
+
+  function handleRemoveVoter(targetVoterId) {
+    votesNode.get(targetVoterId).put(null);
+  }
+
+  function handleToggleDate(dateKey) {
+    if (dates[dateKey]) {
+      datesNode.get(dateKey).put(null);
+    } else {
+      datesNode.get(dateKey).put({ date: dateKey, time: '' });
+    }
+  }
+
+  function handleSavePollDetails({ title, description }) {
+    pollNode.put({ title, description });
+  }
+
   if (poll === null) {
     return <div className="page">Prikker laden... (klopt de link?)</div>;
   }
 
   const hasJoined = Boolean(voterId && votes[voterId]);
-  const isOrganizer =
-    hasJoined && poll.organizerEmail && votes[voterId].email === poll.organizerEmail;
   const hasDates = Object.keys(dates).length > 0;
+  const finalDate = poll.finalDateId ? dates[poll.finalDateId] : null;
 
   return (
     <div className="page">
       <h1>{poll.title}</h1>
       {poll.description && <p className="description">{poll.description}</p>}
 
-      {poll.status === 'closed' && poll.finalDateId && dates[poll.finalDateId] && (
-        <p className="final-date">
-          Gekozen datum: {dates[poll.finalDateId].date} {dates[poll.finalDateId].time}
-        </p>
+      {poll.status === 'closed' && finalDate && (
+        <div className="final-date-block">
+          <p className="final-date">
+            Gekozen datum: {finalDate.date} {finalDate.time}
+          </p>
+        </div>
+      )}
+
+      {hasDates && (
+        <div className="share-actions">
+          <CopyButton text={buildShareText(poll, dates, votes, window.location.href)} label="Update kopiëren" />
+        </div>
       )}
 
       {!hasJoined && <VoterForm onJoin={handleJoin} />}
 
-      {hasJoined && hasDates && (
+      {hasJoined && hasDates && poll.status === 'open' && (
         <>
           <h2>Jouw stem — klik een datum aan</h2>
           <VoteCalendar
@@ -88,18 +125,42 @@ export default function PollPage({ pollId }) {
             myVotes={parseVotes(votes[voterId]?.votesJson)}
             onVote={handleCellClick}
           />
-
-          <h2>Overzicht</h2>
-          <VoteGrid dates={dates} votes={votes} currentVoterId={voterId} />
         </>
       )}
 
-      {hasJoined && isOrganizer && poll.status === 'open' && hasDates && (
-        <OrganizerPanel dates={dates} votes={votes} onConfirm={handleConfirmFinalDate} />
+      {hasJoined && hasDates && (
+        <>
+          <h2>Overzicht</h2>
+          <VoteGrid
+            dates={dates}
+            votes={votes}
+            currentVoterId={voterId}
+            canManage={isUnlocked}
+            onRemoveVoter={handleRemoveVoter}
+          />
+        </>
+      )}
+
+      {!isUnlocked && <OrganizerUnlock pollId={pollId} expectedHash={poll.passwordHash} onUnlock={handleUnlock} />}
+
+      {isUnlocked && (
+        <>
+          <EditPollPanel
+            poll={poll}
+            dates={dates}
+            onSave={handleSavePollDetails}
+            onToggleDate={handleToggleDate}
+          />
+
+          {poll.status === 'open' && hasDates && (
+            <OrganizerPanel dates={dates} votes={votes} onConfirm={handleConfirmFinalDate} />
+          )}
+        </>
       )}
 
       <p className="share-hint">
-        Deel deze link met je groep: <code>{window.location.href}</code>
+        Deel deze link met je groep: <code>{window.location.href}</code>{' '}
+        <CopyButton text={window.location.href} label="Link kopiëren" />
       </p>
     </div>
   );

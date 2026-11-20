@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import gun from '../gun.js';
 import { generateId } from '../utils/id.js';
+import { hashPassword } from '../utils/password.js';
 import MonthCalendar from './MonthCalendar.jsx';
 
 export default function CreatePollPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [organizerName, setOrganizerName] = useState('');
-  const [organizerEmail, setOrganizerEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   // { [dateKey]: { time: '' } } — dateKey is bv. '2026-12-05', en dient
   // meteen als id van de datum verderop in Gun.
   const [selectedDates, setSelectedDates] = useState({});
@@ -39,13 +40,13 @@ export default function CreatePollPage() {
 
   function validate() {
     if (!title.trim()) return 'Geef de prikker een titel.';
-    if (!organizerName.trim()) return 'Vul je naam in.';
-    if (!/^\S+@\S+\.\S+$/.test(organizerEmail)) return 'Vul een geldig e-mailadres in.';
+    if (!password) return 'Kies een wachtwoord voor jezelf als organisator.';
+    if (password !== passwordConfirm) return 'De twee wachtwoorden komen niet overeen.';
     if (Object.keys(selectedDates).length < 2) return 'Selecteer minstens 2 datums in de kalender.';
     return '';
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     const validationError = validate();
     if (validationError) {
@@ -56,13 +57,13 @@ export default function CreatePollPage() {
     setSubmitting(true);
 
     const pollId = generateId('poll-');
+    const passwordHash = await hashPassword(pollId, password);
     const pollNode = gun.get('polls').get(pollId);
 
     pollNode.put({
       title: title.trim(),
       description: description.trim(),
-      organizerName: organizerName.trim(),
-      organizerEmail: organizerEmail.trim().toLowerCase(),
+      passwordHash,
       createdAt: Date.now(),
       status: 'open',
       finalDateId: null,
@@ -74,6 +75,10 @@ export default function CreatePollPage() {
         time: info.time,
       });
     });
+
+    // Jij hebt het wachtwoord zonet zelf gekozen, dus we ontgrendelen deze
+    // browser meteen — geen reden om het nu al opnieuw te laten intypen.
+    window.localStorage.setItem(`poll-unlocked-${pollId}`, 'true');
 
     window.location.href = `${window.location.pathname}?poll=${pollId}`;
   }
@@ -95,14 +100,21 @@ export default function CreatePollPage() {
         </label>
 
         <fieldset>
-          <legend>Jij (organisator)</legend>
+          <legend>Organisator-wachtwoord</legend>
+          <p className="description">
+            Hiermee kan je nadien de prikker bewerken, deelnemers verwijderen en de uiteindelijke datum kiezen.
+          </p>
           <label>
-            Naam
-            <input value={organizerName} onChange={(e) => setOrganizerName(e.target.value)} />
+            Wachtwoord
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
           <label>
-            E-mail
-            <input type="email" value={organizerEmail} onChange={(e) => setOrganizerEmail(e.target.value)} />
+            Bevestig wachtwoord
+            <input
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+            />
           </label>
         </fieldset>
 

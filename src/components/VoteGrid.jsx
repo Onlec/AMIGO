@@ -5,9 +5,10 @@ function sortDateEntries(dates) {
   return Object.entries(dates).sort(([a], [b]) => a.localeCompare(b));
 }
 
-// Alleen-lezen overzicht: wie heeft wat gestemd. Het aanpassen van je eigen
-// stem gebeurt via <VoteCalendar>, niet in deze tabel.
-export default function VoteGrid({ dates, votes, currentVoterId }) {
+// Alleen-lezen overzicht van wie wat stemde. Het aanpassen van je eigen stem
+// gebeurt via <VoteCalendar>; `canManage` (enkel waar voor de ontgrendelde
+// organisator) voegt een kolom toe om deelnemers te verwijderen.
+export default function VoteGrid({ dates, votes, currentVoterId, canManage, onRemoveVoter }) {
   const dateEntries = sortDateEntries(dates);
   const voterEntries = Object.entries(votes);
 
@@ -22,6 +23,7 @@ export default function VoteGrid({ dates, votes, currentVoterId }) {
               {info.time ? ` ${info.time}` : ''}
             </th>
           ))}
+          {canManage && <th />}
         </tr>
       </thead>
       <tbody>
@@ -38,6 +40,17 @@ export default function VoteGrid({ dates, votes, currentVoterId }) {
                 const value = myVotes[dateId] || 'none';
                 return <td key={dateId}>{VOTE_LABELS[value]}</td>;
               })}
+              {canManage && (
+                <td>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveVoter(voterId)}
+                    aria-label={`Verwijder ${voter.name}`}
+                  >
+                    ✕
+                  </button>
+                </td>
+              )}
             </tr>
           );
         })}
