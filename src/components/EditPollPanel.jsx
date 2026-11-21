@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
 
+// Zodra je ontgrendeld bent, sta je automatisch in bewerkmodus — geen aparte
+// "bewerken"-knop meer nodig. Titel/omschrijving zijn een klad dat je zelf
+// opslaat of verwerpt; datums aanklikken past de prikker meteen aan (net
+// zoals stemmen), zodat je zonder extra stap ziet wat je wijzigt.
 export default function EditPollPanel({ poll, dates, onSave, onToggleDate }) {
-  const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(poll.title);
   const [description, setDescription] = useState(poll.description || '');
 
+  const isDirty = title !== poll.title || description !== (poll.description || '');
+
   function handleSave(event) {
     event.preventDefault();
-    onSave({ title: title.trim(), description: description.trim() });
-    setEditing(false);
+    const nextTitle = title.trim() || poll.title;
+    setTitle(nextTitle);
+    onSave({ title: nextTitle, description: description.trim() });
   }
 
-  if (!editing) {
-    return (
-      <button type="button" onClick={() => setEditing(true)}>
-        Prikker bewerken
-      </button>
-    );
+  function handleDiscard() {
+    setTitle(poll.title);
+    setDescription(poll.description || '');
   }
 
   const sortedDateKeys = Object.keys(dates).sort();
 
   return (
-    <div className="organizer-panel">
-      <h2>Prikker bewerken</h2>
+    <div className="organizer-panel edit-mode">
+      <h2>🔓 Bewerkmodus — datums aanpassen</h2>
+
       <form onSubmit={handleSave} className="form">
         <label>
           Titel
@@ -35,29 +39,31 @@ export default function EditPollPanel({ poll, dates, onSave, onToggleDate }) {
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
         </label>
 
-        <p className="selected-dates-label">
-          Datums aanpassen — klik een dag aan om toe te voegen of te verwijderen (meteen van toepassing):
-        </p>
-        <MonthCalendar
-          initialMonthFrom={sortedDateKeys[0]}
-          renderDay={(dateKey, dayNum) => (
-            <button
-              type="button"
-              className={`calendar-day-button ${dates[dateKey] ? 'is-selected' : ''}`}
-              onClick={() => onToggleDate(dateKey)}
-            >
-              {dayNum}
+        {isDirty && (
+          <div className="edit-actions">
+            <button type="submit">Wijzigingen opslaan</button>
+            <button type="button" onClick={handleDiscard}>
+              Wijzigingen verwerpen
             </button>
-          )}
-        />
-
-        <div className="edit-actions">
-          <button type="submit">Titel/omschrijving opslaan</button>
-          <button type="button" onClick={() => setEditing(false)}>
-            Sluiten
-          </button>
-        </div>
+          </div>
+        )}
       </form>
+
+      <p className="selected-dates-label">
+        Klik een dag aan om toe te voegen of te verwijderen (meteen van toepassing):
+      </p>
+      <MonthCalendar
+        initialMonthFrom={sortedDateKeys[0]}
+        renderDay={(dateKey, dayNum) => (
+          <button
+            type="button"
+            className={`calendar-day-button ${dates[dateKey] ? 'is-selected' : ''}`}
+            onClick={() => onToggleDate(dateKey)}
+          >
+            {dayNum}
+          </button>
+        )}
+      />
     </div>
   );
 }

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { hashPassword } from '../utils/password.js';
 
 export default function OrganizerUnlock({ pollId, expectedHash, onUnlock }) {
-  const [expanded, setExpanded] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -21,27 +20,19 @@ export default function OrganizerUnlock({ pollId, expectedHash, onUnlock }) {
     }
   }
 
-  if (!expanded) {
-    return (
-      <button type="button" onClick={() => setExpanded(true)}>
-        Ben je de organisator?
-      </button>
-    );
-  }
-
   return (
     <form onSubmit={handleSubmit} className="form unlock-form">
       <label>
-        Wachtwoord van de organisator
+        Organisator-wachtwoord
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          autoFocus
+          placeholder="Vul in om de prikker te bewerken"
         />
       </label>
       {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={checking}>
+      <button type="submit" disabled={checking || !password}>
         {checking ? 'Controleren...' : 'Ontgrendelen'}
       </button>
     </form>

@@ -1,12 +1,35 @@
 :root {
-  --bg: #fbfaf7;
-  --surface: #ffffff;
-  --ink: #1d2420;
-  --muted: #5c655f;
-  --accent: #2e6e62;
-  --accent-contrast: #ffffff;
-  --border: #d8dcd4;
-  --error: #a23b2e;
+  /* AMIGO-merkpalet (Brand Identity & Design System v3.0) */
+  --amigo-red: #a83232;
+  --amigo-signal-red: #d21f26;
+  --amigo-black: #171a19;
+  --amigo-deep-blue: #174f78;
+  --amigo-electric-blue: #247db5;
+  --amigo-ivory: #eeebdd;
+  --amigo-paper: #f5f4ed;
+  --amigo-forest: #193c35;
+  --amigo-mint: #91a99a;
+  --amigo-steel: #78939b;
+  --amigo-mustard: #d4aa37;
+  --amigo-vermilion: #c9362b;
+  --amigo-grey: #c7c7b9;
+
+  /* Semantische aliassen, zodat de rest van dit stijlblad leesbaar blijft */
+  --bg: var(--amigo-ivory);
+  --surface: var(--amigo-paper);
+  --ink: var(--amigo-black);
+  --muted: var(--amigo-steel);
+  --accent: var(--amigo-deep-blue);
+  --accent-contrast: var(--amigo-paper);
+  --border: var(--amigo-grey);
+  --error: var(--amigo-signal-red);
+
+  --vote-yes: var(--amigo-forest);
+  --vote-maybe: var(--amigo-mustard);
+  --vote-no: var(--amigo-red);
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 * {
@@ -17,26 +40,70 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Merkkop ---- */
+
+.brand-header {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 0.85rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand-divider {
+  width: 1px;
+  height: 1em;
+  align-self: center;
+  background: var(--border);
+}
+
+.brand-tool-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .page {
   max-width: 760px;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 4rem;
+  padding: 2rem 1.5rem 4rem;
 }
 
 h1 {
-  font-family: Georgia, 'Iowan Old Style', serif;
-  font-size: 2rem;
-  margin-bottom: 0.25rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.1rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.3rem;
 }
 
 h2 {
-  font-family: Georgia, 'Iowan Old Style', serif;
-  font-size: 1.3rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .description {
@@ -55,31 +122,67 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  font-size: 0.9rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--muted);
 }
 
 .form input,
 .form textarea {
   font-size: 1rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
   background: var(--surface);
   color: var(--ink);
-  font-family: inherit;
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.form input:focus,
+.form textarea:focus {
+  outline: 2px solid var(--amigo-electric-blue);
+  outline-offset: 1px;
 }
 
 .form fieldset {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
   padding: 1rem;
 }
 
 .form legend {
   padding: 0 0.4rem;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.name-field {
+  margin-top: 1rem;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.name-field input {
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .date-row {
@@ -95,8 +198,8 @@ h2 {
 
 .date-row button {
   background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
   padding: 0.4rem 0.6rem;
   cursor: pointer;
 }
@@ -106,9 +209,12 @@ button[type='button']:not(:where(.date-row button, .calendar button, .vote-grid 
   background: var(--accent);
   color: var(--accent-contrast);
   border: none;
-  border-radius: 6px;
-  padding: 0.6rem 1.1rem;
-  font-size: 0.95rem;
+  border-radius: 4px;
+  padding: 0.65rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
   align-self: flex-start;
 }
@@ -127,7 +233,7 @@ button:disabled {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1.5rem;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .vote-grid th,
@@ -135,6 +241,14 @@ button:disabled {
   border: 1px solid var(--border);
   padding: 0.5rem 0.6rem;
   text-align: center;
+}
+
+.vote-grid th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .vote-grid th:first-child,
@@ -148,8 +262,8 @@ button:disabled {
 
 .vote-grid button {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
   padding: 0.3rem 0.5rem;
   cursor: pointer;
 }
@@ -157,9 +271,13 @@ button:disabled {
 .organizer-panel {
   margin-top: 2rem;
   padding: 1.2rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
   background: var(--surface);
+}
+
+.organizer-panel.edit-mode {
+  border-color: var(--amigo-deep-blue);
 }
 
 .organizer-panel ul {
@@ -171,11 +289,12 @@ button:disabled {
 }
 
 .final-date {
-  background: var(--accent);
-  color: var(--accent-contrast);
+  background: var(--amigo-red);
+  color: var(--amigo-paper);
   padding: 0.7rem 1rem;
-  border-radius: 6px;
+  border-radius: 4px;
   display: inline-block;
+  font-weight: 600;
 }
 
 .final-date-block {
@@ -202,8 +321,8 @@ button:disabled {
 
 .calendar-header button {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
   width: 2.2rem;
   height: 2.2rem;
   font-size: 1.1rem;
@@ -212,14 +331,18 @@ button:disabled {
 }
 
 .calendar-title {
-  font-family: Georgia, 'Iowan Old Style', serif;
-  font-size: 1.15rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* De flip-animatie: bij maandwissel krijgt de nieuwe maand-"pagina" een
    nieuwe key, waardoor de browser ze als een vers DOM-element behandelt
    en de keyframe-animatie altijd opnieuw afspeelt — net als het
-   omslaan van een blaadje op een bureaukalender. */
+   omslaan van een blaadje op een bureaukalender (split-flap, zoals in
+   het AMIGO-bewegingssysteem). */
 .calendar-flip-stage {
   perspective: 1400px;
 }
@@ -230,11 +353,11 @@ button:disabled {
 }
 
 .calendar-page.flip-next {
-  animation: flip-next 0.45s ease;
+  animation: flip-next 0.35s ease;
 }
 
 .calendar-page.flip-prev {
-  animation: flip-prev 0.45s ease;
+  animation: flip-prev 0.35s ease;
 }
 
 @keyframes flip-next {
@@ -265,11 +388,20 @@ button:disabled {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .calendar-page.flip-next,
+  .calendar-page.flip-prev {
+    animation: none;
+  }
+}
+
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   margin-bottom: 0.3rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--muted);
   text-align: center;
 }
@@ -277,7 +409,7 @@ button:disabled {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .calendar-cell {
@@ -291,8 +423,8 @@ button:disabled {
 
 .calendar-day-button {
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
@@ -302,6 +434,7 @@ button:disabled {
   justify-content: center;
   gap: 0.15rem;
   font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
   padding: 0.2rem;
 }
 
@@ -318,6 +451,7 @@ button:disabled {
   justify-content: center;
   color: var(--muted);
   font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .calendar-day-button--vote {
@@ -325,26 +459,33 @@ button:disabled {
 }
 
 .calendar-day-vote {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .calendar-day-button.vote-yes {
-  background: #e3efe9;
-  border-color: var(--accent);
+  background: var(--vote-yes);
+  border-color: var(--vote-yes);
+  color: var(--amigo-paper);
 }
 
 .calendar-day-button.vote-maybe {
-  background: #faf3df;
-  border-color: #c99a2e;
+  background: var(--vote-maybe);
+  border-color: var(--vote-maybe);
+  color: var(--amigo-black);
 }
 
 .calendar-day-button.vote-no {
-  background: #f7e7e4;
-  border-color: var(--error);
+  background: var(--vote-no);
+  border-color: var(--vote-no);
+  color: var(--amigo-paper);
 }
 
 .selected-dates-label {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--muted);
   margin-top: 1rem;
 }
@@ -360,12 +501,14 @@ button:disabled {
 }
 
 .copy-button {
-  font-size: 0.85rem;
-  padding: 0.35rem 0.7rem !important;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.75rem !important;
 }
 
 .share-hint {
   margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 0.85rem;
   display: flex;

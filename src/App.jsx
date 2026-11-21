@@ -10,9 +10,14 @@ function getPollIdFromUrl() {
 export default function App() {
   const pollId = useMemo(getPollIdFromUrl, []);
 
-  if (!pollId) {
-    return <CreatePollPage />;
-  }
-
-  return <PollPage pollId={pollId} />;
+  return (
+    <>
+      <header className="brand-header">
+        <span className="brand-wordmark">AMIGO</span>
+        <span className="brand-divider" aria-hidden="true" />
+        <span className="brand-tool-label">Planner</span>
+      </header>
+      {pollId ? <PollPage pollId={pollId} /> : <CreatePollPage />}
+    </>
+  );
 }
