@@ -7,6 +7,34 @@ eigen database nodig). Gestyled volgens de **AMIGO**-huisstijl
 rood/blauw/ivoor-palet, rechte hoeken en technische lijnen i.p.v.
 zachte kaartjes.
 
+## Site-structuur
+
+De app heeft nu drie "pagina's", gestuurd via de query string (geen
+router-library nodig voor zoiets kleins):
+
+- `/` (geen parameters) → **homepage**: hero, korte merksectie, en de
+  **Rotary Index** — het signatuur-interactiepatroon uit het AMIGO-
+  systeem (een 3D-kaartenwiel: scrollen, slepen of pijltjestoetsen).
+  Eén kaart ("Datumprikker") is echt en opent de tool; de andere kaarten
+  zijn bewust **voorbeeldkaarten** (net als in het AMIGO-artefact zelf,
+  waar ook maar één van de twaalf kaarten was uitgewerkt) — ze houden
+  het wiel visueel vol zonder features voor te spiegelen die er niet
+  zijn.
+- `?page=planner` → de "Nieuwe datumprikker"-pagina (voorheen de
+  startpagina van de app).
+- `?poll=<id>` → de stempagina, ongewijzigd qua werking.
+
+De koptekst (`SiteHeader.jsx`) staat boven alle drie en linkt terug naar
+de homepage via het AMIGO-logo.
+
+De Rotary Index zelf (`RotaryIndex.jsx`) is bewust **niet** als
+idiomatische React-state geschreven: het origineel bouwt per frame 3D-
+transforms op basis van scroll-/sleepfysica, wat zich beter leent voor
+een door React met rust gelaten DOM-subboompje (via refs) dan voor
+re-renders per state-wijziging. Dat is precies hoe het ook in het
+artefact zelf werkt — hier dus overgenomen in een `useEffect` i.p.v.
+herschreven.
+
 ## Hoe het werkt
 
 1. De **organisator** maakt een prikker aan: titel, omschrijving, een
@@ -38,32 +66,45 @@ zachte kaartjes.
 
 ## Huisstijl (AMIGO)
 
-Alle merktokens staan als CSS-variabelen bovenaan `src/styles.css`
-(`--amigo-*`), met semantische aliassen eronder (`--accent`, `--ink`,
-...) zodat de rest van het stijlblad leesbaar blijft. Toegepast:
+De volledige huisstijl uit het artefact is overgenomen, niet enkel de
+kleuren/typografie van een eerdere versie:
 
-- **Typografie**: Space Grotesk voor titels/sectiekoppen/kalendertitel
-  (hoofdlettergebruik + letterspatiëring voor technische labels),
-  Inter voor lopende tekst en formuliervelden. Geladen via Google
-  Fonts in `index.html`.
-- **Kleur**: Institutional Red voor de bevestigde einddatum, Deep Blue
-  als interactie-accent (knoppen, geselecteerde kalenderdag), Warm
-  Ivory/Paper White als achtergronden. De stemkleuren in de kalender
-  gebruiken de merkkleuren i.p.v. generiek groen/geel/rood: Deep Forest
-  (ja), Mustard (misschien), Institutional Red (nee) — de gekopieerde
-  tekst (`buildShareText`) blijft wel de universele 🟩🟨🟥-emoji
-  gebruiken, die zijn niet stijlbaar.
-- **Geometrie**: rechte hoeken (2–4px radius, nooit bubbelig), 1.5px
-  randen i.p.v. schaduwen, een vaste merkkop (`.brand-header`) met
-  wordmark + scheidingslijn boven elk scherm.
-- **Beweging**: de bestaande kalender-flip (al split-flap-achtig) kreeg
-  een iets strakkere timing (0.35s, binnen de merkrichtlijn voor
-  "window transitions") en respecteert nu `prefers-reduced-motion`.
+- **Typografie**: Space Grotesk voor titels, sectiekoppen, de hero en
+  het wiel; Inter voor lopende tekst en formuliervelden. Geladen via
+  Google Fonts in `index.html`.
+- **Kleur**: Institutional Red voor de hero en de bevestigde einddatum,
+  Industrial Black voor structuur (randen, de koptekst, knoppen),
+  Signal Red voor actieve/nadrukkelijke elementen (actieve letter-tab,
+  "Kies een tool"), Deep Blue voor technische accenten. De stemkleuren
+  in de kalender gebruiken merkkleuren i.p.v. generiek groen/geel/rood:
+  Deep Forest (ja), Mustard (misschien), Institutional Red (nee) — de
+  gekopieerde tekst (`buildShareText`) blijft wel de universele
+  🟩🟨🟥-emoji gebruiken, die zijn niet stijlbaar.
+- **Geometrie**: rechte hoeken (2–3px radius, nooit bubbelig), 1.5px
+  randen i.p.v. schaduwen, de genummerde sectiekoppen (`01`, `02`, ...)
+  uit het artefact op de homepage.
+- **Rotary Index**: het signatuur-interactiepatroon, inclusief het
+  kaartenwiel met 3D-perspectief, de letter-tabs opzij, het
+  tellerwerk ("actieve kaart NN"), en het uitschuivende detailpaneel.
+  Scroll, sleep of pijltjestoetsen; `Esc` sluit het detailpaneel.
+- **Dark mode**: de app volgt nu ook `prefers-color-scheme: dark`
+  (achtergrond/tekst/randen wisselen mee; letterlijke merkkleuren zoals
+  het rood van de hero of de "Open tool"-knop blijven net als in het
+  artefact zelf ongewijzigd).
+- **Beweging**: de bestaande kalender-flip kreeg een iets strakkere
+  timing (0.35s). De `prefers-reduced-motion`-regel is nu de volledige
+  variant uit het artefact (schakelt alle transities/animaties uit,
+  niet enkel de kalender-flip) — dat vangt ook de Rotary Index zelf op,
+  die bij "reduced motion" meteen naar de gekozen kaart springt i.p.v.
+  te glijden.
 
-De uitgebreidere merkelementen uit het volledige AMIGO-systeem (de
-Rotary Index-interactie, iconenset, illustratiestijl, ...) zijn niet
-toegepast — die gaan over het bredere platform, niet over deze ene
-tool.
+Bewust **niet** overgenomen: de iconenset, illustratiestijl en de
+losse "instrument"/"systeem"-secties uit het artefact (die laatste twee
+zijn daar zelf een demonstratie van het ontwerpsysteem, geen
+productfunctionaliteit) — en, zoals eerder al zo gekozen, blijven de
+eigenlijke tool-schermen (prikker aanmaken/stemmen) bewust rustiger dan
+de homepage: "de identiteit mag expressief zijn, de tools zelf moeten
+kalm en praktisch blijven" (merkboek, 7.1).
 
 ## Installatie
 

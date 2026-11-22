@@ -1,23 +1,30 @@
 import React, { useMemo } from 'react';
+import SiteHeader from './components/SiteHeader.jsx';
+import HomePage from './components/HomePage.jsx';
 import CreatePollPage from './components/CreatePollPage.jsx';
 import PollPage from './components/PollPage.jsx';
 
-function getPollIdFromUrl() {
+function getRoute() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('poll');
+  const pollId = params.get('poll');
+  if (pollId) {
+    return { name: 'poll', pollId };
+  }
+  if (params.get('page') === 'planner') {
+    return { name: 'planner' };
+  }
+  return { name: 'home' };
 }
 
 export default function App() {
-  const pollId = useMemo(getPollIdFromUrl, []);
+  const route = useMemo(getRoute, []);
 
   return (
     <>
-      <header className="brand-header">
-        <span className="brand-wordmark">AMIGO</span>
-        <span className="brand-divider" aria-hidden="true" />
-        <span className="brand-tool-label">Planner</span>
-      </header>
-      {pollId ? <PollPage pollId={pollId} /> : <CreatePollPage />}
+      <SiteHeader />
+      {route.name === 'poll' && <PollPage pollId={route.pollId} />}
+      {route.name === 'planner' && <CreatePollPage />}
+      {route.name === 'home' && <HomePage />}
     </>
   );
 }
