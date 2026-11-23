@@ -19,12 +19,15 @@ function getRoute() {
 export default function App() {
   const route = useMemo(getRoute, []);
 
+  if (route.name === 'home') {
+    return <HomePage />;
+  }
+
   return (
     <>
       <SiteHeader />
       {route.name === 'poll' && <PollPage pollId={route.pollId} />}
       {route.name === 'planner' && <CreatePollPage />}
-      {route.name === 'home' && <HomePage />}
     </>
   );
 }
