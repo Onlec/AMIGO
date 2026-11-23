@@ -125,21 +125,32 @@ a {
 }
 
 .logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font: 700 1.25rem 'Space Grotesk';
-  letter-spacing: 0.14em;
+  display: inline-block;
+  font: 600 1.25rem 'Sora', sans-serif;
+  letter-spacing: 0.12em;
   text-decoration: none;
-}
-
-.logo svg {
-  display: block;
 }
 
 .top nav {
   display: flex;
+  align-items: center;
   gap: 4px;
+}
+
+.theme-toggle {
+  padding: 8px 12px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font: 600 0.75rem Inter;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: inherit;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--sig);
 }
 
 .top nav a {
@@ -504,6 +515,10 @@ svg#sv:active {
   font-variant-numeric: tabular-nums;
 }
 
+.fld select option {
+  font-family: 'Space Grotesk', Inter, sans-serif;
+}
+
 .fld input:focus,
 .fld select:focus,
 .add input:focus {
@@ -664,7 +679,7 @@ svg#sv:active {
 .btn,
 button[type='submit'],
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
   ) {
   font: 600 1rem 'Space Grotesk', sans-serif;
   display: inline-flex;
@@ -683,7 +698,7 @@ button[type='button']:not(
 .btn:hover,
 button[type='submit']:hover,
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
   ):hover {
   background: var(--amigo-ivory);
   color: var(--amigo-black);
@@ -692,7 +707,7 @@ button[type='button']:not(
 .btn:active,
 button[type='submit']:active,
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
   ):active {
   transform: translateY(2px);
 }

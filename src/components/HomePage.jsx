@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import ThemeToggle from './ThemeToggle.jsx';
 
 // Deze homepage is vrijwel letterlijk overgenomen uit het AMIGO-homepage-
 // artefact: een SVG-kaartenwiel met een kritisch gedempt veermodel voor
@@ -213,15 +214,12 @@ export default function HomePage() {
       <header className="top">
         <div className="wrap">
           <a className="logo" href="#home">
-            <svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true">
-              <rect width="28" height="28" fill="#D21F26" />
-              <path d="M8 28V13a6 6 0 0 1 12 0v15z" fill="#EEEBDD" />
-            </svg>
             AMIGO
           </a>
           <nav aria-label="Hoofdmenu">
             <a href="#home">Index</a>
             <a href="#alle-tools">Alle tools</a>
+            <ThemeToggle />
           </nav>
         </div>
       </header>

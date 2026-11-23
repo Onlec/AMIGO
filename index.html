@@ -4,10 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AMIGO — Planner</title>
+    <script>
+      // Vóór de eerste paint het eventueel opgeslagen thema toepassen,
+      // anders zie je eerst kort het verkeerde thema opflitsen. Dezelfde
+      // sleutel ('amigo-theme') wordt gebruikt in src/utils/theme.js.
+      (function () {
+        try {
+          var t = localStorage.getItem('amigo-theme');
+          if (t === 'dark' || t === 'light') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {
+          /* localStorage niet beschikbaar: val terug op prefers-color-scheme */
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Sora:wght@600&display=swap"
       rel="stylesheet"
     />
   </head>

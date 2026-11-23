@@ -9,31 +9,47 @@ zachte kaartjes.
 
 ## Site-structuur
 
-De app heeft nu drie "pagina's", gestuurd via de query string (geen
+De app heeft drie "pagina's", gestuurd via de query string (geen
 router-library nodig voor zoiets kleins):
 
-- `/` (geen parameters) → **homepage**: hero, korte merksectie, en de
-  **Rotary Index** — het signatuur-interactiepatroon uit het AMIGO-
-  systeem (een 3D-kaartenwiel: scrollen, slepen of pijltjestoetsen).
-  Eén kaart ("Datumprikker") is echt en opent de tool; de andere kaarten
-  zijn bewust **voorbeeldkaarten** (net als in het AMIGO-artefact zelf,
-  waar ook maar één van de twaalf kaarten was uitgewerkt) — ze houden
-  het wiel visueel vol zonder features voor te spiegelen die er niet
-  zijn.
-- `?page=planner` → de "Nieuwe datumprikker"-pagina (voorheen de
-  startpagina van de app).
+- `/` (geen parameters) → de **homepage** (`HomePage.jsx`): een hero
+  met een SVG-kaartenwiel (scrollen, slepen, pijltjestoetsen of de
+  Vorige/Volgende-knoppen), en daaronder een raster met **alle 13
+  tools**. Twaalf daarvan — Agenda, Btw-calculator, Datumrekenaar,
+  Eenhedenomrekenaar, Factuurnummers, Kilometervergoeding,
+  Leningcalculator, Margecalculator, Notities, Procentrekenaar,
+  Tijdschrijver, Uurtariefberekening — zijn **echt werkende** kleine
+  rekenmachines/lijstjes, direct overgenomen uit het AMIGO-homepage-
+  artefact en volledig los van Gun.js (ze bewaren hun data, waar van
+  toepassing, gewoon in `localStorage`). De dertiende, **Datumprikker**,
+  is onze eigen tool: in plaats van in-pagina te openen (zoals de
+  andere twaalf, via `location.hash`) navigeert die naar `?page=planner`.
+- `?page=planner` → de "Nieuwe datumprikker"-pagina.
 - `?poll=<id>` → de stempagina, ongewijzigd qua werking.
 
-De koptekst (`SiteHeader.jsx`) staat boven alle drie en linkt terug naar
-de homepage via het AMIGO-logo.
+De koptekst op de planner-/stempagina (`SiteHeader.jsx`) linkt terug
+naar de homepage via het AMIGO-logo. De homepage heeft haar eigen,
+iets eenvoudigere koptekst (enkel "AMIGO", geen rode "GO"-opsplitsing)
+rechtstreeks in `HomePage.jsx`, zoals in het artefact zelf.
 
-De Rotary Index zelf (`RotaryIndex.jsx`) is bewust **niet** als
-idiomatische React-state geschreven: het origineel bouwt per frame 3D-
-transforms op basis van scroll-/sleepfysica, wat zich beter leent voor
-een door React met rust gelaten DOM-subboompje (via refs) dan voor
-re-renders per state-wijziging. Dat is precies hoe het ook in het
-artefact zelf werkt — hier dus overgenomen in een `useEffect` i.p.v.
-herschreven.
+### Waarom de homepage geen React-state gebruikt
+
+`HomePage.jsx` rendert enkel de statische buitenkant (header, lege
+`<svg id="sv">`, lege `<nav id="grid">`, ...) als JSX. De eigenlijke
+werking — het veermodel achter alle beweging, de SVG-perspectiefwiskunde
+voor het kaartenwiel, de 12 reken-/lijsttools, de in-pagina
+hash-routering — staat in een string (`HOME_SCRIPT`) die in een
+`useEffect` als een **echt, zelf uitvoerend `<script>`-element** aan de
+pagina wordt toegevoegd. Dat is bewust: dit is dichte, onderling
+afhankelijke wiskunde (perspectief-projecties, SVG-padopbouw,
+kritisch gedempte veerfysica) waarin een handmatige omzetting naar
+React-state een reëel risico op transcriptiefouten geeft. Het is dus
+vrijwel 1-op-1 overgenomen; de enige inhoudelijke wijziging is de
+toegevoegde Datumprikker-entry (met een extra array-element voor de
+externe link) en de paar plekken die daarmee rekening houden
+(zie de code-comment bovenaan `HomePage.jsx` voor het exacte overzicht).
+Om diezelfde reden staat `<React.StrictMode>` niet meer in `main.jsx`:
+die zou dit script in ontwikkelmodus twee keer laten draaien.
 
 ## Hoe het werkt
 
@@ -66,45 +82,63 @@ herschreven.
 
 ## Huisstijl (AMIGO)
 
-De volledige huisstijl uit het artefact is overgenomen, niet enkel de
-kleuren/typografie van een eerdere versie:
+De homepage-CSS (`.top`, `.hero`, `svg#sv` + `.k/.kb/.ln/.sm/.smb/.tx`,
+`.ctl`, `.all/.grid/.tl`, `.tp`, `.tgrid/.fld/.res/.stat/.add/.it`, ...)
+is letterlijk overgenomen uit het AMIGO-homepage-artefact, met enkel de
+`var(--...)`-namen als aliassen op het bestaande kleursysteem geplakt
+(`--ivory`, `--black`, `--sig`, `--paper`, `--back` wijzen naar onze
+eigen tokens) — zie de code-comment bovenaan dat CSS-blok in
+`styles.css`.
 
-- **Typografie**: Space Grotesk voor titels, sectiekoppen, de hero en
-  het wiel; Inter voor lopende tekst en formuliervelden. Geladen via
-  Google Fonts in `index.html`.
-- **Kleur**: Institutional Red voor de hero en de bevestigde einddatum,
-  Industrial Black voor structuur (randen, de koptekst, knoppen),
-  Signal Red voor actieve/nadrukkelijke elementen (actieve letter-tab,
-  "Kies een tool"), Deep Blue voor technische accenten. De stemkleuren
-  in de kalender gebruiken merkkleuren i.p.v. generiek groen/geel/rood:
-  Deep Forest (ja), Mustard (misschien), Institutional Red (nee) — de
-  gekopieerde tekst (`buildShareText`) blijft wel de universele
-  🟩🟨🟥-emoji gebruiken, die zijn niet stijlbaar.
-- **Geometrie**: rechte hoeken (2–3px radius, nooit bubbelig), 1.5px
-  randen i.p.v. schaduwen, de genummerde sectiekoppen (`01`, `02`, ...)
-  uit het artefact op de homepage.
-- **Rotary Index**: het signatuur-interactiepatroon, inclusief het
-  kaartenwiel met 3D-perspectief, de letter-tabs opzij, het
-  tellerwerk ("actieve kaart NN"), en het uitschuivende detailpaneel.
-  Scroll, sleep of pijltjestoetsen; `Esc` sluit het detailpaneel.
-- **Dark mode**: de app volgt nu ook `prefers-color-scheme: dark`
+- **Typografie**: Space Grotesk voor titels, labels en het wiel; Inter
+  voor lopende tekst en formuliervelden; **Sora SemiBold (600)** specifiek
+  voor het "AMIGO"-wordmerk zelf (`.logo`). Geladen via Google Fonts in
+  `index.html`. Het logo is bewust een puur letterlogo — geen icoon/
+  rode boog meer.
+- **Dropdowns**: `<select>`-elementen (bv. het btw-tarief, de
+  eenhedenomrekenaar) krijgen hun lettertype nu ook expliciet op hun
+  `<option>`-elementen (`.fld select option`) — sommige browsers nemen
+  de `font`-shorthand van de `<select>` zelf niet automatisch over in de
+  openklapbare lijst.
+- **Kleur**: dit homepage-artefact gebruikt bewust een beperkter
+  palet dan het eerdere merkboek — in essentie ivoor/zwart/Signal Red.
+  De planner-/stempagina's behielden wel hun bredere palet (Deep Blue,
+  Forest/Mustard/Red voor de stemkleuren in de kalender) — dat was geen
+  onderdeel van "gebruik dit als homepage". De focus-ring (`:focus-visible`)
+  is wel overal naar Signal Red gebracht, voor consistentie.
+- **Geometrie**: rechte hoeken (geen afronding op de homepage-
+  elementen zelf — vierkante `.tl`-tegels, vierkante knoppen), 2px
+  randen, geen schaduwen.
+- **SVG-kaartenwiel**: een geprojecteerd 3D-perspectief (geen CSS
+  `transform: rotateX`, maar een eigen `P()`-projectiefunctie die
+  coördinaten uitrekent), een kritisch gedempt veermodel voor alle
+  beweging (scroll/sleep/toetsen/knoppen lopen allemaal naar hetzelfde
+  doel `tg`), en 13 tools in het "alle tools"-raster eronder.
+- **Dark mode**: volgt standaard `prefers-color-scheme: dark`
   (achtergrond/tekst/randen wisselen mee; letterlijke merkkleuren zoals
-  het rood van de hero of de "Open tool"-knop blijven net als in het
-  artefact zelf ongewijzigd).
-- **Beweging**: de bestaande kalender-flip kreeg een iets strakkere
-  timing (0.35s). De `prefers-reduced-motion`-regel is nu de volledige
-  variant uit het artefact (schakelt alle transities/animaties uit,
-  niet enkel de kalender-flip) — dat vangt ook de Rotary Index zelf op,
-  die bij "reduced motion" meteen naar de gekozen kaart springt i.p.v.
-  te glijden.
+  Signal Red blijven ongewijzigd, net als in het artefact) — én is nu
+  **handmatig te kiezen** via de thema-knop in de koptekst (☾/☀︎), die
+  een eigen keuze opslaat in `localStorage` (`amigo-theme`) via het
+  `data-theme="dark"`/`"light"`-attribuut op `<html>`. Een klein
+  scriptje vóór de rest van `index.html` past die keuze meteen toe, nog
+  voor de eerste paint, zodat je niet eerst kort het verkeerde thema
+  ziet opflitsen. Beide kopteksten gebruiken `ThemeToggle.jsx` en de
+  gedeelde logica in `src/utils/theme.js`, met dezelfde sleutel/waarden
+  als het scriptje in `index.html`. Een keuze op de ene pagina geldt
+  daardoor ook op de andere. Zonder eigen keuze volgt ook het label van
+  de knop wijzigingen van het systeemthema. Als `localStorage` niet
+  beschikbaar is, blijft wisselen binnen de huidige pagina werken.
+- **Reduced motion**: de volledige `prefers-reduced-motion`-regel uit
+  het artefact (schakelt alle transities/animaties uit) — het
+  kaartenwiel springt dan meteen naar de gekozen kaart i.p.v. te
+  glijden.
 
-Bewust **niet** overgenomen: de iconenset, illustratiestijl en de
-losse "instrument"/"systeem"-secties uit het artefact (die laatste twee
-zijn daar zelf een demonstratie van het ontwerpsysteem, geen
-productfunctionaliteit) — en, zoals eerder al zo gekozen, blijven de
-eigenlijke tool-schermen (prikker aanmaken/stemmen) bewust rustiger dan
-de homepage: "de identiteit mag expressief zijn, de tools zelf moeten
-kalm en praktisch blijven" (merkboek, 7.1).
+Bewust **niet** overgenomen: de iconenset en illustratiestijl uit het
+bredere merkboek (dit artefact gaat over de homepage zelf, niet over
+dat volledige systeem) — en de eigenlijke Datumprikker-tool (prikker
+aanmaken/stemmen) blijft, zoals eerder al zo gekozen, rustiger dan de
+homepage: "de identiteit mag expressief zijn, de tools zelf moeten kalm
+en praktisch blijven" (merkboek, 7.1).
 
 ## Installatie
 
