@@ -1,0 +1,64 @@
+:root {
+  /* AMIGO-merkpalet (Brand Identity & Design System v3.0) */
+  --amigo-red: #a83232;
+  --amigo-signal-red: #d21f26;
+  --amigo-black: #171a19;
+  --amigo-deep-blue: #174f78;
+  --amigo-electric-blue: #247db5;
+  --amigo-ivory: #eeebdd;
+  --amigo-paper: #f5f4ed;
+  --amigo-forest: #193c35;
+  --amigo-mint: #91a99a;
+  --amigo-steel: #78939b;
+  --amigo-mustard: #d4aa37;
+  --amigo-vermilion: #c9362b;
+  --amigo-grey: #c7c7b9;
+
+  /* Semantische aliassen — volgen het bg/surface/ink/border/muted-schema
+     en wisselen mee met dark mode. Letterlijke merkkleuren (zwart/ivoor
+     voor knoppen, rood voor de hero/bevestigde datum, ...) wisselen
+     bewust NIET mee — net als in het artefact zelf. */
+  --bg: var(--amigo-ivory);
+  --surface: var(--amigo-paper);
+  --ink: var(--amigo-black);
+  --muted: var(--amigo-steel);
+  --border: var(--amigo-grey);
+  --error: var(--amigo-signal-red);
+
+  --accent: var(--amigo-deep-blue);
+  --accent-contrast: var(--amigo-paper);
+
+  --vote-yes: var(--amigo-forest);
+  --vote-maybe: var(--amigo-mustard);
+  --vote-no: var(--amigo-red);
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Kortere aliassen, zoals de homepage-CSS (hieronder, letterlijk uit
+     het AMIGO-homepage-artefact) ze verwacht. */
+  --ivory: var(--amigo-ivory);
+  --black: var(--amigo-black);
+  --sig: var(--amigo-signal-red);
+  --paper: var(--surface);
+  --back: var(--surface);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #121514;
+    --surface: #1d2220;
+    --ink: #eeebdd;
+    --border: #3b423f;
+    --muted: #a9b0aa;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #121514;
+  --surface: #1d2220;
+  --ink: #eeebdd;
+  --border: #3b423f;
+  --muted: #a9b0aa;
+}
+

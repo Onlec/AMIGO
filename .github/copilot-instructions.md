@@ -3,29 +3,23 @@
 ## Project overview
 
 - This is `datumprikker`, a Dutch-language React 18 and Vite web app for scheduling group dates.
-- Gun.js provides peer-to-peer realtime synchronization; there is no application database or REST API.
-- The Express process in `server/relay.js` is only a Gun relay and optionally stores Gun data under `data/`.
-- Keep the app statically deployable. Use `VITE_GUN_RELAY` for the relay URL; local development uses `http://localhost:8765/gun`.
+- Supabase stores shared polls. IndexedDB retains their local copy and pending operations.
+- Keep the app statically deployable. See README.md for the public Supabase configuration.
 
 ## Source layout
 
 - Keep route-level behavior in `src/App.jsx`.
 - Put reusable UI in `src/components/`.
-- Put Gun subscriptions in `src/hooks/`; keep the shared Gun instance in `src/gun.js`.
+- Keep local poll storage and synchronization in `src/data/`.
 - Put pure helpers in `src/utils/`; follow the existing `.js` and `.jsx` ES-module conventions.
-- Keep application styling in `src/styles.css`.
+- Keep the CSS entry point in `src/styles.css` and the ordered stylesheets under `src/styles/`.
 
-## React and Gun conventions
+## React and data conventions
 
 - Use function components and React hooks. Match the existing plain JavaScript style; TypeScript and state-management libraries are not currently configured.
-- Preserve stable Gun node references. Create poll, dates, and votes nodes with `useMemo` where they feed a subscription hook.
-- Keep Gun cleanup correct: subscription hooks must unsubscribe through `node.off()` and list hooks must reset stale items when their node changes.
-- Strip Gun's internal `_` metadata field before storing subscription values in React state.
-- Keep vote data atomic. Store each participant's votes as JSON in `votesJson`, using one `put()` call for a vote update.
+- Commit pending edits atomically in IndexedDB. Deduplicate retries in the same database transaction as the corresponding change.
 - Use `src/utils/votes.js` for vote values and parsing. Valid values are `none`, `yes`, `maybe`, and `no`.
-- Preserve the existing Gun data model documented in `README.md`; especially use `polls/<pollId>`, `dates`, `votes`, and the poll fields `status` and `finalDateId`.
-- Normalize organizer and voter e-mail addresses to lowercase before storing or comparing them.
-- Do not introduce authentication or server-side authorization as part of unrelated UI changes; existing organizer recognition is intentionally e-mail-based.
+- Authorize writes on the server. Anonymous sessions identify voters and the organizer password unlocks management per browser.
 
 ## UI conventions
 
@@ -38,7 +32,7 @@
 ## Commands
 
 - Install dependencies with `npm install`.
-- Start the Relay with `npm run relay` and the app with `npm run dev`.
+- Start the app with `npm run dev`.
 - For a production build, run `npm run build`.
 - There is currently no test script. For behavior changes, run `npm run build` and, when practical, manually verify the relevant flow in a browser with two tabs.
 - Do not add or replace dependencies unless the change requires it.

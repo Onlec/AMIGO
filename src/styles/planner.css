@@ -1,0 +1,483 @@
+/* ---- Knoppen voor de rest van de app ---- */
+/* De homepage hierboven stijlt haar eigen knoppen (.go, .ctl button,
+   .it button) rechtstreeks. De rest van de app (prikker aanmaken/
+   stemmen) stijlt zijn knoppen automatisch via onderstaande regels,
+   zodat die componenten geen aparte classNames nodig hadden.
+   .date-row/.calendar/.vote-grid-knoppen hebben hun eigen, kleinere
+   stijl verderop en worden hier bewust uitgesloten, net als alle
+   homepage-specifieke knopklassen hierboven. */
+
+.btn,
+button[type='submit'],
+button[type='button']:not(
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
+  ) {
+  font: 600 1rem 'Space Grotesk', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 22px;
+  border: 2px solid var(--amigo-black);
+  background: var(--amigo-black);
+  color: var(--amigo-ivory);
+  border-radius: 3px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
+}
+
+.btn:hover,
+button[type='submit']:hover,
+button[type='button']:not(
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
+  ):hover {
+  background: var(--amigo-ivory);
+  color: var(--amigo-black);
+}
+
+.btn:active,
+button[type='submit']:active,
+button[type='button']:not(
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
+  ):active {
+  transform: translateY(2px);
+}
+
+.btn.red {
+  background: var(--amigo-signal-red);
+  border-color: var(--amigo-signal-red);
+  color: #fff;
+}
+
+.btn.red:hover {
+  background: var(--amigo-black);
+  border-color: var(--amigo-black);
+  color: var(--amigo-ivory);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =====================================================================
+   Tool-schermen (prikker aanmaken / stemmen) — bewust rustiger dan de
+   homepage: "de identiteit mag expressief zijn, de tools zelf moeten
+   kalm en praktisch blijven" (AMIGO-merkboek, 7.1).
+   ===================================================================== */
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.1rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.3rem;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.description {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.form input,
+.form textarea {
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.form input:focus,
+.form textarea:focus {
+  outline: 3px solid var(--amigo-electric-blue);
+  outline-offset: 1px;
+}
+
+.form fieldset {
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 1rem;
+}
+
+.form legend {
+  padding: 0 0.4rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.name-field {
+  margin-top: 1rem;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.name-field input {
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.date-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.date-row input {
+  flex: 1;
+}
+
+.date-row button {
+  background: none;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+}
+
+.error {
+  color: var(--error);
+  font-size: 0.9rem;
+}
+
+.vote-grid {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.vote-grid th,
+.vote-grid td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.6rem;
+  text-align: center;
+}
+
+.vote-grid th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.vote-grid th:first-child,
+.vote-grid td:first-child {
+  text-align: left;
+}
+
+.vote-grid .my-row td:first-child {
+  font-weight: 600;
+}
+
+.vote-grid button {
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+
+.organizer-panel {
+  margin-top: 2rem;
+  padding: 1.2rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: var(--surface);
+}
+
+.organizer-panel.edit-mode {
+  border-color: var(--amigo-deep-blue);
+}
+
+.organizer-panel ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.final-date {
+  background: var(--amigo-red);
+  color: var(--amigo-paper);
+  padding: 0.7rem 1rem;
+  border-radius: 3px;
+  display: inline-block;
+  font-weight: 600;
+}
+
+.final-date-block {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.share-actions {
+  margin-top: 1rem;
+}
+
+.calendar {
+  margin-top: 1.5rem;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-header button {
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.calendar-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* De flip-animatie: bij maandwissel krijgt de nieuwe maand-"pagina" een
+   nieuwe key, waardoor de browser ze als een vers DOM-element behandelt
+   en de keyframe-animatie altijd opnieuw afspeelt — net als het
+   omslaan van een blaadje op een bureaukalender (split-flap, zoals in
+   het AMIGO-bewegingssysteem). */
+.calendar-flip-stage {
+  perspective: 1400px;
+}
+
+.calendar-page {
+  transform-origin: top center;
+  backface-visibility: hidden;
+}
+
+.calendar-page.flip-next {
+  animation: flip-next 0.35s ease;
+}
+
+.calendar-page.flip-prev {
+  animation: flip-prev 0.35s ease;
+}
+
+@keyframes flip-next {
+  0% {
+    transform: rotateX(-95deg);
+    opacity: 0;
+  }
+  65% {
+    transform: rotateX(10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes flip-prev {
+  0% {
+    transform: rotateX(95deg);
+    opacity: 0;
+  }
+  65% {
+    transform: rotateX(-10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+.calendar-cell {
+  aspect-ratio: 1;
+  display: flex;
+}
+
+.calendar-cell--empty {
+  visibility: hidden;
+}
+
+.calendar-day-button {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.2rem;
+}
+
+.calendar-day-button.is-selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.calendar-day-plain {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-day-button--vote {
+  font-size: 0.85rem;
+}
+
+.calendar-day-vote {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.calendar-day-button.vote-yes {
+  background: var(--vote-yes);
+  border-color: var(--vote-yes);
+  color: var(--amigo-paper);
+}
+
+.calendar-day-button.vote-maybe {
+  background: var(--vote-maybe);
+  border-color: var(--vote-maybe);
+  color: var(--amigo-black);
+}
+
+.calendar-day-button.vote-no {
+  background: var(--vote-no);
+  border-color: var(--vote-no);
+  color: var(--amigo-paper);
+}
+
+.selected-dates-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-top: 1rem;
+}
+
+.unlock-form {
+  margin-top: 1rem;
+  max-width: 320px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.copy-button {
+  font-size: 0.78rem;
+  padding: 0.4rem 0.75rem !important;
+  height: auto !important;
+}
+
+.share-hint {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.share-hint code {
+  word-break: break-all;
+}

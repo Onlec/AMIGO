@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import gun from '../gun.js';
-import { generateId } from '../utils/id.js';
+import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
+import { follow, syncStatus, unlock, watchStatus } from '../data/sync.js';
 import { parseVotes, buildShareText } from '../utils/votes.js';
-import { useGunNode } from '../hooks/useGunNode.js';
-import { useGunList } from '../hooks/useGunList.js';
 import VoteCalendar from './VoteCalendar.jsx';
 import VoteGrid from './VoteGrid.jsx';
 import OrganizerPanel from './OrganizerPanel.jsx';
@@ -11,46 +9,35 @@ import OrganizerUnlock from './OrganizerUnlock.jsx';
 import EditPollPanel from './EditPollPanel.jsx';
 import CopyButton from './CopyButton.jsx';
 
-function getStoredVoterId(pollId) {
-  return window.localStorage.getItem(`poll-voter-${pollId}`);
-}
-
-function storeVoterId(pollId, voterId) {
-  window.localStorage.setItem(`poll-voter-${pollId}`, voterId);
-}
-
-function isUnlockedInStorage(pollId) {
-  return window.localStorage.getItem(`poll-unlocked-${pollId}`) === 'true';
-}
-
 export default function PollPage({ pollId }) {
-  // useMemo zorgt dat we dezelfde Gun-node-referentie behouden zolang
-  // pollId niet verandert — anders zouden de hooks hieronder bij elke
-  // render opnieuw (de)abonneren.
-  const pollNode = useMemo(() => gun.get('polls').get(pollId), [pollId]);
-  const datesNode = useMemo(() => pollNode.get('dates'), [pollNode]);
-  const votesNode = useMemo(() => pollNode.get('votes'), [pollNode]);
+  const [row, setRow] = useState(null);
+  const [status, setStatus] = useState('');
+  const [storageError, setStorageError] = useState('');
+  useEffect(() => {
+    let live = true;
+    async function refresh() {
+      try {
+        const next = await readLocal(pollId);
+        if (live) setRow(next);
+      } catch (err) {
+        if (live) setStorageError('Lokale opslag is niet beschikbaar. ' + err.message);
+      }
+    }
+    const stopLocal = watchPoll(pollId, refresh);
+    const stopStatus = watchStatus(pollId, () => setStatus(syncStatus(pollId)));
+    refresh();
+    const stopFollowing = follow(pollId);
+    return () => { live = false; stopLocal(); stopStatus(); stopFollowing(); };
+  }, [pollId]);
 
-  const poll = useGunNode(pollNode);
-  const dates = useGunList(datesNode);
-  const votes = useGunList(votesNode);
-
-  const [voterId, setVoterId] = useState(() => getStoredVoterId(pollId));
-  const [isUnlocked, setIsUnlocked] = useState(() => isUnlockedInStorage(pollId));
-
-  // Je naam staat los van "stemmen hebben ingevuld" — je kan ze intypen
-  // voor je ooit geklikt hebt. Eens je eigen stem geladen is, vullen we
-  // het veld eenmalig met de naam die al bij je stem hoorde.
+  const poll = useMemo(() => project(row), [row]);
+  const dates = poll?.dates || {};
+  const votes = poll?.votes || {};
+  const voterId = poll?.ownVoter;
+  const isUnlocked = poll?.organizer;
   const [nameInput, setNameInput] = useState('');
   const [namePrefilled, setNamePrefilled] = useState(false);
   const [nameError, setNameError] = useState('');
-
-  useEffect(() => {
-    setVoterId(getStoredVoterId(pollId));
-    setIsUnlocked(isUnlockedInStorage(pollId));
-    setNamePrefilled(false);
-    setNameInput('');
-  }, [pollId]);
 
   useEffect(() => {
     if (!namePrefilled && voterId && votes[voterId]) {
@@ -67,52 +54,17 @@ export default function PollPage({ pollId }) {
     }
     setNameError('');
 
-    const existing = votes[voterId];
-    let activeVoterId = voterId;
-    let currentVotes = {};
-
-    if (!existing) {
-      activeVoterId = generateId('voter-');
-      storeVoterId(pollId, activeVoterId);
-      setVoterId(activeVoterId);
-    } else {
-      currentVotes = parseVotes(existing.votesJson);
-    }
-
-    currentVotes[dateId] = value;
-    votesNode.get(activeVoterId).put({
-      name: trimmedName,
-      votesJson: JSON.stringify(currentVotes),
-    });
+    save('vote', { day: dateId, value, name: trimmedName });
   }
 
-  function handleConfirmFinalDate(dateId) {
-    pollNode.put({ status: 'closed', finalDateId: dateId });
+  function save(kind, body) {
+    enqueue(pollId, kind, body).catch(err => setStorageError('Lokaal opslaan mislukt. ' + err.message));
   }
 
-  function handleUnlock() {
-    window.localStorage.setItem(`poll-unlocked-${pollId}`, 'true');
-    setIsUnlocked(true);
-  }
-
-  function handleRemoveVoter(targetVoterId) {
-    votesNode.get(targetVoterId).put(null);
-  }
-
-  function handleToggleDate(dateKey) {
-    if (dates[dateKey]) {
-      datesNode.get(dateKey).put(null);
-    } else {
-      datesNode.get(dateKey).put({ date: dateKey, time: '' });
-    }
-  }
-
-  function handleSavePollDetails({ title, description }) {
-    pollNode.put({ title, description });
-  }
-
-  if (poll === null) {
-    return <div className="page">Prikker laden... (klopt de link?)</div>;
+  const notices = row?.notices || [];
+  if (!poll) {
+    const message = status === 'Offline' ? 'Deze prikker is nog niet op dit toestel bewaard. Open de link eerst online.' : status;
+    return <div className="page" role="status">{storageError || notices.at(-1) || message || 'Prikker laden…'}</div>;
   }
 
   const hasDates = Object.keys(dates).length > 0;
@@ -122,6 +74,14 @@ export default function PollPage({ pollId }) {
   return (
     <div className="page">
       <h1>{poll.title}</h1>
+      <p role="status" className="description">
+        {row.queue.some(item => item.kind === 'create')
+          ? 'Lokaal bewaard. Anderen kunnen de link openen na de eerste synchronisatie.'
+          : row.queue.length ? 'Wijzigingen lokaal bewaard.' : ''}
+        {' '}{row.queue.length && status === 'Gesynchroniseerd' ? '' : status}
+      </p>
+      {storageError && <p role="alert" className="error">{storageError}</p>}
+      {notices.map((notice, index) => <p className="error" key={index}>Wijziging afgewezen — {notice}</p>)}
       {poll.description && <p className="description">{poll.description}</p>}
 
       {poll.status === 'closed' && finalDate && (
@@ -169,24 +129,24 @@ export default function PollPage({ pollId }) {
             votes={votes}
             currentVoterId={voterId}
             canManage={isUnlocked}
-            onRemoveVoter={handleRemoveVoter}
+            onRemoveVoter={voter => save('removeVoter', { voter })}
           />
         </>
       )}
 
-      {!isUnlocked && <OrganizerUnlock pollId={pollId} expectedHash={poll.passwordHash} onUnlock={handleUnlock} />}
+      {!isUnlocked && <OrganizerUnlock pollId={pollId} onUnlock={proof => unlock(pollId, proof)} />}
 
       {isUnlocked && (
         <>
           <EditPollPanel
             poll={poll}
             dates={dates}
-            onSave={handleSavePollDetails}
-            onToggleDate={handleToggleDate}
+            onSave={details => save('details', details)}
+            onToggleDate={day => save(dates[day] ? 'removeDate' : 'addDate', { day })}
           />
 
           {poll.status === 'open' && hasDates && (
-            <OrganizerPanel dates={dates} votes={votes} onConfirm={handleConfirmFinalDate} />
+            <OrganizerPanel dates={dates} votes={votes} onConfirm={day => save('close', { day })} />
           )}
         </>
       )}

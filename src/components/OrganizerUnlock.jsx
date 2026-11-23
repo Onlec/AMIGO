@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { hashPassword } from '../utils/password.js';
 
-export default function OrganizerUnlock({ pollId, expectedHash, onUnlock }) {
+export default function OrganizerUnlock({ pollId, onUnlock }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -10,13 +10,13 @@ export default function OrganizerUnlock({ pollId, expectedHash, onUnlock }) {
     event.preventDefault();
     setChecking(true);
     setError('');
-    const hash = await hashPassword(pollId, password);
-    setChecking(false);
-
-    if (hash === expectedHash) {
-      onUnlock();
-    } else {
-      setError('Wachtwoord klopt niet.');
+    try {
+      await onUnlock(await hashPassword(pollId, password));
+      setPassword('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setChecking(false);
     }
   }
 

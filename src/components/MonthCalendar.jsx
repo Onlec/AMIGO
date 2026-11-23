@@ -42,7 +42,7 @@ function monthFromDateKey(dateKey) {
 // daguitje komt te staan (bv. een selecteerbare knop of een stem-knop).
 // `initialMonthFrom` (een 'YYYY-MM-DD' string) laat de kalender één keer
 // automatisch naar die maand springen zodra ze gekend is (bv. de eerst
-// voorgestelde datum van een poll, die pas na het laden uit Gun binnenkomt).
+// voorgestelde datum van een poll, die pas na het laden van de prikker binnenkomt).
 export default function MonthCalendar({ renderDay, initialMonthFrom }) {
   const [view, setView] = useState(() => {
     const today = new Date();

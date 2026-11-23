@@ -1,3 +1,4 @@
+import { startSync } from './data/sync.js';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
@@ -10,3 +11,9 @@ import './styles.css';
 // pagina — onschuldig in productie (StrictMode doet daar toch niets),
 // maar verwarrend tijdens lokaal ontwikkelen.
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+startSync();
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js')
+    .catch(error => console.warn('Offline opstarten is niet beschikbaar.', error));
+}

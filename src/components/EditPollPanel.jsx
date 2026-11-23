@@ -6,21 +6,20 @@ import MonthCalendar from './MonthCalendar.jsx';
 // opslaat of verwerpt; datums aanklikken past de prikker meteen aan (net
 // zoals stemmen), zodat je zonder extra stap ziet wat je wijzigt.
 export default function EditPollPanel({ poll, dates, onSave, onToggleDate }) {
-  const [title, setTitle] = useState(poll.title);
-  const [description, setDescription] = useState(poll.description || '');
-
+  const [draft, setDraft] = useState(null);
+  const title = draft?.title ?? poll.title;
+  const description = draft?.description ?? (poll.description || '');
   const isDirty = title !== poll.title || description !== (poll.description || '');
 
   function handleSave(event) {
     event.preventDefault();
     const nextTitle = title.trim() || poll.title;
-    setTitle(nextTitle);
+    setDraft(null);
     onSave({ title: nextTitle, description: description.trim() });
   }
 
   function handleDiscard() {
-    setTitle(poll.title);
-    setDescription(poll.description || '');
+    setDraft(null);
   }
 
   const sortedDateKeys = Object.keys(dates).sort();
@@ -32,11 +31,11 @@ export default function EditPollPanel({ poll, dates, onSave, onToggleDate }) {
       <form onSubmit={handleSave} className="form">
         <label>
           Titel
-          <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input value={title} onChange={(e) => setDraft({ title: e.target.value, description })} />
         </label>
         <label>
           Omschrijving
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          <textarea value={description} onChange={(e) => setDraft({ title, description: e.target.value })} rows={3} />
         </label>
 
         {isDirty && (

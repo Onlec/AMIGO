@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import gun from '../gun.js';
-import { generateId } from '../utils/id.js';
+import { enqueue } from '../data/polls.js';
 import { hashPassword } from '../utils/password.js';
 import MonthCalendar from './MonthCalendar.jsx';
 
@@ -9,8 +8,6 @@ export default function CreatePollPage() {
   const [description, setDescription] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
-  // { [dateKey]: { time: '' } } — dateKey is bv. '2026-12-05', en dient
-  // meteen als id van de datum verderop in Gun.
   const [selectedDates, setSelectedDates] = useState({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -56,31 +53,16 @@ export default function CreatePollPage() {
     setError('');
     setSubmitting(true);
 
-    const pollId = generateId('poll-');
-    const passwordHash = await hashPassword(pollId, password);
-    const pollNode = gun.get('polls').get(pollId);
-
-    pollNode.put({
-      title: title.trim(),
-      description: description.trim(),
-      passwordHash,
-      createdAt: Date.now(),
-      status: 'open',
-      finalDateId: null,
-    });
-
-    Object.entries(selectedDates).forEach(([dateKey, info]) => {
-      pollNode.get('dates').get(dateKey).put({
-        date: dateKey,
-        time: info.time,
-      });
-    });
-
-    // Jij hebt het wachtwoord zonet zelf gekozen, dus we ontgrendelen deze
-    // browser meteen — geen reden om het nu al opnieuw te laten intypen.
-    window.localStorage.setItem(`poll-unlocked-${pollId}`, 'true');
-
-    window.location.href = `${window.location.pathname}?poll=${pollId}`;
+    try {
+      const pollId = crypto.randomUUID();
+      const proof = await hashPassword(pollId, password);
+      const dates = Object.fromEntries(Object.entries(selectedDates).map(([date, info]) => [date, { date, ...info }]));
+      await enqueue(pollId, 'create', { title: title.trim(), description: description.trim(), proof, dates });
+      window.location.href = window.location.pathname + '?poll=' + pollId;
+    } catch (err) {
+      setError('Lokaal opslaan mislukt. ' + err.message);
+      setSubmitting(false);
+    }
   }
 
   const sortedSelectedDates = Object.entries(selectedDates).sort(([a], [b]) => a.localeCompare(b));
