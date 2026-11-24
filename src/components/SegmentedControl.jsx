@@ -3,7 +3,7 @@ import '../styles/segmented-control.css';
 
 // Controlled single-choice input. allowDeselect preserves optional answers.
 export default function SegmentedControl({
-  options, value, onChange, label, variant = 'default', disabled = false, allowDeselect = false,
+  options, value, onChange, label, variant = 'default', disabled = false, allowDeselect = false, iconOnly = false,
 }) {
   const buttons = useRef([]);
   const selected = options.findIndex(option => option.value === value);
@@ -34,12 +34,13 @@ export default function SegmentedControl({
       {options.map((option, index) => (
         <button key={option.value} ref={node => { buttons.current[index] = node; }}
           type="button" className="segmented-control__option" role="radio"
+          aria-label={iconOnly ? option.label : undefined}
           aria-checked={index === selected} disabled={disabled || option.disabled}
           tabIndex={index === focusIndex && !disabled ? 0 : -1}
           onKeyDown={event => handleKeyDown(event, index)}
           onClick={() => onChange(allowDeselect && index === selected ? null : option.value)}>
           {option.icon && <span className="segmented-control__icon" aria-hidden="true">{option.icon}</span>}
-          {option.label}
+          {!iconOnly && option.label}
         </button>
       ))}
     </div>

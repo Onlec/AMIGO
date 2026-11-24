@@ -443,9 +443,8 @@ button.btn-secondary:focus-visible {
 }
 
 .calendar-day-vote {
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .calendar-day-button.vote-yes {
@@ -526,10 +525,6 @@ button.btn-secondary:focus-visible {
     padding: 0.6rem;
   }
 
-  .calendar-day-vote {
-    font-size: 0.55rem;
-    letter-spacing: 0;
-  }
 }
 
 .date-view-actions {
