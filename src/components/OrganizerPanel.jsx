@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import MonthCalendar from './MonthCalendar.jsx';
 import { parseVotes } from '../utils/votes.js';
 
 function computeTally(dates, votes) {
@@ -17,38 +18,42 @@ function computeTally(dates, votes) {
   return counts;
 }
 
-export default function OrganizerPanel({ dates, votes, onConfirm }) {
+export default function OrganizerPanel({ dates, votes, onConfirm, onCancel }) {
   const [selectedDateId, setSelectedDateId] = useState('');
   const tally = useMemo(() => computeTally(dates, votes), [dates, votes]);
 
-  function handleConfirm() {
-    if (!selectedDateId) return;
-    onConfirm(selectedDateId);
+  const selected = dates[selectedDateId];
+  const counts = tally[selectedDateId];
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleConfirm() {
+    setSaving(true);
+    try {
+      await onConfirm(selectedDateId);
+      onCancel();
+    } catch (err) {
+      setError('Lokaal opslaan mislukt. ' + err.message);
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="organizer-panel">
-      <h2>Organisator: kies de einddatum</h2>
-      <ul>
-        {Object.entries(dates).map(([dateId, info]) => (
-          <li key={dateId}>
-            <label>
-              <input
-                type="radio"
-                name="final-date"
-                value={dateId}
-                checked={selectedDateId === dateId}
-                onChange={() => setSelectedDateId(dateId)}
-              />{' '}
-              {info.date} {info.time} — {tally[dateId]?.yes || 0} ja, {tally[dateId]?.maybe || 0} misschien,{' '}
-              {tally[dateId]?.no || 0} nee
-            </label>
-          </li>
-        ))}
-      </ul>
-      <button type="button" onClick={handleConfirm} disabled={!selectedDateId}>
-        Bevestig deze datum
-      </button>
-    </div>
+    <section className="organizer-panel">
+      <h2>Einddatum kiezen</h2>
+      <MonthCalendar initialMonthFrom={Object.keys(dates).sort()[0]} renderDay={(day, number) => (
+        dates[day] ? (
+          <button type="button" aria-label={day} aria-pressed={day === selectedDateId}
+            className={`calendar-day-button ${day === selectedDateId ? 'is-selected' : ''}`}
+            onClick={() => setSelectedDateId(day)}>{number}</button>
+        ) : <span className="calendar-day-plain">{number}</span>
+      )} />
+      {selected && <p role="status">{selected.date} {selected.time} — {counts.yes} ja, {counts.maybe} misschien, {counts.no} nee</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="edit-actions">
+        <button type="button" onClick={handleConfirm} disabled={!selected || saving}>Bevestig deze datum</button>
+        <button type="button" onClick={onCancel} disabled={saving}>Annuleren</button>
+      </div>
+    </section>
   );
 }

@@ -39,7 +39,7 @@ export function watchStatus(id, listener) {
 }
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
+const labels = { edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
   removeDate: 'Datum verwijderen', close: 'Datum bevestigen', removeVoter: 'Deelnemer verwijderen' };
 
 async function synchronize(id) {
@@ -51,7 +51,11 @@ async function synchronize(id) {
     const command = row.queue[0];
     let rejection;
     try {
-      await rpc('amigo_apply', { p: id, ...command });
+      if (command.kind === 'edit') {
+        await rpc('amigo_edit', { p: id, operation: command.operation, body: command.body });
+      } else {
+        await rpc('amigo_apply', { p: id, ...command });
+      }
     } catch (error) {
       if (!['P0001','23503','23505','23514','23502','22007','22P02'].includes(error.code)) throw error;
       rejection = labels[command.kind] + (command.body.day ? ' (' + command.body.day + ')' : '') + ': ' + error.message;
@@ -90,7 +94,7 @@ export function sync(id) {
 }
 
 export async function unlock(id, proof) {
-  if (!navigator.onLine) throw new Error('Ga online om deze browser voor het eerst te ontgrendelen.');
+  if (!navigator.onLine) throw new Error('Ga online om het organisatorwachtwoord te controleren.');
   await connect();
   if (!await rpc('amigo_unlock', { p: id, proof })) throw new Error('Wachtwoord klopt niet.');
   await sync(id);

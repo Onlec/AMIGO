@@ -135,6 +135,7 @@ h2 {
 }
 
 .form fieldset {
+  min-width: 0;
   border: 1.5px solid var(--ink);
   border-radius: 3px;
   padding: 1rem;
@@ -373,6 +374,7 @@ h2 {
 }
 
 .calendar-cell {
+  min-width: 0;
   aspect-ratio: 1;
   display: flex;
 }
@@ -456,6 +458,7 @@ h2 {
 }
 
 .edit-actions {
+  flex-wrap: wrap;
   display: flex;
   gap: 0.6rem;
 }
@@ -480,4 +483,21 @@ h2 {
 
 .share-hint code {
   word-break: break-all;
+}
+
+.organizer-panel > button,
+.share-actions + button {
+  margin-top: 1rem;
+}
+
+@media (max-width: 480px) {
+  .organizer-panel,
+  .form fieldset {
+    padding: 0.6rem;
+  }
+
+  .calendar-day-vote {
+    font-size: 0.55rem;
+    letter-spacing: 0;
+  }
 }

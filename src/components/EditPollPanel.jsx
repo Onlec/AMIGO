@@ -1,68 +1,63 @@
 import React, { useState } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
 
-// Zodra je ontgrendeld bent, sta je automatisch in bewerkmodus — geen aparte
-// "bewerken"-knop meer nodig. Titel/omschrijving zijn een klad dat je zelf
-// opslaat of verwerpt; datums aanklikken past de prikker meteen aan (net
-// zoals stemmen), zodat je zonder extra stap ziet wat je wijzigt.
-export default function EditPollPanel({ poll, dates, onSave, onToggleDate }) {
-  const [draft, setDraft] = useState(null);
-  const title = draft?.title ?? poll.title;
-  const description = draft?.description ?? (poll.description || '');
-  const isDirty = title !== poll.title || description !== (poll.description || '');
+export default function EditPollPanel({ poll, onSave, onCancel, onChooseFinal }) {
+  const [original] = useState(poll);
+  const [title, setTitle] = useState(original.title);
+  const [description, setDescription] = useState(original.description);
+  const [days, setDays] = useState(() => new Set(Object.keys(original.dates)));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const added = [...days].filter(day => !original.dates[day]);
+  const removed = Object.keys(original.dates).filter(day => !days.has(day));
+  const changes = { added, removed };
+  if (title.trim() !== original.title) changes.title = title.trim();
+  if (description.trim() !== original.description) changes.description = description.trim();
+  const dirty = added.length || removed.length || 'title' in changes || 'description' in changes;
 
-  function handleSave(event) {
+  function toggle(day) {
+    const next = new Set(days);
+    if (next.has(day)) next.delete(day);
+    else next.add(day);
+    setDays(next);
+  }
+
+  async function submit(event) {
     event.preventDefault();
-    const nextTitle = title.trim() || poll.title;
-    setDraft(null);
-    onSave({ title: nextTitle, description: description.trim() });
+    if (!title.trim()) return setError('Geef de prikker een titel.');
+    if (removed.includes(poll.finalDateId)) return setError('De gekozen einddatum blijft behouden.');
+    setSaving(true);
+    try {
+      if (dirty) await onSave(changes);
+      onCancel();
+    } catch (err) {
+      setError('Lokaal opslaan mislukt. ' + err.message);
+      setSaving(false);
+    }
   }
-
-  function handleDiscard() {
-    setDraft(null);
-  }
-
-  const sortedDateKeys = Object.keys(dates).sort();
 
   return (
-    <div className="organizer-panel edit-mode">
-      <h2>🔓 Bewerkmodus — datums aanpassen</h2>
-
-      <form onSubmit={handleSave} className="form">
-        <label>
-          Titel
-          <input value={title} onChange={(e) => setDraft({ title: e.target.value, description })} />
-        </label>
-        <label>
-          Omschrijving
-          <textarea value={description} onChange={(e) => setDraft({ title, description: e.target.value })} rows={3} />
-        </label>
-
-        {isDirty && (
-          <div className="edit-actions">
-            <button type="submit">Wijzigingen opslaan</button>
-            <button type="button" onClick={handleDiscard}>
-              Wijzigingen verwerpen
-            </button>
-          </div>
-        )}
+    <section className="organizer-panel">
+      <h2>Prikker bewerken</h2>
+      <form className="form" onSubmit={submit}>
+        <label>Titel<input required value={title} onChange={e => setTitle(e.target.value)} /></label>
+        <label>Omschrijving<textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
+        <fieldset disabled={saving}>
+          <legend>Mogelijke datums</legend>
+          <MonthCalendar initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (
+            <button type="button" className={`calendar-day-button ${days.has(day) ? 'is-selected' : ''}`}
+              aria-label={day} aria-pressed={days.has(day)} disabled={day === poll.finalDateId}
+              onClick={() => toggle(day)}>{number}</button>
+          )} />
+        </fieldset>
+        {error && <p className="error" role="alert">{error}</p>}
+        <div className="edit-actions">
+          <button type="submit" disabled={saving}>Opslaan</button>
+          <button type="button" disabled={saving} onClick={onCancel}>Annuleren</button>
+        </div>
       </form>
-
-      <p className="selected-dates-label">
-        Klik een dag aan om toe te voegen of te verwijderen (meteen van toepassing):
-      </p>
-      <MonthCalendar
-        initialMonthFrom={sortedDateKeys[0]}
-        renderDay={(dateKey, dayNum) => (
-          <button
-            type="button"
-            className={`calendar-day-button ${dates[dateKey] ? 'is-selected' : ''}`}
-            onClick={() => onToggleDate(dateKey)}
-          >
-            {dayNum}
-          </button>
-        )}
-      />
-    </div>
+      {onChooseFinal && <button type="button" disabled={Boolean(dirty) || saving} onClick={onChooseFinal}>Einddatum kiezen</button>}
+      {onChooseFinal && Boolean(dirty) && <p>Sla je wijzigingen op voordat je een einddatum kiest.</p>}
+    </section>
   );
 }

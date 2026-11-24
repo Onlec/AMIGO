@@ -35,6 +35,13 @@ begin
     perform public.amigo_apply(p,gen_random_uuid(),'vote',jsonb_build_object('day','2027-01-01','voter',voter,'name','B','value','no'));
     raise exception using errcode='XX000', message='Vote ownership failed';
   exception when raise_exception then assert sqlerrm='Deze stem hoort bij een andere deelnemer.'; end;
+  op := gen_random_uuid();
+  perform public.amigo_edit(p,op,'{"title":"Bijgewerkt","added":["2027-02-03"],"removed":["2027-01-02"]}');
+  perform public.amigo_edit(p,op,'{"title":"Dubbel","added":[],"removed":[]}');
+  snapshot := public.amigo_read(p);
+  assert snapshot->>'title'='Bijgewerkt' and snapshot#>>'{dates,2027-01-01,time}'='12:30';
+  assert (snapshot->'dates') ? '2027-02-03' and not ((snapshot->'dates') ? '2027-01-02');
+  assert (snapshot#>>array['votes',voter::text,'votesJson'])::jsonb='{"2027-01-01":"yes"}'::jsonb;
   perform public.amigo_apply(p,gen_random_uuid(),'removeDate','{"day":"2027-01-02"}');
   perform public.amigo_apply(p,gen_random_uuid(),'removeVoter',jsonb_build_object('voter',voter));
   perform set_config('request.jwt.claim.sub',visitor,true);
@@ -46,6 +53,11 @@ begin
   assert public.amigo_unlock(p,repeat('a',64));
   perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-01"}');
   snapshot := public.amigo_read(p);
+  begin
+    perform public.amigo_edit(p,gen_random_uuid(),'{"title":"Ongeldig","added":[],"removed":["2027-01-01"]}');
+    raise exception using errcode='XX000', message='Final date removed';
+  exception when raise_exception then assert sqlerrm='De gekozen datum blijft behouden.'; end;
+  assert public.amigo_read(p)->>'title'='Bijgewerkt';
   assert snapshot->>'status'='closed' and snapshot->'votes'='{}'::jsonb;
   begin
     perform public.amigo_apply(p,gen_random_uuid(),'vote',jsonb_build_object('day','2027-01-01','voter',voter,'name','A','value','yes'));

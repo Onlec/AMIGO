@@ -34,7 +34,8 @@ export default function PollPage({ pollId }) {
   const dates = poll?.dates || {};
   const votes = poll?.votes || {};
   const voterId = poll?.ownVoter;
-  const isUnlocked = poll?.organizer;
+  const [mode, setMode] = useState('view');
+  const editing = mode === 'edit' || mode === 'final';
   const [nameInput, setNameInput] = useState('');
   const [namePrefilled, setNamePrefilled] = useState(false);
   const [nameError, setNameError] = useState('');
@@ -98,7 +99,15 @@ export default function PollPage({ pollId }) {
         </div>
       )}
 
-      {hasDates && poll.status === 'open' && (
+      {mode === 'view' && <button type="button" onClick={() => setMode('password')}>Bewerken</button>}
+      {mode === 'password' && (
+        <OrganizerUnlock pollId={pollId} onCancel={() => setMode('view')} onUnlock={async proof => {
+          await unlock(pollId, proof);
+          setMode('edit');
+        }} />
+      )}
+
+      {!editing && hasDates && poll.status === 'open' && (
         <>
           <h2>Jouw stem — klik een datum aan</h2>
           <label className="name-field">
@@ -121,6 +130,18 @@ export default function PollPage({ pollId }) {
         </>
       )}
 
+      {mode === 'edit' && (
+        <EditPollPanel poll={poll} onSave={body => enqueue(pollId, 'edit', body)}
+          onCancel={() => setMode('view')}
+          onChooseFinal={poll.status === 'open' && hasDates ? () => setMode('final') : null} />
+      )}
+      {mode === 'final' && poll.status === 'open' && (
+        <OrganizerPanel dates={dates} votes={votes} onConfirm={day => enqueue(pollId, 'close', { day })}
+          onCancel={() => setMode('view')} />
+      )}
+      {mode === 'final' && poll.status === 'closed' && (
+        <button type="button" onClick={() => setMode('view')}>Klaar</button>
+      )}
       {hasDates && hasVoters && (
         <>
           <h2>Overzicht</h2>
@@ -128,26 +149,9 @@ export default function PollPage({ pollId }) {
             dates={dates}
             votes={votes}
             currentVoterId={voterId}
-            canManage={isUnlocked}
+            canManage={editing}
             onRemoveVoter={voter => save('removeVoter', { voter })}
           />
-        </>
-      )}
-
-      {!isUnlocked && <OrganizerUnlock pollId={pollId} onUnlock={proof => unlock(pollId, proof)} />}
-
-      {isUnlocked && (
-        <>
-          <EditPollPanel
-            poll={poll}
-            dates={dates}
-            onSave={details => save('details', details)}
-            onToggleDate={day => save(dates[day] ? 'removeDate' : 'addDate', { day })}
-          />
-
-          {poll.status === 'open' && hasDates && (
-            <OrganizerPanel dates={dates} votes={votes} onConfirm={day => save('close', { day })} />
-          )}
         </>
       )}
 

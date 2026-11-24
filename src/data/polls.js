@@ -36,6 +36,15 @@ export async function updateLocal(id, change) {
   channel?.postMessage(id);
 }
 
+function removeDay(poll, day) {
+  delete poll.dates[day];
+  for (const voter of Object.values(poll.votes)) {
+    const choices = JSON.parse(voter.votesJson);
+    delete choices[day];
+    voter.votesJson = JSON.stringify(choices);
+  }
+}
+
 // The local view is always the latest confirmed snapshot with unsent edits replayed.
 export function project(row) {
   if (!row) return null;
@@ -58,14 +67,15 @@ export function project(row) {
       }
       case 'details': Object.assign(poll, body); break;
       case 'addDate': poll.dates[body.day] ??= { date: body.day, time: '' }; break;
+      case 'edit':
+        if (body.removed.includes(poll.finalDateId)) break;
+        if ('title' in body) poll.title = body.title;
+        if ('description' in body) poll.description = body.description;
+        for (const day of body.removed) removeDay(poll, day);
+        for (const day of body.added) poll.dates[day] ??= { date: day, time: '' };
+        break;
       case 'removeDate':
-        if (body.day === poll.finalDateId) break;
-        delete poll.dates[body.day];
-        for (const voter of Object.values(poll.votes)) {
-          const choices = JSON.parse(voter.votesJson);
-          delete choices[body.day];
-          voter.votesJson = JSON.stringify(choices);
-        }
+        if (body.day !== poll.finalDateId) removeDay(poll, body.day);
         break;
       case 'removeVoter':
         delete poll.votes[body.voter];
