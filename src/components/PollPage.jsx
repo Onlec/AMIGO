@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
 import { follow, syncStatus, unlock, watchStatus } from '../data/sync.js';
-import { parseVotes, buildShareText } from '../utils/votes.js';
-import VoteCalendar from './VoteCalendar.jsx';
+import { buildShareText } from '../utils/votes.js';
 import { readVoterSession, rememberVoterSession } from '../data/voterSession.js';
 import VoterForm from './VoterForm.jsx';
 import VoteGrid from './VoteGrid.jsx';
@@ -39,10 +38,10 @@ export default function PollPage({ pollId }) {
   const voterId = votes[session?.voter] ? session.voter : null;
   const [mode, setMode] = useState('view');
   const editing = mode === 'edit' || mode === 'final';
-  function selectVoter(next) {
+  const selectVoter = useCallback(next => {
     rememberVoterSession(pollId, next);
     setSession(next);
-  }
+  }, [pollId]);
 
   function save(kind, body) {
     enqueue(pollId, kind, body).catch(err => setStorageError('Lokaal opslaan mislukt. ' + err.message));
@@ -86,42 +85,11 @@ export default function PollPage({ pollId }) {
         </div>
       )}
 
-      {hasDates && (
-        <div className="share-actions">
-          <CopyButton text={buildShareText(poll, dates, votes, window.location.href)} label="Update kopiëren" />
-        </div>
-      )}
-
-      {mode === 'view' && <button type="button" onClick={() => setMode('password')}>Bewerken</button>}
-      {mode === 'password' && (
-        <OrganizerUnlock pollId={pollId} onCancel={() => setMode('view')} onUnlock={async proof => {
-          await unlock(pollId, proof);
-          setMode('edit');
-        }} />
-      )}
-
-      {showBallot && (
-        <div className="form">
-          <fieldset>
-            <legend>01 — Stemmer kiezen</legend>
-            {deferred.length > 0 && <p>Er staan oude stemmen op dit toestel klaar. Kies je naam bij <strong>Eerdere stem aanpassen</strong> om ze met je stemwachtwoord te bewaren.</p>}
-            {voterId ? (
-              <>
-                <p>Je stemt als <strong>{votes[voterId].name}</strong>.</p>
-                <button type="button" className="btn-secondary" onClick={() => selectVoter(null)}>Van stemmer wisselen</button>
-              </>
-            ) : (
-              <VoterForm pollId={pollId} votes={{ ...localParticipants, ...votes }} legacyVoter={poll.ownVoter} onSelect={selectVoter} />
-            )}
-          </fieldset>
-          <fieldset>
-            <legend>02 — Jouw beschikbaarheid</legend>
-            <VoteCalendar
-              dates={dates}
-              myVotes={parseVotes(votes[voterId]?.votesJson)}
-              onVote={voterId ? (day, value) => save('castVote', { ...session, day, value }) : undefined}
-            />
-          </fieldset>
+      {hasDates && poll.status === 'open' && (
+        <div hidden={!showBallot}>
+          <VoterForm pollId={pollId} dates={dates} participants={{ ...localParticipants, ...votes }}
+            legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults}
+            session={session} onSelect={selectVoter} />
         </div>
       )}
 
@@ -152,6 +120,20 @@ export default function PollPage({ pollId }) {
             </div>
           </fieldset>
         </div>
+      )}
+
+      {hasDates && (
+        <div className="share-actions">
+          <CopyButton text={buildShareText(poll, dates, votes, window.location.href)} label="Update kopiëren" />
+        </div>
+      )}
+
+      {mode === 'view' && <button type="button" onClick={() => setMode('password')}>Prikker beheren</button>}
+      {mode === 'password' && (
+        <OrganizerUnlock pollId={pollId} onCancel={() => setMode('view')} onUnlock={async proof => {
+          await unlock(pollId, proof);
+          setMode('edit');
+        }} />
       )}
 
       <p className="share-hint">

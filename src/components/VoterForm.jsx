@@ -1,35 +1,104 @@
-import React, { useState } from 'react';
-import { activateVoter } from '../data/polls.js';
-import { unlockVoter } from '../data/sync.js';
+import React, { useEffect, useState } from 'react';
+import { enqueue } from '../data/polls.js';
 import { voterSession } from '../data/voterSession.js';
+import { parseVotes } from '../utils/votes.js';
+import VoteCalendar from './VoteCalendar.jsx';
 
-export default function VoterForm({ pollId, votes, legacyVoter, onSelect }) {
-  const [mode, setMode] = useState(null);
-  const [name, setName] = useState('');
-  const [selected, setSelected] = useState('');
+const normalize = name => name.trim().toLowerCase();
+
+export default function VoterForm({ pollId, dates, participants, legacyVoter, deferred, results, session, onSelect }) {
+  const storageKey = 'amigo-ballot:' + pollId;
+  const [submission, setSubmission] = useState(() => JSON.parse(sessionStorage.getItem(storageKey) || 'null'));
+  const [name, setName] = useState(() => submission?.name || participants[session?.voter]?.name || '');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [picked, setPicked] = useState(submission?.session.voter || session?.voter || '');
+  const [edits, setEdits] = useState(submission?.changes || {});
+  const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const returning = mode === 'existing';
-  const localOnly = returning && Boolean(votes[selected]?.localOnly);
-  const claim = returning && (selected === legacyVoter || localOnly);
-  const blocked = returning && votes[selected]?.needsPassword && !claim;
-  const participants = Object.entries(votes).sort(([, a], [, b]) => a.name.localeCompare(b.name));
+  const [error, setError] = useState('');
+
+  const matches = Object.entries(participants).filter(([, person]) => normalize(person.name) === normalize(name));
+  const id = matches.length === 1 ? matches[0][0] : matches.find(([key]) => key === picked)?.[0];
+  const person = participants[id];
+  const remembered = id && id === session?.voter;
+  const oldVotes = deferred.filter(item => item.body.voter === id);
+  const base = parseVotes(person?.votesJson);
+  const oldAnswers = Object.fromEntries(oldVotes.map(({ body }) => [body.day, body.value]));
+  const answers = { ...base, ...oldAnswers, ...edits };
+  const count = Object.keys(dates).filter(day => answers[day] && answers[day] !== 'none').length;
+  const outcome = submission && results?.[submission.operation];
+  const processed = Boolean(outcome);
+  const pending = submission && !processed;
+  const locked = busy || Boolean(pending);
+  const saved = processed && !outcome.rejection;
+  const removed = Object.keys(edits).filter(day => !dates[day]);
+
+  useEffect(() => {
+    if (!saved) return;
+    onSelect(submission.session);
+    setPassword('');
+    setEdits({});
+    setEditingId(null);
+    sessionStorage.removeItem(storageKey);
+  }, [saved, submission, onSelect, storageKey]);
+
+  function clearSubmission() {
+    sessionStorage.removeItem(storageKey);
+    setSubmission(null);
+  }
+
+  function discardAllowed() {
+    return pending || !Object.keys(edits).length || window.confirm('Je hebt onopgeslagen antwoorden. Wil je die verwerpen?');
+  }
+
+  function reset() {
+    if (!discardAllowed()) return;
+    onSelect(null);
+    setName('');
+    setPicked('');
+    setPassword('');
+    setEdits({});
+    setEditingId(null);
+    clearSubmission();
+    setError('');
+  }
+
+  function changeName(next) {
+    if (id && normalize(next) !== normalize(name)) {
+      if (!discardAllowed()) return;
+      setEdits({});
+      setEditingId(null);
+      setPassword('');
+      setPicked('');
+    }
+    clearSubmission();
+    setError('');
+    setName(next);
+  }
 
   async function submit(event) {
     event.preventDefault();
     setError('');
+    if (!name.trim()) return setError('Vul je naam in.');
+    if (editingId && !participants[editingId]) return setError('Deze deelnemer is verwijderd. Wissel van stemmer om opnieuw te beginnen.');
+    if (matches.length > 1 && !id) return setError('Kies welke deelnemer je bent.');
+    if (person?.needsPassword && legacyVoter !== id) return setError('Stel je wachtwoord eerst in op het oorspronkelijke toestel.');
+    if (!count) return setError('Beantwoord minstens één datum.');
+    if (!password && !remembered) return setError('Vul je stemwachtwoord in.');
     setBusy(true);
     try {
-      const trimmed = name.trim();
-      if (!returning && !trimmed) throw new Error('Vul je naam in.');
-      if (!returning && participants.some(([, person]) => person.name.trim().toLowerCase() === trimmed.toLowerCase())) {
-        throw new Error('Deze naam is al in gebruik. Kies je bestaande stem of gebruik een andere naam.');
+      const credentials = password ? await voterSession(pollId, id || crypto.randomUUID(), password) : session;
+      const changes = {};
+      for (const [day, value] of Object.entries({ ...oldAnswers, ...edits })) {
+        if (dates[day] && value !== (base[day] || 'none')) changes[day] = value;
       }
-      const session = await voterSession(pollId, returning ? selected : crypto.randomUUID(), password);
-      if (returning && !localOnly) await unlockVoter(pollId, session, claim);
-      await activateVoter(pollId, session, localOnly ? votes[selected].name : returning ? null : trimmed);
-      onSelect(session);
+      const operation = await enqueue(pollId, 'ballot', {
+        ...credentials, name: name.trim(), register: !person || Boolean(person.localOnly),
+        claim: Boolean(id && id === legacyVoter), changes, legacyOperations: oldVotes.map(item => item.operation),
+      });
+      const receipt = { operation, session: credentials, name: name.trim(), count, changes };
+      sessionStorage.setItem(storageKey, JSON.stringify(receipt));
+      setSubmission(receipt);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,49 +106,50 @@ export default function VoterForm({ pollId, votes, legacyVoter, onSelect }) {
     }
   }
 
-  if (!mode) return (
-    <div className="edit-actions">
-      <button type="button" onClick={() => setMode('new')}>Nieuwe stem uitbrengen</button>
-      {participants.length > 0 && (
-        <button type="button" className="btn-secondary" onClick={() => {
-          setSelected(legacyVoter || '');
-          setMode('existing');
-        }}>Eerdere stem aanpassen</button>
-      )}
-    </div>
-  );
-
   return (
-    <form className="form voter-form" onSubmit={submit}>
-      {returning ? (
-        <div>
-          <label htmlFor="voter-choice">Stemmer</label>
-          <select id="voter-choice" required value={selected} onChange={e => {
-            setSelected(e.target.value);
-            setPassword('');
-            setError('');
+    <form className="form" onSubmit={submit}>
+      <fieldset disabled={locked}>
+        <legend>01 — Jouw gegevens</legend>
+        <label>Jouw naam<input value={name} required onChange={e => changeName(e.target.value)} /></label>
+        {matches.length > 1 && <label>Welke deelnemer ben je?
+          <select value={id || ''} required onChange={e => {
+            if (id && !discardAllowed()) return;
+            setPicked(e.target.value);
+            if (id) { setEdits({}); setPassword(''); }
           }}>
-            <option value="">Kies je naam</option>
-            {participants.map(([id, person]) => <option key={id} value={id}>{person.name}</option>)}
+            <option value="">Kies je deelnemer</option>
+            {matches.map(([key, participant]) => <option key={key} value={key}>{participant.name} ({key.slice(0, 8)})</option>)}
           </select>
-        </div>
-      ) : <label>Jouw naam<input required autoFocus value={name} onChange={e => setName(e.target.value)} /></label>}
-      {blocked ? <p>Stel eerst een stemwachtwoord in op het toestel waarop je oorspronkelijk hebt gestemd.</p> : (
-        <label>{returning && !claim ? 'Stemwachtwoord' : 'Kies een stemwachtwoord'}
-          <input required type="password" autoComplete={returning && !claim ? 'current-password' : 'new-password'}
-            value={password} onChange={e => setPassword(e.target.value)} />
+        </label>}
+        <label>Stemwachtwoord
+          <input type="password" value={password} required={!remembered}
+            autoComplete={person && !person.needsPassword ? 'current-password' : 'new-password'}
+            placeholder={remembered ? 'Al ingevuld voor deze sessie' : undefined}
+            onChange={e => { setPassword(e.target.value); setError(''); clearSubmission(); }} />
         </label>
-      )}
-      {error && <p role="alert" className="error">{error}</p>}
-      <div className="edit-actions">
-        <button type="submit" disabled={busy || blocked || (returning && !selected)}>
-          {busy ? 'Even geduld...' : 'Stemmen'}
-        </button>
-        <button type="button" className="btn-secondary" disabled={busy} onClick={() => {
-          setMode(null);
-          setPassword('');
+        <p className="description">{person && !person.needsPassword && !person.localOnly
+          ? 'Je eerdere antwoorden staan hieronder. Gebruik je wachtwoord om ze aan te passen.'
+          : 'Kies een wachtwoord om je antwoorden later te kunnen aanpassen.'}</p>
+      </fieldset>
+      <fieldset disabled={locked}>
+        <legend>02 — Jouw beschikbaarheid</legend>
+        <p>Kies Ja, Misschien of Nee. In de agenda klik je door de antwoorden heen.</p>
+        <VoteCalendar key={id || 'new'} dates={dates} myVotes={answers} onVote={(day, value) => {
+          clearSubmission();
+          setEditingId(id || null);
           setError('');
-        }}>Annuleren</button>
+          setEdits(previous => ({ ...previous, [day]: value }));
+        }} />
+      </fieldset>
+      {removed.length > 0 && <p role="status">Verwijderd uit deze prikker: {removed.join(', ')}. Bij opslaan tellen alleen de overige datums mee.</p>}
+      {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
+      {error && <p role="alert" className="error">{error}</p>}
+      {submission && !outcome?.rejection && <p role="status">
+        {submission.name} · {submission.count} van {Object.keys(dates).length} datums beantwoord · {saved ? 'Gesynchroniseerd' : 'Lokaal bewaard'}
+      </p>}
+      <div className="edit-actions">
+        <button type="submit" disabled={locked}>Stem opslaan</button>
+        {(name || session) && <button type="button" className="btn-secondary" disabled={busy} onClick={reset}>Van stemmer wisselen</button>}
       </div>
     </form>
   );

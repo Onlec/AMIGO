@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 const WEEKDAYS = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
 const MONTH_NAMES = [
@@ -27,66 +27,52 @@ function getMonthGrid(year, month) {
   for (let day = 1; day <= daysInMonth; day += 1) {
     cells.push(day);
   }
-  while (cells.length % 7 !== 0) {
+  while (cells.length < 42) {
     cells.push(null);
   }
   return cells;
 }
 
-function monthFromDateKey(dateKey) {
-  const [year, month] = dateKey.split('-').map(Number);
-  return { year, month: month - 1 };
-}
-
-// Generieke maandkalender. `renderDay(dateKey, dayNumber)` bepaalt wat in elke
-// daguitje komt te staan (bv. een selecteerbare knop of een stem-knop).
-// `initialMonthFrom` (een 'YYYY-MM-DD' string) laat de kalender één keer
-// automatisch naar die maand springen zodra ze gekend is (bv. de eerst
-// voorgestelde datum van een poll, die pas na het laden van de prikker binnenkomt).
-export default function MonthCalendar({ renderDay, initialMonthFrom }) {
-  const [view, setView] = useState(() => {
-    const today = new Date();
-    return { year: today.getFullYear(), month: today.getMonth() };
-  });
+export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDays }) {
+  const now = new Date();
+  const todayKey = toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
+  const first = proposedDays?.[0]?.slice(0, 7);
+  const last = proposedDays?.at(-1)?.slice(0, 7);
+  const [requested, setRequested] = useState(() => (initialMonthFrom || first || todayKey).slice(0, 7));
+  const monthKey = first && requested < first ? first : last && requested > last ? last : requested;
+  const [year, monthNumber] = monthKey.split('-').map(Number);
+  const month = monthNumber - 1;
   const [flipClass, setFlipClass] = useState('');
-  const [hasAutoJumped, setHasAutoJumped] = useState(false);
-
-  useEffect(() => {
-    if (initialMonthFrom && !hasAutoJumped) {
-      setView(monthFromDateKey(initialMonthFrom));
-      setHasAutoJumped(true);
-    }
-  }, [initialMonthFrom, hasAutoJumped]);
 
   function changeMonth(delta) {
     setFlipClass(delta > 0 ? 'flip-next' : 'flip-prev');
-    setView((prev) => {
-      const date = new Date(prev.year, prev.month + delta, 1);
-      return { year: date.getFullYear(), month: date.getMonth() };
-    });
+    const date = new Date(year, month + delta, 1);
+    setRequested(toDateKey(date.getFullYear(), date.getMonth(), 1).slice(0, 7));
   }
 
-  const now = new Date();
-  const todayKey = toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
-  const cells = useMemo(() => getMonthGrid(view.year, view.month), [view]);
+  const cells = useMemo(() => getMonthGrid(year, month), [year, month]);
+  const arrows = !first || first !== last;
 
   return (
     <div className="calendar">
       <div className="calendar-header">
-        <button type="button" onClick={() => changeMonth(-1)} aria-label="Vorige maand">
+        {arrows && <button type="button" disabled={monthKey === first} onClick={() => changeMonth(-1)} aria-label="Vorige maand">
           ‹
-        </button>
+        </button>}
         <span className="calendar-title">
-          {MONTH_NAMES[view.month]} {view.year}
+          {MONTH_NAMES[month]} {year}
         </span>
-        <button type="button" onClick={() => changeMonth(1)} aria-label="Volgende maand">
+        {arrows && <button type="button" disabled={monthKey === last} onClick={() => changeMonth(1)} aria-label="Volgende maand">
           ›
-        </button>
+        </button>}
       </div>
 
+      {proposedDays && <p className="month-status" role="status">
+        {proposedDays.some(day => day.startsWith(monthKey)) ? '' : 'Deze maand zijn er geen voorgestelde datums.'}
+      </p>}
       <div className="calendar-flip-stage">
         <div
-          key={`${view.year}-${view.month}`}
+          key={monthKey}
           className={`calendar-page ${flipClass}`}
           onAnimationEnd={() => setFlipClass('')}
         >
@@ -100,9 +86,9 @@ export default function MonthCalendar({ renderDay, initialMonthFrom }) {
               if (day === null) {
                 return <div key={`empty-${idx}`} className="calendar-cell calendar-cell--empty" />;
               }
-              const dateKey = toDateKey(view.year, view.month, day);
+              const dateKey = toDateKey(year, month, day);
               return (
-                <div key={dateKey} className="calendar-cell" aria-current={dateKey === todayKey ? 'date' : undefined}>
+                <div key={dateKey} data-day={dateKey} className="calendar-cell" aria-current={dateKey === todayKey ? 'date' : undefined}>
                   {renderDay(dateKey, day)}
                 </div>
               );

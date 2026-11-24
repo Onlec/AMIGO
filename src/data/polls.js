@@ -108,24 +108,11 @@ export async function deferLegacyVote(id, operation) {
   });
 }
 
-export async function activateVoter(id, session, name) {
-  await updateLocal(id, row => {
-    const belongsToVoter = item => item.kind === 'vote' && item.body.voter === session.voter;
-    const pending = [...(row.legacyVotes || []), ...row.queue].filter(belongsToVoter);
-    row.legacyVotes = (row.legacyVotes || []).filter(item => !belongsToVoter(item));
-    row.queue = row.queue.filter(item => !belongsToVoter(item));
-    if (name) row.queue.push({ operation: crypto.randomUUID(), kind: 'join', body: { ...session, name } });
-    // Keep the original receipt in case the server already processed an offline vote.
-    for (const { operation, body } of pending) {
-      row.queue.push({ operation, kind: 'castVote', body: { ...session, day: body.day, value: body.value } });
-    }
-  });
-  window.dispatchEvent(new CustomEvent('amigo-queued', { detail: id }));
-}
-
 export async function enqueue(id, kind, body) {
+  const operation = crypto.randomUUID();
   await updateLocal(id, row => {
-    row.queue.push({ operation: crypto.randomUUID(), kind, body });
+    row.queue.push({ operation, kind, body });
   });
   window.dispatchEvent(new CustomEvent('amigo-queued', { detail: id }));
+  return operation;
 }

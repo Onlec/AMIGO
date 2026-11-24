@@ -39,7 +39,7 @@ export function watchStatus(id, listener) {
 }
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
+const labels = { ballot: 'Stem opslaan', join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
   removeDate: 'Datum verwijderen', close: 'Datum bevestigen', removeVoter: 'Deelnemer verwijderen' };
 
 async function synchronize(id) {
@@ -56,7 +56,9 @@ async function synchronize(id) {
     }
     let rejection;
     try {
-      if (command.kind === 'edit') {
+      if (command.kind === 'ballot') {
+        await rpc('amigo_submit_ballot', { p: id, operation: command.operation, body: command.body });
+      } else if (command.kind === 'edit') {
         await rpc('amigo_edit', { p: id, operation: command.operation, body: command.body });
       } else {
         await rpc('amigo_apply', { p: id, ...command });
@@ -70,6 +72,13 @@ async function synchronize(id) {
     await updateLocal(id, current => {
       current.base = base;
       current.queue = current.queue.filter(item => item.operation !== command.operation);
+      if (command.kind === 'ballot') {
+        (current.ballotResults ??= {})[command.operation] = { rejection };
+        if (!rejection) {
+          const used = new Set(command.body.legacyOperations || []);
+          current.legacyVotes = (current.legacyVotes || []).filter(item => !used.has(item.operation));
+        }
+      }
       if (rejection) current.notices.push(rejection);
     });
     row = await readLocal(id);
@@ -96,14 +105,6 @@ export function sync(id) {
     .catch(error => status(id, client ? 'Synchronisatie uitgesteld. ' + error.message : error.message))
     .finally(() => running.delete(id));
   return job.promise;
-}
-
-export async function unlockVoter(id, session, claim) {
-  if (!navigator.onLine) throw new Error('Ga online om je stemwachtwoord te controleren.');
-  await connect();
-  await sync(id);
-  await rpc('amigo_voter_unlock', { p: id, ...session, claim });
-  await sync(id);
 }
 
 export async function unlock(id, proof) {

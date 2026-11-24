@@ -581,3 +581,33 @@ button.btn-secondary:focus-visible {
     letter-spacing: 0;
   }
 }
+
+.date-view-actions, .date-view-toggle, .answer-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+.date-view-actions { justify-content: space-between; }
+.date-view-toggle button[aria-pressed="false"], .answer-options button[aria-pressed="false"] {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: transparent;
+}
+.date-cards {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: .75rem;
+}
+.date-cards li {
+  padding: .85rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.date-cards strong { display: block; margin-bottom: .5rem; }
+.month-status { min-height: 1.5em; margin: 0; line-height: 1.5; font-size: .85rem; }
+.calendar-header .calendar-title:only-child { margin-inline: auto; }
+.calendar-grid { grid-auto-rows: 1fr; }
+.calendar-day-button small { font-size: .65rem; }
+.calendar:has(.month-status) .calendar-cell { width: 100%; min-height: 3.6rem; }

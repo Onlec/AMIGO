@@ -102,4 +102,37 @@ begin
   perform public.amigo_apply(p,gen_random_uuid(),'castVote',jsonb_build_object('day','2027-01-01','voter',v,'proof',repeat('d',64),'value','no'));
   assert (public.amigo_read(p)#>>array['votes',v::text,'votesJson'])::jsonb='{"2027-01-01":"no"}'::jsonb;
 end $$;
+do $$
+declare
+  p uuid := gen_random_uuid();
+  v uuid := gen_random_uuid();
+  op uuid := gen_random_uuid();
+  b jsonb := jsonb_build_object('name','Anna','voter',v,'proof',repeat('c',64),'register',true);
+  snapshot jsonb;
+begin
+  perform public.amigo_apply(p,gen_random_uuid(),'createPoll',jsonb_build_object('title','Kaarten','description','',
+    'organizerName','Maker','proof',repeat('a',64),'dates','{"2027-01-10":{},"2027-04-12":{}}'::jsonb));
+  begin
+    perform public.amigo_submit_ballot(p,op,b || '{"changes":{}}');
+    raise exception using errcode='XX000', message='Empty ballot accepted';
+  exception when raise_exception then assert sqlerrm='Beantwoord minstens één datum.'; end;
+  assert public.amigo_read(p)->'votes'='{}'::jsonb;
+  b := b || '{"changes":{"2027-01-10":"yes"}}';
+  perform public.amigo_submit_ballot(p,op,b);
+  perform public.amigo_submit_ballot(p,op,b);
+  b := b || '{"register":false,"changes":{"2027-04-12":"maybe"}}';
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),b);
+  snapshot := public.amigo_read(p);
+  assert (snapshot#>>array['votes',v::text,'votesJson'])::jsonb='{"2027-01-10":"yes","2027-04-12":"maybe"}'::jsonb;
+  begin
+    perform public.amigo_submit_ballot(p,gen_random_uuid(),b || '{"changes":{"2027-01-10":"no","2027-05-12":"yes"}}');
+    raise exception using errcode='XX000', message='Removed date accepted';
+  exception when raise_exception then assert sqlerrm like 'De datum % is verwijderd.%'; end;
+  assert public.amigo_read(p)=snapshot;
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-10"}');
+  begin
+    perform public.amigo_submit_ballot(p,gen_random_uuid(),b);
+    raise exception using errcode='XX000', message='Closed poll accepted a ballot';
+  exception when raise_exception then assert sqlerrm='De prikker is gesloten of verwijderd.'; end;
+end $$;
 rollback;

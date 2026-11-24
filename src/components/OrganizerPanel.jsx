@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import MonthCalendar from './MonthCalendar.jsx';
+import DateChoices from './DateChoices.jsx';
 import { parseVotes } from '../utils/votes.js';
 
 function computeTally(dates, votes) {
@@ -41,12 +41,19 @@ export default function OrganizerPanel({ dates, votes, onConfirm, onCancel }) {
   return (
     <section className="organizer-panel">
       <h2>Einddatum kiezen</h2>
-      <MonthCalendar initialMonthFrom={Object.keys(dates).sort()[0]} renderDay={(day, number) => (
-        dates[day] ? (
-          <button type="button" aria-label={day} aria-pressed={day === selectedDateId}
-            className={`calendar-day-button ${day === selectedDateId ? 'is-selected' : ''}`}
-            onClick={() => setSelectedDateId(day)}>{number}</button>
-        ) : <span className="calendar-day-plain">{number}</span>
+      <DateChoices dates={dates} renderCard={day => (
+        <>
+          <p>{tally[day].yes} ja, {tally[day].maybe} misschien, {tally[day].no} nee</p>
+          <button type="button" aria-pressed={day === selectedDateId} onClick={() => setSelectedDateId(day)}>
+            {day === selectedDateId ? 'Geselecteerd' : 'Kies deze datum'}
+          </button>
+        </>
+      )} renderDay={(day, number) => (
+        <button type="button" aria-label={day} aria-pressed={day === selectedDateId}
+          className={'calendar-day-button ' + (day === selectedDateId ? 'is-selected' : '')}
+          onClick={() => setSelectedDateId(day)}>
+          {number}<small>{dates[day].time}</small>
+        </button>
       )} />
       {selected && <p role="status">{selected.date} {selected.time} — {counts.yes} ja, {counts.maybe} misschien, {counts.no} nee</p>}
       {error && <p className="error" role="alert">{error}</p>}
