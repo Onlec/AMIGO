@@ -50,7 +50,7 @@ export default function VoterForm({ pollId, votes, legacyVoter, onSelect }) {
   );
 
   return (
-    <form className="form unlock-form" onSubmit={submit}>
+    <form className="form voter-form" onSubmit={submit}>
       {returning ? (
         <div>
           <label htmlFor="voter-choice">Stemmer</label>
@@ -71,14 +71,16 @@ export default function VoterForm({ pollId, votes, legacyVoter, onSelect }) {
         </label>
       )}
       {error && <p role="alert" className="error">{error}</p>}
-      <button type="submit" disabled={busy || blocked || (returning && !selected)}>
-        {busy ? 'Even geduld...' : 'Stemmen'}
-      </button>
-      <button type="button" className="btn-secondary" disabled={busy} onClick={() => {
-        setMode(null);
-        setPassword('');
-        setError('');
-      }}>Annuleren</button>
+      <div className="edit-actions">
+        <button type="submit" disabled={busy || blocked || (returning && !selected)}>
+          {busy ? 'Even geduld...' : 'Stemmen'}
+        </button>
+        <button type="button" className="btn-secondary" disabled={busy} onClick={() => {
+          setMode(null);
+          setPassword('');
+          setError('');
+        }}>Annuleren</button>
+      </div>
     </form>
   );
 }

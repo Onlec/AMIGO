@@ -146,8 +146,16 @@ h2 {
   outline-offset: 1px;
 }
 
-.unlock-form select {
+.voter-form select {
   width: 100%;
+}
+
+.voter-form {
+  margin-top: 0;
+}
+
+.form + .poll-results {
+  margin-top: 1rem;
 }
 
 .form .participation-choice {
@@ -163,8 +171,8 @@ h2 {
   padding: 1rem;
 }
 
-.form legend,
-.section-number {
+.form legend {
+  padding: 0 0.4rem;
   font-family: var(--font-display);
   font-weight: 600;
   color: var(--muted);
@@ -176,10 +184,6 @@ h2 {
 .name-field {
   margin-top: 1rem;
   max-width: 320px;
-}
-
-.form legend {
-  padding: 0 0.4rem;
 }
 
 .eyebrow {

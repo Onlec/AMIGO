@@ -81,16 +81,18 @@ export default function CreatePollPage() {
       <div className="lab eyebrow">AMIGO / PLANNER</div>
       <h1>Nieuwe datumprikker</h1>
       <form onSubmit={handleSubmit} className="form">
-        <span className="lab section-number">01 — Prikker instellen</span>
-        <label>
-          Titel
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Teamuitje december" />
-        </label>
+        <fieldset>
+          <legend>01 — Prikker instellen</legend>
+          <label>
+            Titel
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Teamuitje december" />
+          </label>
 
-        <label>
-          Omschrijving (optioneel)
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-        </label>
+          <label>
+            Omschrijving (optioneel)
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          </label>
+        </fieldset>
 
         <fieldset>
           <legend>02 — Organisator</legend>

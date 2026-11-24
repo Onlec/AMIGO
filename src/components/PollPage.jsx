@@ -55,6 +55,7 @@ export default function PollPage({ pollId }) {
   }
 
   const hasDates = Object.keys(dates).length > 0;
+  const showBallot = !editing && hasDates && poll.status === 'open';
   const hasVoters = Object.keys(votes).length > 0;
   const deferred = row.legacyVotes || [];
   const localParticipants = {};
@@ -99,24 +100,29 @@ export default function PollPage({ pollId }) {
         }} />
       )}
 
-      {!editing && hasDates && poll.status === 'open' && (
-        <>
-          <h2>Jouw stem</h2>
-          {deferred.length > 0 && <p>Er staan oude stemmen op dit toestel klaar. Kies je naam bij <strong>Eerdere stem aanpassen</strong> om ze met je stemwachtwoord te bewaren.</p>}
-          {voterId ? (
-            <>
-              <p>Je stemt als <strong>{votes[voterId].name}</strong>.</p>
-              <button type="button" className="btn-secondary" onClick={() => selectVoter(null)}>Van stemmer wisselen</button>
-            </>
-          ) : (
-            <VoterForm pollId={pollId} votes={{ ...localParticipants, ...votes }} legacyVoter={poll.ownVoter} onSelect={selectVoter} />
-          )}
-          <VoteCalendar
-            dates={dates}
-            myVotes={parseVotes(votes[voterId]?.votesJson)}
-            onVote={voterId ? (day, value) => save('castVote', { ...session, day, value }) : undefined}
-          />
-        </>
+      {showBallot && (
+        <div className="form">
+          <fieldset>
+            <legend>01 — Stemmer kiezen</legend>
+            {deferred.length > 0 && <p>Er staan oude stemmen op dit toestel klaar. Kies je naam bij <strong>Eerdere stem aanpassen</strong> om ze met je stemwachtwoord te bewaren.</p>}
+            {voterId ? (
+              <>
+                <p>Je stemt als <strong>{votes[voterId].name}</strong>.</p>
+                <button type="button" className="btn-secondary" onClick={() => selectVoter(null)}>Van stemmer wisselen</button>
+              </>
+            ) : (
+              <VoterForm pollId={pollId} votes={{ ...localParticipants, ...votes }} legacyVoter={poll.ownVoter} onSelect={selectVoter} />
+            )}
+          </fieldset>
+          <fieldset>
+            <legend>02 — Jouw beschikbaarheid</legend>
+            <VoteCalendar
+              dates={dates}
+              myVotes={parseVotes(votes[voterId]?.votesJson)}
+              onVote={voterId ? (day, value) => save('castVote', { ...session, day, value }) : undefined}
+            />
+          </fieldset>
+        </div>
       )}
 
       {mode === 'edit' && (
@@ -132,18 +138,20 @@ export default function PollPage({ pollId }) {
         <button type="button" onClick={() => setMode('view')}>Klaar</button>
       )}
       {hasDates && hasVoters && (
-        <>
-          <h2>Overzicht</h2>
-          <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
-            <VoteGrid
-              dates={dates}
-              votes={votes}
-              currentVoterId={voterId}
-              canManage={editing}
-              onRemoveVoter={voter => save('removeVoter', { voter })}
-            />
-          </div>
-        </>
+        <div className="form poll-results">
+          <fieldset>
+            <legend>{showBallot ? '03 — Stemmenoverzicht' : 'Stemmenoverzicht'}</legend>
+            <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
+              <VoteGrid
+                dates={dates}
+                votes={votes}
+                currentVoterId={voterId}
+                canManage={editing}
+                onRemoveVoter={voter => save('removeVoter', { voter })}
+              />
+            </div>
+          </fieldset>
+        </div>
       )}
 
       <p className="share-hint">
