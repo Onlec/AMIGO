@@ -42,10 +42,8 @@ export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDay
   const monthKey = first && requested < first ? first : last && requested > last ? last : requested;
   const [year, monthNumber] = monthKey.split('-').map(Number);
   const month = monthNumber - 1;
-  const [flipClass, setFlipClass] = useState('');
 
   function changeMonth(delta) {
-    setFlipClass(delta > 0 ? 'flip-next' : 'flip-prev');
     const date = new Date(year, month + delta, 1);
     setRequested(toDateKey(date.getFullYear(), date.getMonth(), 1).slice(0, 7));
   }
@@ -70,30 +68,24 @@ export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDay
       {proposedDays && <p className="month-status" role="status">
         {proposedDays.some(day => day.startsWith(monthKey)) ? '' : 'Deze maand zijn er geen voorgestelde datums.'}
       </p>}
-      <div className="calendar-flip-stage">
-        <div
-          key={monthKey}
-          className={`calendar-page ${flipClass}`}
-          onAnimationEnd={() => setFlipClass('')}
-        >
-          <div className="calendar-weekdays">
-            {WEEKDAYS.map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
-          <div className="calendar-grid">
-            {cells.map((day, idx) => {
-              if (day === null) {
-                return <div key={`empty-${idx}`} className="calendar-cell calendar-cell--empty" />;
-              }
-              const dateKey = toDateKey(year, month, day);
-              return (
-                <div key={dateKey} data-day={dateKey} className="calendar-cell" aria-current={dateKey === todayKey ? 'date' : undefined}>
-                  {renderDay(dateKey, day)}
-                </div>
-              );
-            })}
-          </div>
+      <div className="calendar-page">
+        <div className="calendar-weekdays">
+          {WEEKDAYS.map((day) => (
+            <span key={day}>{day}</span>
+          ))}
+        </div>
+        <div className="calendar-grid">
+          {cells.map((day, idx) => {
+            if (day === null) {
+              return <div key={`empty-${idx}`} className="calendar-cell calendar-cell--empty" />;
+            }
+            const dateKey = toDateKey(year, month, day);
+            return (
+              <div key={dateKey} data-day={dateKey} className="calendar-cell" aria-current={dateKey === todayKey ? 'date' : undefined}>
+                {renderDay(dateKey, day)}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

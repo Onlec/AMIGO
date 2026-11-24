@@ -1,0 +1,94 @@
+.segmented-control {
+  --segment-active-bg: var(--amigo-ivory);
+  --segment-active-ink: var(--amigo-black);
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr));
+  max-width: 100%;
+  padding: 4px;
+  border-radius: 3px;
+  background: #252a27;
+  vertical-align: middle;
+}
+
+.segmented-control--status[data-status='yes'] {
+  --segment-active-bg: var(--vote-yes);
+  --segment-active-ink: var(--amigo-paper);
+}
+
+.segmented-control--status[data-status='maybe'] {
+  --segment-active-bg: var(--vote-maybe);
+}
+
+.segmented-control--status[data-status='no'] {
+  --segment-active-bg: var(--vote-no);
+  --segment-active-ink: var(--amigo-paper);
+}
+
+.segmented-control__track {
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.segmented-control__indicator {
+  display: block;
+  height: 100%;
+  width: calc(100% / var(--segment-count));
+  transform: translateX(calc(var(--segment-index) * 100%));
+  background: var(--segment-active-bg);
+  border-radius: 1px;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.segmented-control__option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-radius: 1px;
+  background: transparent;
+  color: var(--amigo-grey);
+  font: 600 0.875rem/1.25 var(--font-display);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.segmented-control__option[aria-checked='true'] {
+  color: var(--segment-active-ink);
+}
+
+.segmented-control__option:not(:disabled):not([aria-checked='true']):hover {
+  background: rgb(255 255 255 / 8%);
+  color: var(--amigo-ivory);
+}
+
+.segmented-control__option:focus-visible {
+  outline: 2px solid var(--amigo-signal-red);
+  outline-offset: -3px;
+}
+
+.segmented-control__option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.segmented-control__icon,
+.segmented-control__icon svg {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented-control__indicator {
+    transition: none;
+  }
+}

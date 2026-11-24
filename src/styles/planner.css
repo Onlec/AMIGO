@@ -10,7 +10,7 @@
 .btn,
 button[type='submit'],
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle, .segmented-control__option)
   ) {
   font: 600 1rem 'Space Grotesk', sans-serif;
   display: inline-flex;
@@ -29,7 +29,7 @@ button[type='button']:not(
 .btn:hover,
 button[type='submit']:hover,
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle, .segmented-control__option)
   ):hover {
   background: var(--amigo-ivory);
   color: var(--amigo-black);
@@ -38,7 +38,7 @@ button[type='button']:not(
 .btn:active,
 button[type='submit']:active,
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle, .segmented-control__option)
   ):active {
   transform: translateY(2px);
 }
@@ -362,56 +362,6 @@ button.btn-secondary:focus-visible {
   letter-spacing: 0.04em;
 }
 
-/* De flip-animatie: bij maandwissel krijgt de nieuwe maand-"pagina" een
-   nieuwe key, waardoor de browser ze als een vers DOM-element behandelt
-   en de keyframe-animatie altijd opnieuw afspeelt — net als het
-   omslaan van een blaadje op een bureaukalender (split-flap, zoals in
-   het AMIGO-bewegingssysteem). */
-.calendar-flip-stage {
-  perspective: 1400px;
-}
-
-.calendar-page {
-  transform-origin: top center;
-  backface-visibility: hidden;
-}
-
-.calendar-page.flip-next {
-  animation: flip-next 0.35s ease;
-}
-
-.calendar-page.flip-prev {
-  animation: flip-prev 0.35s ease;
-}
-
-@keyframes flip-next {
-  0% {
-    transform: rotateX(-95deg);
-    opacity: 0;
-  }
-  65% {
-    transform: rotateX(10deg);
-    opacity: 1;
-  }
-  100% {
-    transform: rotateX(0deg);
-  }
-}
-
-@keyframes flip-prev {
-  0% {
-    transform: rotateX(95deg);
-    opacity: 0;
-  }
-  65% {
-    transform: rotateX(-10deg);
-    opacity: 1;
-  }
-  100% {
-    transform: rotateX(0deg);
-  }
-}
-
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -582,18 +532,32 @@ button.btn-secondary:focus-visible {
   }
 }
 
-.date-view-actions, .date-view-toggle, .answer-options {
+.date-view-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: .5rem;
 }
 .date-view-actions { justify-content: space-between; }
-.date-view-toggle button[aria-pressed="false"], .answer-options button[aria-pressed="false"] {
-  color: var(--ink);
-  border-color: var(--ink);
-  background: transparent;
+.vote-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
 }
+.vote-legend li { display: flex; align-items: center; gap: 0.4rem; }
+.vote-legend__swatch {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--ink);
+  background: var(--surface);
+}
+.vote-legend__swatch--yes { background: var(--vote-yes); }
+.vote-legend__swatch--maybe { background: var(--vote-maybe); }
+.vote-legend__swatch--no { background: var(--vote-no); }
 .date-cards {
   list-style: none;
   padding: 0;
