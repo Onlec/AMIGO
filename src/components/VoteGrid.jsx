@@ -44,6 +44,7 @@ export default function VoteGrid({ dates, votes, currentVoterId, canManage, onRe
                 <td>
                   <button
                     type="button"
+                    className="btn-danger"
                     onClick={() => onRemoveVoter(voterId)}
                     aria-label={`Verwijder ${voter.name}`}
                   >

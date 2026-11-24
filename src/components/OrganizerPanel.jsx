@@ -52,7 +52,7 @@ export default function OrganizerPanel({ dates, votes, onConfirm, onCancel }) {
       {error && <p className="error" role="alert">{error}</p>}
       <div className="edit-actions">
         <button type="button" onClick={handleConfirm} disabled={!selected || saving}>Bevestig deze datum</button>
-        <button type="button" onClick={onCancel} disabled={saving}>Annuleren</button>
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>Annuleren</button>
       </div>
     </section>
   );

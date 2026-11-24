@@ -66,6 +66,8 @@ export default function MonthCalendar({ renderDay, initialMonthFrom }) {
     });
   }
 
+  const now = new Date();
+  const todayKey = toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
   const cells = useMemo(() => getMonthGrid(view.year, view.month), [view]);
 
   return (
@@ -100,7 +102,7 @@ export default function MonthCalendar({ renderDay, initialMonthFrom }) {
               }
               const dateKey = toDateKey(view.year, view.month, day);
               return (
-                <div key={dateKey} className="calendar-cell">
+                <div key={dateKey} className="calendar-cell" aria-current={dateKey === todayKey ? 'date' : undefined}>
                   {renderDay(dateKey, day)}
                 </div>
               );

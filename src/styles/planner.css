@@ -105,10 +105,11 @@ h2 {
   margin-top: 1.5rem;
 }
 
-.form label {
+.form label,
+.name-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -116,11 +117,12 @@ h2 {
 }
 
 .form input,
-.form textarea {
+.form textarea,
+.name-field input {
   font-size: 1rem;
   padding: 0.6rem 0.75rem;
   border: 1.5px solid var(--ink);
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--ink);
   font-family: var(--font-body);
@@ -128,23 +130,32 @@ h2 {
   letter-spacing: normal;
 }
 
+.form input:hover,
+.form textarea:hover,
+.name-field input:hover {
+  border-color: var(--muted);
+}
+
+.name-field input:focus,
 .form input:focus,
 .form textarea:focus {
-  outline: 3px solid var(--amigo-electric-blue);
+  outline: 3px solid var(--amigo-signal-red);
   outline-offset: 1px;
 }
 
 .form fieldset {
   min-width: 0;
   border: 1.5px solid var(--ink);
-  border-radius: 3px;
+  border-radius: 0;
   padding: 1rem;
 }
 
-.form legend {
-  padding: 0 0.4rem;
+.form legend,
+.section-number {
+  font-family: var(--font-display);
+  font-weight: 600;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -152,44 +163,32 @@ h2 {
 .name-field {
   margin-top: 1rem;
   max-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
 }
 
-.name-field input {
-  font-size: 1rem;
-  padding: 0.6rem 0.75rem;
-  border: 1.5px solid var(--ink);
-  border-radius: 3px;
-  background: var(--surface);
-  color: var(--ink);
-  font-family: var(--font-body);
-  text-transform: none;
-  letter-spacing: normal;
+.form legend {
+  padding: 0 0.4rem;
+}
+
+.eyebrow {
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.eyebrow + h1 {
+  margin-top: 0;
 }
 
 .date-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.5rem;
 }
 
 .date-row input {
-  flex: 1;
-}
-
-.date-row button {
-  background: none;
-  border: 1.5px solid var(--ink);
-  border-radius: 3px;
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
+  flex: 1 1 7rem;
+  min-width: 0;
 }
 
 .error {
@@ -197,10 +196,14 @@ h2 {
   font-size: 0.9rem;
 }
 
+.vote-grid-scroll {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
 .vote-grid {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1.5rem;
   font-size: 0.9rem;
 }
 
@@ -209,6 +212,10 @@ h2 {
   border: 1px solid var(--border);
   padding: 0.5rem 0.6rem;
   text-align: center;
+}
+
+.vote-grid th:not(:first-child) {
+  white-space: nowrap;
 }
 
 .vote-grid th {
@@ -222,18 +229,49 @@ h2 {
 .vote-grid th:first-child,
 .vote-grid td:first-child {
   text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  max-width: 12rem;
+  overflow-wrap: anywhere;
 }
 
 .vote-grid .my-row td:first-child {
   font-weight: 600;
 }
 
-.vote-grid button {
-  background: var(--surface);
+.date-row .btn-danger,
+.vote-grid .btn-danger {
+  background: transparent;
   border: 1.5px solid var(--ink);
+  color: var(--ink);
   border-radius: 3px;
-  padding: 0.3rem 0.5rem;
+  min-width: 40px;
+  min-height: 40px;
   cursor: pointer;
+}
+
+.date-row .btn-danger:is(:hover, :focus-visible),
+.vote-grid .btn-danger:is(:hover, :focus-visible) {
+  border-color: var(--amigo-signal-red);
+  color: var(--amigo-signal-red);
+}
+
+button.btn-secondary {
+  background: transparent;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+button.btn-secondary:hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+button.btn-secondary:focus-visible {
+  outline: 3px solid var(--amigo-signal-red);
+  outline-offset: 2px;
 }
 
 .organizer-panel {
@@ -290,9 +328,10 @@ h2 {
 .calendar-header button {
   background: var(--surface);
   border: 1.5px solid var(--ink);
-  border-radius: 3px;
-  width: 2.2rem;
-  height: 2.2rem;
+  border-radius: 0;
+  color: var(--ink);
+  width: 40px;
+  height: 40px;
   font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
@@ -358,7 +397,7 @@ h2 {
 
 .calendar-weekdays {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin-bottom: 0.3rem;
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -369,7 +408,7 @@ h2 {
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.25rem;
 }
 
@@ -379,6 +418,22 @@ h2 {
   display: flex;
 }
 
+.calendar-cell[aria-current='date'] {
+  position: relative;
+}
+
+.calendar-cell[aria-current='date']::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 30%;
+  right: 30%;
+  height: 2px;
+  background: var(--amigo-signal-red);
+  box-shadow: 0 0 0 1px var(--amigo-paper);
+  pointer-events: none;
+}
+
 .calendar-cell--empty {
   visibility: hidden;
 }
@@ -386,7 +441,7 @@ h2 {
 .calendar-day-button {
   width: 100%;
   border: 1.5px solid var(--border);
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
@@ -401,9 +456,9 @@ h2 {
 }
 
 .calendar-day-button.is-selected {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
+  background: var(--amigo-signal-red);
+  border-color: var(--amigo-signal-red);
+  color: #fff;
 }
 
 .calendar-day-plain {
@@ -491,6 +546,14 @@ h2 {
 }
 
 @media (max-width: 480px) {
+  .page {
+    padding-inline: 0.75rem;
+  }
+
+  .calendar-cell {
+    min-height: 40px;
+  }
+
   .organizer-panel,
   .form fieldset {
     padding: 0.6rem;

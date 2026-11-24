@@ -74,6 +74,7 @@ export default function PollPage({ pollId }) {
 
   return (
     <div className="page">
+      <div className="lab eyebrow">AMIGO / STEMMEN</div>
       <h1>{poll.title}</h1>
       <p role="status" className="description">
         {row.queue.some(item => item.kind === 'create')
@@ -145,13 +146,15 @@ export default function PollPage({ pollId }) {
       {hasDates && hasVoters && (
         <>
           <h2>Overzicht</h2>
-          <VoteGrid
-            dates={dates}
-            votes={votes}
-            currentVoterId={voterId}
-            canManage={editing}
-            onRemoveVoter={voter => save('removeVoter', { voter })}
-          />
+          <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
+            <VoteGrid
+              dates={dates}
+              votes={votes}
+              currentVoterId={voterId}
+              canManage={editing}
+              onRemoveVoter={voter => save('removeVoter', { voter })}
+            />
+          </div>
         </>
       )}
 

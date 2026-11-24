@@ -53,7 +53,7 @@ export default function EditPollPanel({ poll, onSave, onCancel, onChooseFinal })
         {error && <p className="error" role="alert">{error}</p>}
         <div className="edit-actions">
           <button type="submit" disabled={saving}>Opslaan</button>
-          <button type="button" disabled={saving} onClick={onCancel}>Annuleren</button>
+          <button type="button" className="btn-secondary" disabled={saving} onClick={onCancel}>Annuleren</button>
         </div>
       </form>
       {onChooseFinal && <button type="button" disabled={Boolean(dirty) || saving} onClick={onChooseFinal}>Einddatum kiezen</button>}

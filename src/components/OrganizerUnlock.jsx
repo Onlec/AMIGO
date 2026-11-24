@@ -35,7 +35,7 @@ export default function OrganizerUnlock({ pollId, onUnlock, onCancel }) {
       <button type="submit" disabled={checking || !password}>
         {checking ? 'Controleren...' : 'Ontgrendelen'}
       </button>
-      <button type="button" disabled={checking} onClick={onCancel}>Annuleren</button>
+      <button type="button" className="btn-secondary" disabled={checking} onClick={onCancel}>Annuleren</button>
     </form>
   );
 }

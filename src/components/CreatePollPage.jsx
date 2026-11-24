@@ -69,8 +69,10 @@ export default function CreatePollPage() {
 
   return (
     <div className="page">
+      <div className="lab eyebrow">AMIGO / PLANNER</div>
       <h1>Nieuwe datumprikker</h1>
       <form onSubmit={handleSubmit} className="form">
+        <span className="lab section-number">01 — Prikker instellen</span>
         <label>
           Titel
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Teamuitje december" />
@@ -82,7 +84,7 @@ export default function CreatePollPage() {
         </label>
 
         <fieldset>
-          <legend>Organisator-wachtwoord</legend>
+          <legend>02 — Organisator-wachtwoord</legend>
           <p className="description">
             Hiermee kan je nadien de prikker bewerken, deelnemers verwijderen en de uiteindelijke datum kiezen.
           </p>
@@ -101,13 +103,14 @@ export default function CreatePollPage() {
         </fieldset>
 
         <fieldset>
-          <legend>Mogelijke datums — klik dagen aan in de kalender</legend>
+          <legend>03 — Mogelijke datums</legend>
 
           <MonthCalendar
             renderDay={(dateKey, dayNum) => (
               <button
                 type="button"
                 className={`calendar-day-button ${selectedDates[dateKey] ? 'is-selected' : ''}`}
+                aria-pressed={Boolean(selectedDates[dateKey])}
                 onClick={() => toggleDate(dateKey)}
               >
                 {dayNum}
@@ -125,10 +128,11 @@ export default function CreatePollPage() {
                   <span>{dateKey}</span>
                   <input
                     type="time"
+                    aria-label={`Tijdstip voor ${dateKey}`}
                     value={info.time}
                     onChange={(e) => updateTime(dateKey, e.target.value)}
                   />
-                  <button type="button" onClick={() => removeDate(dateKey)} aria-label="Verwijder datum">
+                  <button type="button" className="btn-danger" onClick={() => removeDate(dateKey)} aria-label="Verwijder datum">
                     ✕
                   </button>
                 </div>
