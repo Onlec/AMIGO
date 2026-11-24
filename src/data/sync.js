@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { pendingPolls, readLocal, updateLocal } from './polls.js';
+import { deferLegacyVote, pendingPolls, readLocal, updateLocal } from './polls.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -39,7 +39,7 @@ export function watchStatus(id, listener) {
 }
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
+const labels = { join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
   removeDate: 'Datum verwijderen', close: 'Datum bevestigen', removeVoter: 'Deelnemer verwijderen' };
 
 async function synchronize(id) {
@@ -49,6 +49,11 @@ async function synchronize(id) {
   let row = await readLocal(id);
   while (row?.queue.length) {
     const command = row.queue[0];
+    if (command.kind === 'vote') {
+      await deferLegacyVote(id, command.operation);
+      row = await readLocal(id);
+      continue;
+    }
     let rejection;
     try {
       if (command.kind === 'edit') {
@@ -91,6 +96,14 @@ export function sync(id) {
     .catch(error => status(id, client ? 'Synchronisatie uitgesteld. ' + error.message : error.message))
     .finally(() => running.delete(id));
   return job.promise;
+}
+
+export async function unlockVoter(id, session, claim) {
+  if (!navigator.onLine) throw new Error('Ga online om je stemwachtwoord te controleren.');
+  await connect();
+  await sync(id);
+  await rpc('amigo_voter_unlock', { p: id, ...session, claim });
+  await sync(id);
 }
 
 export async function unlock(id, proof) {

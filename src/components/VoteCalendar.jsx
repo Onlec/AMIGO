@@ -21,6 +21,7 @@ export default function VoteCalendar({ dates, myVotes, onVote }) {
           <button
             type="button"
             className={`calendar-day-button calendar-day-button--vote vote-${value}`}
+            disabled={!onVote}
             onClick={() => onVote(dateKey, nextVoteValue(value))}
             title={candidate.time ? `${dateKey} ${candidate.time}` : dateKey}
           >

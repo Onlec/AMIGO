@@ -3,6 +3,8 @@ import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
 import { follow, syncStatus, unlock, watchStatus } from '../data/sync.js';
 import { parseVotes, buildShareText } from '../utils/votes.js';
 import VoteCalendar from './VoteCalendar.jsx';
+import { readVoterSession, rememberVoterSession } from '../data/voterSession.js';
+import VoterForm from './VoterForm.jsx';
 import VoteGrid from './VoteGrid.jsx';
 import OrganizerPanel from './OrganizerPanel.jsx';
 import OrganizerUnlock from './OrganizerUnlock.jsx';
@@ -33,29 +35,13 @@ export default function PollPage({ pollId }) {
   const poll = useMemo(() => project(row), [row]);
   const dates = poll?.dates || {};
   const votes = poll?.votes || {};
-  const voterId = poll?.ownVoter;
+  const [session, setSession] = useState(() => readVoterSession(pollId));
+  const voterId = votes[session?.voter] ? session.voter : null;
   const [mode, setMode] = useState('view');
   const editing = mode === 'edit' || mode === 'final';
-  const [nameInput, setNameInput] = useState('');
-  const [namePrefilled, setNamePrefilled] = useState(false);
-  const [nameError, setNameError] = useState('');
-
-  useEffect(() => {
-    if (!namePrefilled && voterId && votes[voterId]) {
-      setNameInput(votes[voterId].name);
-      setNamePrefilled(true);
-    }
-  }, [voterId, votes, namePrefilled]);
-
-  function handleVote(dateId, value) {
-    const trimmedName = nameInput.trim();
-    if (!trimmedName) {
-      setNameError('Vul eerst je naam in.');
-      return;
-    }
-    setNameError('');
-
-    save('vote', { day: dateId, value, name: trimmedName });
+  function selectVoter(next) {
+    rememberVoterSession(pollId, next);
+    setSession(next);
   }
 
   function save(kind, body) {
@@ -70,6 +56,11 @@ export default function PollPage({ pollId }) {
 
   const hasDates = Object.keys(dates).length > 0;
   const hasVoters = Object.keys(votes).length > 0;
+  const deferred = row.legacyVotes || [];
+  const localParticipants = {};
+  for (const { body } of deferred) {
+    if (!body.existing && !votes[body.voter]) localParticipants[body.voter] = { name: body.name, localOnly: true };
+  }
   const finalDate = poll.finalDateId ? dates[poll.finalDateId] : null;
 
   return (
@@ -77,7 +68,7 @@ export default function PollPage({ pollId }) {
       <div className="lab eyebrow">AMIGO / STEMMEN</div>
       <h1>{poll.title}</h1>
       <p role="status" className="description">
-        {row.queue.some(item => item.kind === 'create')
+        {row.queue.some(item => ['create', 'createPoll'].includes(item.kind))
           ? 'Lokaal bewaard. Anderen kunnen de link openen na de eerste synchronisatie.'
           : row.queue.length ? 'Wijzigingen lokaal bewaard.' : ''}
         {' '}{row.queue.length && status === 'Gesynchroniseerd' ? '' : status}
@@ -110,23 +101,20 @@ export default function PollPage({ pollId }) {
 
       {!editing && hasDates && poll.status === 'open' && (
         <>
-          <h2>Jouw stem — klik een datum aan</h2>
-          <label className="name-field">
-            Jouw naam
-            <input
-              value={nameInput}
-              onChange={(e) => {
-                setNameInput(e.target.value);
-                if (e.target.value.trim()) setNameError('');
-              }}
-              placeholder="Vul je naam in om te stemmen"
-            />
-          </label>
-          {nameError && <p className="error">{nameError}</p>}
+          <h2>Jouw stem</h2>
+          {deferred.length > 0 && <p>Er staan oude stemmen op dit toestel klaar. Kies je naam bij <strong>Eerdere stem aanpassen</strong> om ze met je stemwachtwoord te bewaren.</p>}
+          {voterId ? (
+            <>
+              <p>Je stemt als <strong>{votes[voterId].name}</strong>.</p>
+              <button type="button" className="btn-secondary" onClick={() => selectVoter(null)}>Van stemmer wisselen</button>
+            </>
+          ) : (
+            <VoterForm pollId={pollId} votes={{ ...localParticipants, ...votes }} legacyVoter={poll.ownVoter} onSelect={selectVoter} />
+          )}
           <VoteCalendar
             dates={dates}
             myVotes={parseVotes(votes[voterId]?.votesJson)}
-            onVote={handleVote}
+            onVote={voterId ? (day, value) => save('castVote', { ...session, day, value }) : undefined}
           />
         </>
       )}

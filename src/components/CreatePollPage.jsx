@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { enqueue } from '../data/polls.js';
 import { hashPassword } from '../utils/password.js';
+import { rememberVoterSession, voterSession } from '../data/voterSession.js';
 import MonthCalendar from './MonthCalendar.jsx';
 
 export default function CreatePollPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [organizerName, setOrganizerName] = useState('');
+  const [participating, setParticipating] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [selectedDates, setSelectedDates] = useState({});
@@ -37,6 +40,7 @@ export default function CreatePollPage() {
 
   function validate() {
     if (!title.trim()) return 'Geef de prikker een titel.';
+    if (!organizerName.trim()) return 'Vul je naam als organisator in.';
     if (!password) return 'Kies een wachtwoord voor jezelf als organisator.';
     if (password !== passwordConfirm) return 'De twee wachtwoorden komen niet overeen.';
     if (Object.keys(selectedDates).length < 2) return 'Selecteer minstens 2 datums in de kalender.';
@@ -57,7 +61,12 @@ export default function CreatePollPage() {
       const pollId = crypto.randomUUID();
       const proof = await hashPassword(pollId, password);
       const dates = Object.fromEntries(Object.entries(selectedDates).map(([date, info]) => [date, { date, ...info }]));
-      await enqueue(pollId, 'create', { title: title.trim(), description: description.trim(), proof, dates });
+      const session = participating ? await voterSession(pollId, crypto.randomUUID(), password) : null;
+      await enqueue(pollId, 'createPoll', {
+        title: title.trim(), description: description.trim(), organizerName: organizerName.trim(), proof, dates,
+        ...(session && { voter: session.voter, voterProof: session.proof }),
+      });
+      rememberVoterSession(pollId, session);
       window.location.href = window.location.pathname + '?poll=' + pollId;
     } catch (err) {
       setError('Lokaal opslaan mislukt. ' + err.message);
@@ -84,7 +93,8 @@ export default function CreatePollPage() {
         </label>
 
         <fieldset>
-          <legend>02 — Organisator-wachtwoord</legend>
+          <legend>02 — Organisator</legend>
+          <label>Naam organisator<input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
           <p className="description">
             Hiermee kan je nadien de prikker bewerken, deelnemers verwijderen en de uiteindelijke datum kiezen.
           </p>
@@ -99,6 +109,10 @@ export default function CreatePollPage() {
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
             />
+          </label>
+          <label className="participation-choice">
+            <input type="checkbox" checked={participating} onChange={e => setParticipating(e.target.checked)} />
+            Zelf meestemmen met mijn naam en wachtwoord
           </label>
         </fieldset>
 

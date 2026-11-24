@@ -5,8 +5,8 @@ AmiGo is een React/Vite-app met dertien tools. De rotary-index op de homepage we
 ## Installeren
 
 1. Installeer Node.js 22.12 of nieuwer en voer `npm ci` uit.
-2. Maak een Supabase-project. Schakel **Allow anonymous sign-ins** in onder Authentication. Deelnemers vullen in de app alleen hun naam in.
-3. Voer de SQL uit `supabase/migrations/202611230001_planner.sql` eenmaal uit in de SQL Editor van het nieuwe project. De migratie maakt de privétabellen, RPC-functies en het toegangsbeleid voor de privékanalen in Realtime aan. Gebruik een eigen project voor deze app.
+2. Maak een Supabase-project. Schakel **Allow anonymous sign-ins** in onder Authentication. Deelnemers gebruiken per prikker een naam en stemwachtwoord.
+3. Voer de SQL-bestanden uit `supabase/migrations/` eenmaal in volgorde van bestandsnaam uit in de SQL Editor van het nieuwe project. De migratie maakt de privétabellen, RPC-functies en het toegangsbeleid voor de privékanalen in Realtime aan. Gebruik een eigen project voor deze app.
 4. Kopieer `.env.example` naar `.env`. Vul `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` in met de project-URL en publieke sleutel van dit project. Vite neemt deze waarden op tijdens de build.
 5. Start met `npm run dev`. Voor de productieversie voer je `npm run build` uit en publiceer je de inhoud van `dist/` op de root van een HTTPS-site. Met `npm run preview` test je die versie op localhost.
 
@@ -14,8 +14,8 @@ Dit is een schone start voor de Datumprikker. Prikkers uit de Gun-prerelease wor
 
 ## Gebruik en offline werken
 
-- Open `/` voor de index of `?page=planner` voor een nieuwe prikker. Kies minstens twee datums, eventueel met tijdstip, en een organisatorwachtwoord.
-- Deel de link met `?poll=<id>`. Deelnemers doorlopen per datum Ja, Misschien, Nee en leeg. De organisator kan de gegevens bewerken, deelnemers verwijderen en een datum bevestigen. Een ander toestel kan online met het wachtwoord ontgrendelen.
+- Open `/` voor de index of `?page=planner` voor een nieuwe prikker. Kies minstens twee datums, eventueel met tijdstip, en geef een organisatornaam en wachtwoord op. Selecteer **Zelf meestemmen** om meteen als deelnemer te starten.
+- Deel de link met `?poll=<id>`. Via **Nieuwe stem uitbrengen** maak je een deelnemer aan. Via **Eerdere stem aanpassen** kies je jouw naam en vul je online je wachtwoord in, ook op een ander toestel. Bestaande deelnemers zonder wachtwoord stellen dit eerst in vanuit hun oorspronkelijke browsersessie. **Van stemmer wisselen** beëindigt de selectie in dit tabblad. Deelnemers doorlopen per datum Ja, Misschien, Nee en leeg. De organisator kan de gegevens bewerken, deelnemers verwijderen en een datum bevestigen. Een ander toestel kan online met het wachtwoord ontgrendelen.
 - Open de productieversie eenmaal online zodat de serviceworker de app en de lettertypen kan opslaan. Open een gedeelde prikker eenmaal online om ook de gegevens op dat toestel te bewaren. Je kunt daarna offline herladen, prikkers aanmaken, stemmen en ontgrendelde prikkers beheren.
 - Elke lokale wijziging krijgt een eigen ID. Bij herverbinden verstuurt de geopende app de wachtrij in volgorde. Na het sluiten van de browser gaat dit verder bij het volgende bezoek. Een nieuwe offline prikker is voor anderen bereikbaar zodra de eerste synchronisatie is bevestigd.
 - Stemmen op verschillende datums worden afzonderlijk verwerkt. Bij wijzigingen aan hetzelfde veld geldt de laatst door de server geaccepteerde opdracht. De server weigert onder meer stemmen op verwijderde datums en gesloten prikkers. De pagina toont het resultaat.

@@ -50,19 +50,27 @@ export function project(row) {
   if (!row) return null;
   let poll = structuredClone(row.base);
   for (const { kind, body } of row.queue) {
-    if (kind === 'create') {
+    if (kind === 'create' || kind === 'createPoll') {
       poll = { title: body.title, description: body.description, status: 'open', finalDateId: null,
         organizer: true, dates: structuredClone(body.dates), votes: {}, ownVoter: null };
+      if (body.voter) poll.votes[body.voter] = { name: body.organizerName, votesJson: '{}' };
       continue;
     }
     if (!poll) continue;
     switch (kind) {
+      case 'join':
+        if (poll.status === 'open') poll.votes[body.voter] = { name: body.name, votesJson: '{}' };
+        break;
+      case 'castVote':
       case 'vote': {
         if (poll.status === 'closed' || !poll.dates[body.day]) break;
+        if (kind === 'castVote' && !poll.votes[body.voter]) break;
         const choices = JSON.parse(poll.votes[body.voter]?.votesJson || '{}');
         choices[body.day] = body.value;
-        poll.votes[body.voter] = { name: body.name, votesJson: JSON.stringify(choices) };
-        poll.ownVoter = body.voter;
+        const participant = poll.votes[body.voter] || { name: body.name };
+        participant.votesJson = JSON.stringify(choices);
+        poll.votes[body.voter] = participant;
+        if (kind === 'vote') poll.ownVoter = body.voter;
         break;
       }
       case 'details': Object.assign(poll, body); break;
@@ -90,12 +98,33 @@ export function project(row) {
   return poll;
 }
 
+// Keep offline votes from the old client until their voter has a password.
+export async function deferLegacyVote(id, operation) {
+  await updateLocal(id, row => {
+    const command = row.queue.find(item => item.operation === operation);
+    if (command?.kind !== 'vote') return;
+    (row.legacyVotes ??= []).push(command);
+    row.queue = row.queue.filter(item => item !== command);
+  });
+}
+
+export async function activateVoter(id, session, name) {
+  await updateLocal(id, row => {
+    const belongsToVoter = item => item.kind === 'vote' && item.body.voter === session.voter;
+    const pending = [...(row.legacyVotes || []), ...row.queue].filter(belongsToVoter);
+    row.legacyVotes = (row.legacyVotes || []).filter(item => !belongsToVoter(item));
+    row.queue = row.queue.filter(item => !belongsToVoter(item));
+    if (name) row.queue.push({ operation: crypto.randomUUID(), kind: 'join', body: { ...session, name } });
+    // Keep the original receipt in case the server already processed an offline vote.
+    for (const { operation, body } of pending) {
+      row.queue.push({ operation, kind: 'castVote', body: { ...session, day: body.day, value: body.value } });
+    }
+  });
+  window.dispatchEvent(new CustomEvent('amigo-queued', { detail: id }));
+}
+
 export async function enqueue(id, kind, body) {
   await updateLocal(id, row => {
-    if (kind === 'vote') {
-      const voter = project(row)?.ownVoter;
-      body = { ...body, voter: voter || crypto.randomUUID(), existing: Boolean(voter) };
-    }
     row.queue.push({ operation: crypto.randomUUID(), kind, body });
   });
   window.dispatchEvent(new CustomEvent('amigo-queued', { detail: id }));
