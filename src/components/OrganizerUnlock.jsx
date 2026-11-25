@@ -27,11 +27,11 @@ export default function OrganizerUnlock({ onEdit, onChooseFinal, onReopen, final
             {onChooseFinal && <button ref={finalButton} type="button" value="final" className="btn-secondary" disabled={!authorized} onClick={() => {
               lastAction.current = 'final';
               onChooseFinal();
-            }}>{finalDateChosen ? 'Einddatum wijzigen' : 'Einddatum kiezen'}</button>}
+            }}>{finalDateChosen ? 'Wijzig datum' : 'Datum kiezen'}</button>}
           </div>
           {finalDateChosen && onReopen && <div className="organizer-reopen">
             <p className="description">Verwijder de gekozen datum en laat iedereen opnieuw stemmen. Bestaande stemmen blijven behouden.</p>
-            <button type="button" value="reopen" className="btn-secondary" disabled={!authorized} onClick={onReopen}>Poll heropenen</button>
+            <button type="button" value="reopen" className="btn-secondary" disabled={!authorized} onClick={onReopen}>Heropenen</button>
           </div>}
         </>}
       </CollapsibleSegment>

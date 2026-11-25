@@ -125,6 +125,22 @@ try {
       if (node.scrollWidth > node.clientWidth + 1) errors.push('segment content overflow');
     }
     const visible = node => node.getBoundingClientRect().height > 0 && !node.closest('.collapsible-segment[data-open=false]');
+    const actions = '.edit-actions > button,.edit-actions > .btn,.organizer-reopen > button,.share-hint > button,.date-jump-actions > button,.date-cards > li > button';
+    for (const button of page.querySelectorAll(actions)) {
+      if (!visible(button)) continue;
+      const rect = button.getBoundingClientRect();
+      near(rect.width, 128, 'text button width');
+      near(rect.height, 48, 'text button height');
+      if (button.scrollWidth > button.clientWidth + 1 || button.scrollHeight > button.clientHeight + 1) errors.push('button label clipped');
+    }
+    if (frame) {
+      const rail = frame.getBoundingClientRect().right - 1.5 - parseFloat(getComputedStyle(page).getPropertyValue('--planner-inset'));
+      for (const row of page.querySelectorAll('.edit-actions,.share-hint,.organizer-reopen')) {
+        if (!visible(row)) continue;
+        const last = [...row.querySelectorAll(':scope > button,:scope > .btn')].filter(visible).at(-1);
+        if (last) near(last.getBoundingClientRect().right, rail, 'page action right edge');
+      }
+    }
     for (const cell of page.querySelectorAll('.calendar-cell:not(.calendar-cell--empty)')) {
       if (!visible(cell)) continue;
       const rect = cell.getBoundingClientRect();

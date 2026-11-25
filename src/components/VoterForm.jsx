@@ -20,7 +20,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
   const availability = useRef(null);
   const handledLogin = useRef(null);
 
-  const [id, person] = Object.entries(participants).find(([, person]) => normalize(person.name) === normalize(name)) || [];
+  const [id] = Object.entries(participants).find(([, person]) => normalize(person.name) === normalize(name)) || [];
   const activePerson = participants[session?.voter];
   const votingSignedIn = Boolean(session && activePerson);
   const signedIn = votingSignedIn || Boolean(session?.organizer);
@@ -104,7 +104,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
   return (
     <div className="form">
       <CollapsibleSegment ref={segment} title="01 — Jouw gegevens" open={active}>
-        <form onSubmit={signIn}>
+        <form onSubmit={signIn} aria-busy={locked || undefined}>
           <fieldset className="voter-credentials" disabled={busy}>
             <div className="access-row">
               <div className="access-fields">
@@ -112,7 +112,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
                   <p>Aangemeld als <strong>{activePerson?.name || session.name}</strong>{session.organizer ? ' (organisator)' : ''}.</p>
                 ) : (
                   <>
-                    <label>Jouw naam<input value={name} required disabled={locked} onChange={e => {
+                    <label>Naam<input value={name} required disabled={locked} onChange={e => {
                       setName(e.target.value);
                       setPassword('');
                       setError('');
@@ -131,10 +131,6 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
                 {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Afmelden</button>}
               </div>
             </div>
-            {!signedIn && <p className="description access-hint">{person
-              ? 'Meld je aan met je wachtwoord om je antwoorden te bekijken en aan te passen.'
-              : 'Gebruik je bestaande wachtwoord of kies als nieuwe deelnemer een wachtwoord.'}</p>}
-            {pending && <p role="status" className="description">Je aanmelding wordt gecontroleerd. Wacht op verbinding met de database.</p>}
             {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
           </fieldset>
         </form>

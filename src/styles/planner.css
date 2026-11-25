@@ -216,10 +216,6 @@ h2 {
   max-width: 12rem;
 }
 
-.access-hint {
-  margin: 0.75rem 0 0;
-}
-
 .edit-actions.organizer-actions {
   flex-wrap: nowrap;
 }

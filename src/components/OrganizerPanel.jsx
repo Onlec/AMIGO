@@ -54,7 +54,7 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
         </div>
       } renderCard={day => (
           <button type="button" aria-pressed={day === selectedDateId} onClick={() => setSelectedDateId(day)}>
-            {day === selectedDateId ? 'Geselecteerd' : 'Kies deze datum'}
+            {day === selectedDateId ? 'Gekozen' : 'Selecteren'}
           </button>
       )} renderCardMeta={day => <span>{tally[day].yes} ja, {tally[day].maybe} misschien, {tally[day].no} nee</span>} renderDay={(day, number) => (
         <button type="button" aria-label={formatDay(day)} aria-pressed={day === selectedDateId}
@@ -66,7 +66,7 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
       {selected && <p role="status">{formatProposal(selected.date, selected.time)} — {counts.yes} ja, {counts.maybe} misschien, {counts.no} nee</p>}
       {error && <p className="error" role="alert">{error}</p>}
       <div className="edit-actions">
-        <button type="button" onClick={handleConfirm} disabled={!selected || selectedDateId === finalDateId || saving}>Bevestig deze datum</button>
+        <button type="button" onClick={handleConfirm} disabled={!selected || selectedDateId === finalDateId || saving}>Bevestigen</button>
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>Annuleren</button>
       </div>
     </section>

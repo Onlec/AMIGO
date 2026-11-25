@@ -7,6 +7,7 @@
   --planner-section-gap: 24px;
   --planner-field-gap: 16px;
   --planner-control-gap: 12px;
+  --planner-action-width: 128px;
 }
 
 .planner-header .wrap,
@@ -51,12 +52,23 @@
 .planner-page .access-row:has(.access-fields input) { align-items: end; }
 .planner-page .access-fields { gap: var(--planner-field-gap); }
 .planner-page .access-fields p { overflow-wrap: anywhere; }
-.planner-page .access-hint { margin: 12px 0 0; }
 .planner-page .edit-actions { align-items: center; gap: var(--planner-control-gap); }
-.planner-page .edit-actions > :is(button, .btn) { width: auto; max-width: 208px; }
+.planner-page :is(.edit-actions, .organizer-reopen, .share-hint, .date-jump-actions) > :is(button, .btn),
+.planner-page .date-cards > li > button {
+  width: var(--planner-action-width);
+  min-width: var(--planner-action-width);
+  max-width: var(--planner-action-width);
+  height: 48px;
+  min-height: 48px;
+  flex: 0 0 var(--planner-action-width);
+  padding: 4px 8px;
+  font-size: 15px;
+  line-height: 1.2;
+}
+.planner-page .planner-page-actions,
+.planner-page .share-hint { padding-inline: calc(var(--planner-inset) + 1.5px); }
 .planner-page button[type]:not(:where(.calendar button, .date-row button, .vote-grid button, .segmented-control__option, .copy-button--icon)) { font-size: 15px; }
 .planner-page .organizer-actions { flex-wrap: wrap; }
-.planner-page .organizer-actions button[type] { flex: 0 1 auto; min-width: 0; width: auto; max-width: 208px; }
 .planner-page .organizer-reopen { margin-top: 24px; gap: 12px 16px; }
 .planner-page .organizer-reopen > p { margin: 0; }
 .planner-page .organizer-panel--final { gap: 16px; }

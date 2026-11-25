@@ -159,7 +159,7 @@ try {
     }
   })()`);
   await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
-  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.some(command => command.kind === 'signIn'))"));
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Wait for server confirmation');
   const loginMotion = await evaluate(`recordMotion(() => pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.shift();
@@ -348,7 +348,7 @@ try {
     }
   })()`);
   await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
-  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.some(command => command.kind === 'signIn'))"));
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.pop();
     row.loginResults[login.operation] = { rejection: 'Wachtwoord klopt niet.' };
@@ -369,7 +369,7 @@ try {
     input.dispatchEvent(new Event('input', { bubbles: true }));
   })()`);
   await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
-  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.some(command => command.kind === 'signIn'))"));
   const reducedLogin = await evaluate(`recordMotion(() => pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.pop();
     row.loginResults[login.operation] = { session: { voter: login.body.voter, name: login.body.name, organizer: false } };
@@ -395,7 +395,7 @@ try {
     }
   })()`);
   await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
-  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.some(command => command.kind === 'signIn'))"));
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.pop();
     row.base.organizerVoter = login.body.voter;
@@ -483,7 +483,7 @@ try {
   assert.equal(await evaluate("sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Final-date selection preserves the voter session');
   assert.equal(await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').disabled"), false, 'Cancelling final-date selection restores normal voting');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
-  await until(() => evaluate("document.querySelector('.unlock-form button[value=final]')?.textContent === 'Einddatum wijzigen'"));
+  await until(() => evaluate("document.querySelector('.unlock-form button[value=final]')?.textContent === 'Wijzig datum'"));
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), false, 'Closed polls remain editable and allow replacing the final date');
   await evaluate("document.querySelector('.unlock-form button[value=edit]').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel textarea') !== null"));
@@ -529,7 +529,7 @@ try {
           if (now - start < 1500) requestAnimationFrame(sample); else resolve(samples);
         }
         requestAnimationFrame(sample);
-        [...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Bevestig deze datum').click();
+        [...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Bevestigen').click();
       })`);
       assert.ok(sequence.some(sample => !sample.banner && sample.moving), 'Final date stays hidden while segments finish closing');
       assert.ok(sequence.some(sample => sample.banner && sample.confetti), 'Organizer confirmation reveals the date and starts confetti');
@@ -549,7 +549,7 @@ try {
   await until(() => evaluate("document.querySelector('.final-date') === null && document.querySelector('.voter-availability').dataset.open === 'true'"));
   assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).finalDateId)'), null, 'Reopening removes the chosen date');
   assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))'), votesBeforeDateChange, 'Reopening preserves all votes');
-  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=final]').textContent"), 'Einddatum kiezen', 'Reopened poll offers a fresh final-date choice');
+  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=final]').textContent"), 'Datum kiezen', 'Reopened poll offers a fresh final-date choice');
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=reopen]') === null && document.querySelector('.vote-grid .chosen-column') === null"), true, 'Reopened poll removes final-date actions and highlights');
   const beforeReopenedVote = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue.length)');
   await evaluate("document.querySelector('.unlock-form button[value=edit]').click()");
@@ -622,7 +622,7 @@ try {
       }
     })()`);
     await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
-    await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+    await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.some(command => command.kind === 'signIn'))"));
     await evaluate(`pollData.updateLocal(fixturePoll, row => {
       const login = row.queue.pop();
       if (login.kind !== 'signIn') throw new Error('Expected unified sign-in');
@@ -696,7 +696,7 @@ try {
     input.dispatchEvent(new Event('input', { bubbles: true }));
   })()`);
   await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
-  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.some(command => command.kind === 'signIn'))"));
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.pop();
     (row.loginResults ??= {})[login.operation] = { session: {

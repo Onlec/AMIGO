@@ -394,7 +394,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       if (final && state.sort === 'attendance') entries.sort((a, b) => b.yes - a.yes || a.day - b.day);
       return `<div class="cards">${entries.map(date => `<article class="date-card ${final ? 'final-card' : ''}">
         <strong>${date.label}</strong>
-        ${final ? button(date.day === 6 ? 'Geselecteerd' : 'Kies deze datum', 'select-date', date.day !== 6, `aria-pressed="${date.day === 6}"`) : `<div class="votes" role="group" aria-label="Beschikbaarheid op ${date.label}">${['✓', '?', '×'].map((vote, i) => button(vote, 'vote', false, `aria-label="${['Ja', 'Misschien', 'Nee'][i]}" aria-pressed="${i === 0}"`)).join('')}</div>`}
+        ${final ? button(date.day === 6 ? 'Gekozen' : 'Selecteren', 'select-date', date.day !== 6, `aria-pressed="${date.day === 6}"`) : `<div class="votes" role="group" aria-label="Beschikbaarheid op ${date.label}">${['✓', '?', '×'].map((vote, i) => button(vote, 'vote', false, `aria-label="${['Ja', 'Misschien', 'Nee'][i]}" aria-pressed="${i === 0}"`)).join('')}</div>`}
         <p class="card-meta"><span class="time">${date.time}</span>${final ? `<span>${date.yes} ja, 1 misschien, 1 nee</span>` : ''}</p>
       </article>`).join('')}</div>`;
     }
@@ -419,14 +419,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         ${segment('01 — Prikker instellen', `<div class="fields">${label('Titel', title())}${description()}</div>`)}
         ${segment('02 — Organisator', `<div class="fields">${label('Naam organisator', person())}${label('Wachtwoord', 'voorbeeld', 'password')}${participation()}</div>`)}
         ${segment('03 — Mogelijke datums', calendar(true) + `<div class="selected-dates"><p>Geselecteerd (${dates().length}) — optioneel een tijdstip:</p>${dates().map(date => `<div class="date-row"><span>${date.label}</span><input type="time" aria-label="Tijdstip voor ${date.label}" value="${date.time}">${button('×', 'remove-date', true, 'aria-label="Verwijder datum"', 'square')}</div>`).join('')}</div>`)}
-        ${actionRow(button('Prikker aanmaken', 'share'))}</form>`;
+        <div class="page-actions">${actionRow(button('Aanmaken', 'share'))}</div></form>`;
     }
     function share() {
       return `<div class="eyebrow">AMIGO / delen</div><h1>Deel je datumprikker</h1><p class="description">${title()}</p>
-        <div class="segments">${segment('Stemlink', `<div class="fields">${label('Stemlink', 'https://amigo.example/?poll=voorbeeld', 'url', 'readonly')}<p class="description">Klaar om te delen.</p>${actionRow(button('Link kopiëren', 'copy', true) + button('Naar de datumprikker', 'poll'))}</div>`)}</div>`;
+        <div class="segments">${segment('Stemlink', `<div class="fields">${label('Stemlink', 'https://amigo.example/?poll=voorbeeld', 'url', 'readonly')}<p class="description">Klaar om te delen.</p>${actionRow(button('Link kopiëren', 'copy', true) + button('Open prikker', 'poll'))}</div>`)}</div>`;
     }
     function credentials() {
-      if (state.scenario === 'guest') return `<div class="access-row"><div class="fields">${label('Jouw naam', '')}${label('Wachtwoord', '', 'password')}</div><div class="actions">${button('Aanmelden', 'login')}</div></div><p class="description hint">Gebruik je bestaande wachtwoord of kies als nieuwe deelnemer een wachtwoord.</p>`;
+      if (state.scenario === 'guest') return `<div class="access-row"><div class="fields">${label('Jouw naam', '')}${label('Wachtwoord', '', 'password')}</div><div class="actions">${button('Aanmelden', 'login')}</div></div>`;
       return `<div class="access-row"><p>Aangemeld als <strong>${escape(person())}</strong>${state.scenario !== 'voter' ? ' (organisator)' : ''}.</p>${actionRow(button('Afmelden', 'logout', true))}</div>`;
     }
     function edit() {
@@ -439,13 +439,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     function final() {
       return `<h2>${state.scenario === 'closed' ? 'Einddatum wijzigen' : 'Einddatum kiezen'}</h2>${choices(true)}
         <p class="selection-summary">Zo 6 dec. 2026, 18:30 — 5 ja, 1 misschien, 1 nee</p>
-        ${actionRow(button('Bevestig deze datum', 'confirm') + button('Annuleren', 'poll', true))}`;
+        ${actionRow(button('Bevestigen', 'confirm') + button('Annuleren', 'poll', true))}`;
     }
     function management() {
       if (state.screen === 'edit') return edit();
       if (state.screen === 'final') return final();
-      return `${actionRow(button('Bewerken', 'edit') + button(state.scenario === 'closed' ? 'Einddatum wijzigen' : 'Einddatum kiezen', 'final', true))}
-        ${state.scenario === 'closed' ? `<div class="reopen"><p class="description">Verwijder de gekozen datum en laat iedereen opnieuw stemmen. Bestaande stemmen blijven behouden.</p>${button('Poll heropenen', 'reopen', true)}</div>` : ''}`;
+      return `${actionRow(button('Bewerken', 'edit') + button(state.scenario === 'closed' ? 'Wijzig datum' : 'Datum kiezen', 'final', true))}
+        ${state.scenario === 'closed' ? `<div class="reopen"><p class="description">Verwijder de gekozen datum en laat iedereen opnieuw stemmen. Bestaande stemmen blijven behouden.</p>${button('Heropenen', 'reopen', true)}</div>` : ''}`;
     }
     function poll() {
       const authorized = ['organizer', 'closed'].includes(state.scenario);
@@ -489,7 +489,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       input[type=checkbox]:checked:after { content:'✓'; color:white; font-size:14px; line-height:1; }
       .access-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:16px; } .access-row:has(>.fields) { align-items:end; } .access-row>.fields { max-width:320px; }
       .access-row p { overflow-wrap:anywhere; } .actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; }
-      .actions>button { max-width:208px; } .hint { margin:12px 0 0; } .choices { min-width:0; }
+      .actions>button,.reopen>button,.share-footer>button,.final-card>button { width:128px; min-width:128px; max-width:128px; height:48px; min-height:48px; flex:0 0 128px; padding:4px 8px; line-height:1.2; }
+      .page-actions,.share-footer { padding-inline:calc(var(--inset) + 1.5px); }
+      .hint { margin:12px 0 0; } .choices { min-width:0; }
       .toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
       .toolbar .toggle { margin-left:auto; } .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--muted); }
       .toggle { display:inline-flex; flex:none; padding:4px; border:1px solid var(--border); border-radius:3px; gap:0; background:var(--surface); min-height:36px; }
@@ -501,7 +503,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .votes { display:flex; border:1px solid var(--border); padding:4px; border-radius:3px; }
       .votes button { min-height:32px; min-width:32px; border:0; padding:4px 6px; background:transparent; color:var(--ink); }
       .votes button[aria-pressed=true] { background:#193c35; color:#f5f4ed; }
-      .final-card>button { grid-column:2; grid-row:1; max-width:150px; } .final-card>p { grid-row:2; grid-column:1/-1; font-size:12px; color:var(--muted); }
+      .final-card>button { grid-column:2; grid-row:1; } .final-card>p { grid-row:2; grid-column:1/-1; font-size:12px; color:var(--muted); }
       .final-card button[aria-pressed=true] { background:#d21f26; border-color:#d21f26; color:white; }
       .selection-summary { margin-block:16px; font-size:14px; } .readonly { opacity:.65; }
       .calendar-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
@@ -601,7 +603,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         else if (action === 'confirm') { state.screen = 'poll'; state.scenario = 'closed'; $('screen').value = 'poll'; }
         else if (action === 'reopen') state.scenario = 'organizer';
         else if (action === 'copy') { target.textContent = target.classList.contains('icon-button') ? '✓' : 'Gekopieerd ✓'; target.setAttribute('aria-label', 'Gekopieerd'); return; }
-        else if (action === 'select-date') { doc.querySelectorAll('.final-card button').forEach(button => { const selected = button === target; button.setAttribute('aria-pressed', selected); button.textContent = selected ? 'Geselecteerd' : 'Kies deze datum'; button.classList.toggle('secondary', !selected); }); return; }
+        else if (action === 'select-date') { doc.querySelectorAll('.final-card button').forEach(button => { const selected = button === target; button.setAttribute('aria-pressed', selected); button.textContent = selected ? 'Gekozen' : 'Selecteren'; button.classList.toggle('secondary', !selected); }); return; }
         else return;
         render();
       });

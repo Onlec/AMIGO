@@ -152,9 +152,11 @@ export default function CreatePollPage({ onCreated }) {
 
         {error && <p className="error">{error}</p>}
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Bezig...' : 'Prikker aanmaken'}
-        </button>
+        <div className="edit-actions planner-page-actions">
+          <button type="submit" disabled={submitting}>
+            {submitting ? 'Bezig...' : 'Aanmaken'}
+          </button>
+        </div>
       </form>
     </div>
   );

@@ -87,8 +87,8 @@ try {
   await evaluate("document.querySelectorAll('.calendar-day-button')[1].click()");
   await evaluate("document.querySelector('button[type=submit]').click()");
   await until(() => evaluate("document.querySelector('h1')?.textContent === 'Deel je datumprikker'"));
-  const pollLink = await evaluate("[...document.querySelectorAll('a')].find(link => link.textContent === 'Naar de datumprikker').href");
-  await evaluate("[...document.querySelectorAll('a')].find(link => link.textContent === 'Naar de datumprikker').click()");
+  const pollLink = await evaluate("[...document.querySelectorAll('a')].find(link => link.textContent === 'Open prikker').href");
+  await evaluate("[...document.querySelectorAll('a')].find(link => link.textContent === 'Open prikker').click()");
   await until(async () => navigationError || await evaluate("document.querySelector('.voter-credentials') !== null"));
   assert.equal(navigationError, '', 'Share screen to poll navigation must not fail in Chrome');
   assert.equal(await evaluate("document.querySelector('h1').textContent"), 'Chrome navigation');

@@ -174,7 +174,7 @@ export default function PollPage({ pollId, share }) {
               <p role="status" className="description">{row.base ? 'Klaar om te delen.' : 'Lokaal bewaard. Anderen kunnen de link openen na synchronisatie.'}</p>
               <div className="edit-actions">
                 <CopyButton text={link} label="Link kopiëren" secondary />
-                <a className="btn" href={link}>Naar de datumprikker</a>
+                <a className="btn" href={link}>Open prikker</a>
               </div>
             </div>
           </fieldset>
