@@ -455,7 +455,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         ${state.scenario === 'closed' ? '<div class="final-date-block"><p class="final-date">Gekozen datum: zo 6 dec. 2026, 18:30</p></div>' : ''}
         <div class="segments">
           ${segment('01 — Jouw gegevens', credentials())}
-          ${segment('02 — Jouw beschikbaarheid', `<div ${editing ? 'class="readonly" inert' : ''}>${choices()}<p class="description hint">${editing ? 'Je stemmen zijn alleen-lezen tijdens het beheren van de prikker.' : 'Je keuzes worden automatisch opgeslagen.'}</p></div>`, state.scenario !== 'guest' && state.scenario !== 'closed')}
+          ${segment('02 — Jouw beschikbaarheid', `${choices()}<p class="description hint">Je keuzes worden automatisch opgeslagen.</p>`, !editing && state.scenario !== 'guest' && state.scenario !== 'closed')}
           ${segment('03 — Stemmenoverzicht', table())}
           ${segment('04 — Prikker beheren', management(), authorized)}
         </div>${shareFooter()}`;

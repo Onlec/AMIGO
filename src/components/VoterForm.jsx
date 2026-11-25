@@ -24,6 +24,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
   const activePerson = participants[session?.voter];
   const votingSignedIn = Boolean(session && activePerson);
   const signedIn = votingSignedIn || Boolean(session?.organizer);
+  const availabilityOpen = active && votingOpen && votingSignedIn && !readOnly;
   const outcome = submission && loginResults?.[submission.operation];
   const pending = Boolean(submission && !outcome);
   const locked = busy || pending;
@@ -136,12 +137,11 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
         </form>
         {!signedIn && error && <p role="alert" className="error">{error}</p>}
       </CollapsibleSegment>
-      <div ref={availability} className="voter-availability" data-open={votingSignedIn && votingOpen}>
-        <CollapsibleSegment title="02 — Jouw beschikbaarheid" open={active && votingOpen && votingSignedIn}>
-          <div className="voter-ballot" role="region" aria-label="Jouw beschikbaarheid" tabIndex={votingSignedIn && active && votingOpen ? 0 : undefined}>
+      <div ref={availability} className="voter-availability" data-open={availabilityOpen}>
+        <CollapsibleSegment title="02 — Jouw beschikbaarheid" open={availabilityOpen}>
+          <div className="voter-ballot" role="region" aria-label="Jouw beschikbaarheid" tabIndex={availabilityOpen ? 0 : undefined}>
             <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly} />
-            <p className="description" role="status">{readOnly ? 'Je stemmen zijn alleen-lezen tijdens het beheren van de prikker.'
-              : saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
+            <p className="description" role="status">{saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
           </div>
           {signedIn && error && <p role="alert" className="error">{error}</p>}
         </CollapsibleSegment>
