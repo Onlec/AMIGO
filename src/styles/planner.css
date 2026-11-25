@@ -158,8 +158,7 @@ h2 {
   --segment-viewport: min(36rem, 65svh);
 }
 
-.collapsible-segment--scrollable > .collapsible-segment__body,
-.voter-ballot {
+.collapsible-segment--scrollable > .collapsible-segment__body {
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scroll-padding-block: 7rem 1rem;
@@ -253,7 +252,48 @@ h2 {
 }
 
 .voter-ballot {
-  max-height: min(36rem, 65svh);
+  display: flow-root;
+}
+
+.voter-ballot .date-choices__toolbar {
+  position: static;
+}
+
+.date-choices__panels {
+  position: relative;
+}
+
+.date-choices__calendar {
+  display: flow-root;
+}
+
+.date-choices__calendar[aria-hidden='true'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.date-choices__calendar .calendar-header {
+  min-height: 40px;
+}
+
+.date-choices__calendar .month-status {
+  min-height: 3em;
+}
+
+.date-choices__calendar .date-jump-actions {
+  min-height: 48px;
+}
+
+.date-choices__cards {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+.date-choices__cards > .date-cards {
+  margin: 0;
 }
 
 @media (max-width: 480px) {

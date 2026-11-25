@@ -20,7 +20,7 @@ export default function VoteCalendar({ dates, myVotes, onVote }) {
     </ul>
   );
   return (
-      <DateChoices dates={dates} firstUnanswered={unanswered} legend={legend} renderCard={day => (
+      <DateChoices dates={dates} firstUnanswered={unanswered} legend={legend} showUnansweredJump renderCard={day => (
         <SegmentedControl label={'Beschikbaarheid op ' + formatDay(day)} variant="status" allowDeselect iconOnly
           options={answerOptions} value={myVotes[day] || 'none'} onChange={value => onVote(day, value || 'none')} />
       )} renderDay={(day, number) => {

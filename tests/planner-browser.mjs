@@ -179,13 +179,20 @@ try {
     assert.ok(Math.abs(frames.at(-1).height - targetHeight) < 1, 'Reopened frame fits the new content');
   }
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click()");
-  await until(() => evaluate("document.querySelector('.calendar') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  await until(() => evaluate("document.querySelector('.date-choices').dataset.view === 'calendar' && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  assert.equal(await evaluate(`(() => {
+    const ballot = document.querySelector('.voter-ballot');
+    ballot.scrollTop = 100;
+    const calendar = ballot.querySelector('.date-choices__calendar');
+    return ballot.scrollTop === 0 && ballot.scrollHeight <= ballot.clientHeight + 1
+      && calendar.querySelector('.calendar-grid').getBoundingClientRect().bottom <= calendar.getBoundingClientRect().bottom;
+  })()`), true, 'Desktop calendar is fully displayed without internal scrolling');
   const monthMotion = await evaluate(`recordMotion(() => document.querySelector('[aria-label="Volgende maand"]').click())`);
   assert.ok(monthMotion.every(frame => frame.phase === 'idle'), 'Month navigation does not close the segment');
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
   await until(() => evaluate("document.querySelector('.date-cards') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click(); document.querySelector('.logo').focus()");
-  await until(() => evaluate("document.querySelector('.calendar') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  await until(() => evaluate("document.querySelector('.date-choices').dataset.view === 'calendar' && participationBody().closest('fieldset').dataset.phase === 'idle'"));
   assert.equal(await evaluate("document.activeElement.classList.contains('logo')"), true, 'Transition does not steal focus moved to the header');
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
   await until(() => evaluate("document.querySelector('.date-cards') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
@@ -202,26 +209,61 @@ try {
   await until(() => evaluate("document.querySelectorAll('.date-cards > li').length === 10"));
   await pause(800);
   const mobileScroll = await evaluate(`new Promise(resolve => {
-    const body = ballotSegment().querySelector('.voter-ballot');
+    const body = ballotSegment().querySelector('.date-choices__cards');
     const toolbar = ballotSegment().querySelector('.date-choices__toolbar');
+    const before = toolbar.getBoundingClientRect().top;
+    window.mobileCardsHeight = participationBody().getBoundingClientRect().height;
     body.scrollTop = body.scrollHeight;
     requestAnimationFrame(() => {
       const last = ballotSegment().querySelector('.date-cards > li:last-child').getBoundingClientRect();
-      resolve({ after: toolbar.getBoundingClientRect().top, bodyTop: body.getBoundingClientRect().top,
+      resolve({ before, after: toolbar.getBoundingClientRect().top,
+        referenceHeight: ballotSegment().querySelector('.date-choices__calendar').getBoundingClientRect().height,
         height: body.clientHeight, scrolling: body.scrollHeight > body.clientHeight,
-        lastVisible: last.bottom <= body.getBoundingClientRect().bottom + 1 && last.top >= toolbar.getBoundingClientRect().bottom,
+        lastVisible: last.bottom <= body.getBoundingClientRect().bottom + 1 && last.top >= body.getBoundingClientRect().top,
         noHorizontalOverflow: body.scrollWidth <= body.clientWidth });
     });
   })`);
-  assert.ok(mobileScroll.height <= 844 * 0.65 + 1, 'Ten mobile cards stay within a bounded segment');
+  assert.ok(Math.abs(mobileScroll.height - mobileScroll.referenceHeight) < 1, 'Cards use the full calendar height instead of a viewport cap');
   assert.ok(mobileScroll.scrolling && mobileScroll.lastVisible, 'Internal scrolling reaches the final card');
-  assert.ok(Math.abs(mobileScroll.bodyTop - mobileScroll.after) < 1, 'Legend and view toggle remain pinned');
+  assert.ok(Math.abs(mobileScroll.before - mobileScroll.after) < 1, 'Legend and view toggle stay outside the cards scroll area');
   assert.ok(mobileScroll.noHorizontalOverflow, 'Mobile cards fit without horizontal scrolling');
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click()");
-  await until(() => evaluate("ballotSegment().querySelector('.voter-ballot').scrollTop === 0"));
-  await until(() => evaluate("participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  await until(() => evaluate("document.querySelector('.date-choices').dataset.view === 'calendar' && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  assert.equal(await evaluate(`(() => {
+    const ballot = ballotSegment().querySelector('.voter-ballot');
+    ballot.scrollTop = 100;
+    const reference = ballot.querySelector('.date-choices__calendar');
+    return ballot.scrollTop === 0 && ballot.scrollHeight <= ballot.clientHeight + 1
+      && reference.querySelector('.calendar-grid').getBoundingClientRect().bottom <= reference.getBoundingClientRect().bottom
+      && Math.abs(participationBody().getBoundingClientRect().height - mobileCardsHeight) < 1
+      && ballot.querySelector('.date-choices__cards') === null;
+  })()`), true, 'Mobile calendar is complete, cannot scroll internally and keeps the cards segment height');
+  for (const viewport of [{ width: 390, height: 420 }, { width: 844, height: 390 }, { width: 320, height: 568 }]) {
+    await command('Emulation.setDeviceMetricsOverride', { ...viewport, deviceScaleFactor: 1, mobile: true });
+    await until(() => evaluate("Math.abs(participationBody().getBoundingClientRect().height - participationBody().querySelector('.collapsible-segment__content').getBoundingClientRect().height) < 1"));
+    assert.equal(await evaluate(`(() => {
+      const ballot = document.querySelector('.voter-ballot');
+      const calendar = ballot.querySelector('.date-choices__calendar');
+      ballot.scrollTop = 100;
+      return ballot.scrollTop === 0 && ballot.scrollHeight <= ballot.clientHeight + 1
+        && calendar.scrollHeight <= calendar.clientHeight + 1
+        && calendar.querySelector('.calendar-grid').getBoundingClientRect().bottom <= calendar.getBoundingClientRect().bottom;
+    })()`), true, `Full calendar has no internal scroll at ${viewport.width}x${viewport.height}`);
+  }
+  await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await until(() => evaluate("Math.abs(participationBody().getBoundingClientRect().height - mobileCardsHeight) < 1"));
+  await evaluate(`pollData.updateLocal(fixturePoll, row => {
+    const voter = Object.values(row.base.votes)[0];
+    voter.votesJson = JSON.stringify(Object.fromEntries(Object.keys(row.base.dates).map(day => [day, 'yes'])));
+  })`);
+  await until(() => evaluate("document.querySelector('[aria-label=\"Ga naar de eerste onbeantwoorde datum\"]') === null"));
+  await pause(700);
+  assert.ok(Math.abs(await evaluate('participationBody().getBoundingClientRect().height - mobileCardsHeight')) < 1, 'Completing the final answer preserves the maximum calendar height');
+  await evaluate("pollData.updateLocal(fixturePoll, row => { Object.values(row.base.votes)[0].votesJson = '{}'; })");
+  await until(() => evaluate("document.querySelector('[aria-label=\"Ga naar de eerste onbeantwoorde datum\"]') !== null"));
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
   await until(() => evaluate("document.querySelector('.date-cards') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  assert.equal(await evaluate("document.querySelector('.date-choices__cards').scrollTop"), 0, 'Returning to cards starts at the top');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = originalDates; })");
   await command('Emulation.clearDeviceMetricsOverride');
   await until(() => evaluate("document.querySelectorAll('.date-cards > li').length === 2"));
@@ -299,7 +341,7 @@ try {
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");
   await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 2"));
   assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All three headers remain visible without dates or voters');
-  console.log('PASS: aligned access forms, organizer recognition, segment motion, focus, mobile scrolling and automatic saves');
+  console.log('PASS: full calendar without internal scrolling, cards bounded by calendar height, responsive layouts, segment motion and automatic saves');
 } finally {
   socket?.close();
   browser.kill();

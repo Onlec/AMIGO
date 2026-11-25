@@ -33,23 +33,22 @@ function readView() {
   return localStorage.getItem('amigo-date-view') === 'calendar' ? 'calendar' : 'cards';
 }
 
-export default function DateChoices({ dates, firstUnanswered, renderCard, renderDay, legend }) {
+export default function DateChoices({ dates, firstUnanswered, renderCard, renderDay, legend, showUnansweredJump = false }) {
   const days = Object.keys(dates).sort();
   const view = useSyncExternalStore(watchView, readView);
   const [jump, setJump] = useState(null);
-  const root = useRef(null);
+  const calendar = useRef(null);
+  const cards = useRef(null);
   const transitionContent = useSegmentTransition();
   useLayoutEffect(() => {
-    if (jump) root.current?.querySelector(`[data-day="${jump.day}"] button`)?.focus();
+    if (jump) calendar.current?.querySelector(`[data-day="${jump.day}"] button`)?.focus();
   }, [jump]);
 
   function changeView(next) {
     if (next === view) return;
     const commit = () => {
       setJump(null);
-      const scroller = root.current?.closest('.voter-ballot')
-        || root.current?.closest('.collapsible-segment--scrollable')?.querySelector('.collapsible-segment__body');
-      if (scroller) scroller.scrollTop = 0;
+      if (cards.current) cards.current.scrollTop = 0;
       localStorage.setItem('amigo-date-view', next);
       window.dispatchEvent(new Event('amigo-view-change'));
     };
@@ -58,33 +57,41 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
   }
 
   return (
-    <div ref={root}>
+    <div className="date-choices" data-view={view}>
       <div className="date-choices__toolbar">
         {legend}
         <div className="date-view-actions">
           <SegmentedControl label="Weergave" options={viewOptions} value={view} onChange={changeView} iconOnly size="small" />
         </div>
       </div>
-      {view === 'cards' ? (
-        <ul className="date-cards">
-          {days.map(day => (
-            <li key={day} data-day={day}>
-              <strong>{formatProposal(day, dates[day].time, true)}</strong>
-              {renderCard(day)}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <MonthCalendar key={jump?.count || 0} proposedDays={days} initialMonthFrom={jump?.day || firstUnanswered || days[0]}
-          renderDay={(day, number) => dates[day] ? renderDay(day, number) : <span className="calendar-day-plain">{number}</span>} />
-      )}
-      {view === 'calendar' && firstUnanswered && (
-        <div className="date-view-actions date-jump-actions">
-          <button type="button" className="btn-secondary" aria-label="Ga naar de eerste onbeantwoorde datum" onClick={() =>
-            setJump({ day: firstUnanswered, count: (jump?.count || 0) + 1 })
-          }>Nog invullen</button>
+      <div className="date-choices__panels">
+        {/* Keep the calendar in layout in both views: its full six-week height
+            determines the cards' scroll area, including on smaller screens. */}
+        <div ref={calendar} className="date-choices__calendar" aria-hidden={view !== 'calendar'} inert={view === 'calendar' ? undefined : ''}>
+          <MonthCalendar key={view === 'calendar' ? jump?.count || 0 : 'reference'} proposedDays={days}
+            initialMonthFrom={jump?.day || firstUnanswered || days[0]}
+            renderDay={(day, number) => dates[day] ? renderDay(day, number) : <span className="calendar-day-plain">{number}</span>} />
+          {showUnansweredJump && (
+            <div className="date-view-actions date-jump-actions">
+              {firstUnanswered && <button type="button" className="btn-secondary" aria-label="Ga naar de eerste onbeantwoorde datum" onClick={() =>
+                setJump({ day: firstUnanswered, count: (jump?.count || 0) + 1 })
+              }>Nog invullen</button>}
+            </div>
+          )}
         </div>
-      )}
+        {view === 'cards' && (
+          <div ref={cards} className="date-choices__cards" role="region" aria-label="Voorgestelde datums" tabIndex={0}>
+            <ul className="date-cards">
+              {days.map(day => (
+                <li key={day} data-day={day}>
+                  <strong>{formatProposal(day, dates[day].time, true)}</strong>
+                  {renderCard(day)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
