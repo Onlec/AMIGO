@@ -7,7 +7,7 @@ AmiGo is een React/Vite-app met dertien tools. De rotary-index op de homepage we
 1. Installeer Node.js 22.12 of nieuwer en voer `npm ci` uit.
 2. Maak een Supabase-project. Schakel **Allow anonymous sign-ins** in onder Authentication. Deelnemers gebruiken per prikker een naam en stemwachtwoord.
 3. Voer de SQL-bestanden uit `supabase/migrations/` eenmaal in volgorde van bestandsnaam uit in de SQL Editor van het nieuwe project. De migratie maakt de privétabellen, RPC-functies en het toegangsbeleid voor de privékanalen in Realtime aan. Gebruik een eigen project voor deze app.
-4. Kopieer `.env.example` naar `.env`. Vul `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` in met de project-URL en publieke sleutel van dit project. Vite neemt deze waarden op tijdens de build.
+4. Kopieer `.env.example` naar `.env`. Vul `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` in met de project-URL en publieke sleutel van dit project. Op Vercel kun je ook `SUPABASE_URL` en `SUPABASE_PUBLISHABLE_KEY` gebruiken. De namen met `VITE_` krijgen voorrang als beide bestaan. Alleen deze twee publieke instellingen worden vanuit de alternatieve namen aan de browser doorgegeven. Vite neemt de waarden op tijdens de build; start na een wijziging aan de variabelen een nieuwe deployment. Gebruik voor de sleutel de **publishable key** van Supabase.
 5. Start met `npm run dev`. Voor de productieversie voer je `npm run build` uit en publiceer je de inhoud van `dist/` op de root van een HTTPS-site. Met `npm run preview` test je die versie op localhost.
 
 Dit is een schone start voor de Datumprikker. Prikkers uit de Gun-prerelease worden niet geïmporteerd. Houd bij een upgrade hetzelfde webadres aan voor toegang tot de bestaande lokale Agenda, Notities en themakeuze.
