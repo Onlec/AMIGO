@@ -293,4 +293,35 @@ begin
   perform public.amigo_edit(created,gen_random_uuid(),jsonb_build_object('organizerParticipation',participation || '{"enabled":false}'));
   assert not (public.amigo_read(created)->'votes' ? own::text);
 end $$;
+do $$
+declare
+  p uuid := gen_random_uuid();
+  voter uuid := gen_random_uuid();
+  owner_actor text := auth.uid()::text;
+  op uuid := gen_random_uuid();
+begin
+  perform public.amigo_apply(p,gen_random_uuid(),'createPoll',jsonb_build_object('title','Nieuwe einddatum',
+    'organizerName','Maker','proof',repeat('a',64),'dates','{"2027-01-01":{},"2027-01-02":{}}'::jsonb));
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',voter,'name','Anna',
+    'proof',repeat('b',64),'register',true,'changes','{"2027-01-01":"yes","2027-01-02":"no"}'::jsonb));
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-01"}');
+  perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+  begin
+    perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-02"}');
+    raise exception using errcode='XX000', message='Visitor replaced final date';
+  exception when raise_exception then assert sqlerrm='Ontgrendel eerst de bewerkmodus.'; end;
+  perform set_config('request.jwt.claim.sub',owner_actor,true);
+  begin
+    perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-03"}');
+    raise exception using errcode='XX000', message='Missing replacement date accepted';
+  exception when raise_exception then assert sqlerrm='Deze datum is verwijderd.'; end;
+  assert public.amigo_read(p)->>'finalDateId'='2027-01-01';
+  perform public.amigo_apply(p,op,'close','{"day":"2027-01-02"}');
+  assert public.amigo_read(p)->>'finalDateId'='2027-01-02';
+  assert public.amigo_read(p)->>'status'='closed';
+  assert (public.amigo_read(p)#>>array['votes',voter::text,'votesJson'])::jsonb='{"2027-01-01":"yes","2027-01-02":"no"}'::jsonb;
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-01"}');
+  perform public.amigo_apply(p,op,'close','{"day":"2027-01-02"}');
+  assert public.amigo_read(p)->>'finalDateId'='2027-01-01';
+end $$;
 rollback;

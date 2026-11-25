@@ -11,6 +11,7 @@ import EditPollPanel from './EditPollPanel.jsx';
 import CopyButton from './CopyButton.jsx';
 import SharePollButton from './SharePollButton.jsx';
 import CollapsibleSegment from './CollapsibleSegment.jsx';
+import Confetti from './Confetti.jsx';
 
 export default function PollPage({ pollId, share }) {
   const [row, setRow] = useState(null);
@@ -146,10 +147,10 @@ export default function PollPage({ pollId, share }) {
 
       {poll.status === 'closed' && finalDate && (
         <div className="final-date-block">
+          <Confetti key={pollId} />
           <p className="final-date">
             Gekozen datum: {formatProposal(finalDate.date, finalDate.time, true)}
           </p>
-          <SharePollButton poll={poll} dates={dates} votes={votes} label="Einddatum delen" />
         </div>
       )}
 
@@ -176,17 +177,15 @@ export default function PollPage({ pollId, share }) {
       </div>
 
       <OrganizerUnlock editing={editing} authorized={organizerAuthorized} signedIn={Boolean(session)}
-        onEdit={() => setMode('edit')} onChooseFinal={poll.status === 'open' && hasDates ? () => setMode('final') : null}>
+        finalDateChosen={Boolean(poll.finalDateId)}
+        onEdit={() => setMode('edit')} onChooseFinal={hasDates ? () => setMode('final') : null}>
         {mode === 'edit' && (
           <EditPollPanel poll={poll} initiallyParticipating={Boolean(organizerVoterId)} onSave={savePoll}
             onCancel={() => setMode('view')} />
         )}
-        {mode === 'final' && poll.status === 'open' && (
-          <OrganizerPanel dates={dates} votes={votes} onConfirm={day => enqueue(pollId, 'close', { day })}
+        {mode === 'final' && (
+          <OrganizerPanel dates={dates} votes={votes} finalDateId={poll.finalDateId} onConfirm={day => enqueue(pollId, 'close', { day })}
             onCancel={() => setMode('view')} />
-        )}
-        {mode === 'final' && poll.status === 'closed' && (
-          <button type="button" onClick={() => setMode('view')}>Klaar</button>
         )}
       </OrganizerUnlock>
 

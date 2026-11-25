@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import CollapsibleSegment from './CollapsibleSegment.jsx';
 
-export default function OrganizerUnlock({ onEdit, onChooseFinal, authorized = false, signedIn = false, active = true, editing = false, children }) {
+export default function OrganizerUnlock({ onEdit, onChooseFinal, finalDateChosen = false, authorized = false, signedIn = false, active = true, editing = false, children }) {
   const editButton = useRef(null);
   const finalButton = useRef(null);
   const lastAction = useRef('edit');
@@ -17,7 +17,7 @@ export default function OrganizerUnlock({ onEdit, onChooseFinal, authorized = fa
 
   return (
     <div className="form unlock-form">
-      <CollapsibleSegment title="04 — Prikker beheren" open={active}>
+      <CollapsibleSegment title="04 — Prikker beheren" open={active && authorized}>
         {editing ? children : (
           <div className="access-row">
             <div className="access-fields">
@@ -33,7 +33,7 @@ export default function OrganizerUnlock({ onEdit, onChooseFinal, authorized = fa
               {onChooseFinal && <button ref={finalButton} type="button" value="final" className="btn-secondary" disabled={!authorized} onClick={() => {
                 lastAction.current = 'final';
                 onChooseFinal();
-              }}>Einddatum kiezen</button>}
+              }}>{finalDateChosen ? 'Einddatum wijzigen' : 'Einddatum kiezen'}</button>}
             </div>
           </div>
         )}

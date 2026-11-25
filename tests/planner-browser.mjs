@@ -99,6 +99,8 @@ try {
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.collapsible-segment > legend')].map(node => node.textContent)"),
     ['01 — Jouw gegevens', '02 — Jouw beschikbaarheid', '03 — Stemmenoverzicht', '04 — Prikker beheren'], 'Login, voting, results and organizer controls have separate numbered segments');
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Ballot closed before login');
+  assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'false', 'Organizer segment is closed before login');
+  assert.equal(await evaluate("document.querySelector('.unlock-form legend').getBoundingClientRect().height > 0 && document.querySelector('.unlock-form .collapsible-segment__body').inert"), true, 'Closed organizer segment keeps its title visible and controls inaccessible');
   assert.equal(await evaluate("participationBody().getBoundingClientRect().height"), 0, 'Closed voting content takes no space');
   assert.equal(await evaluate("participationBody().inert && ballotSegment().querySelector('legend').getBoundingClientRect().height > 0"), true, 'Availability title stays visible while controls remain inaccessible before login');
   for (const mobile of [false, true]) {
@@ -154,6 +156,7 @@ try {
   assert.equal(await evaluate("document.activeElement.classList.contains('voter-ballot')"), true, 'Login restores focus to availability');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = true; })");
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), true, 'Normal voter login cannot inherit stale organizer rights');
+  assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'false', 'Organizer segment stays closed for a normal voter, including stale server rights');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = false; })");
   assert.equal(await evaluate("document.body.textContent.includes('Stem opslaan')"), false, 'No save button');
   assert.equal(await evaluate("document.querySelectorAll('.date-view-actions [role=radio]')[0].getAttribute('aria-label')"), 'Kaarten');
@@ -370,6 +373,7 @@ try {
   })`);
   await until(() => evaluate("document.querySelector('.unlock-form button').disabled === false"));
   assert.equal(await evaluate("document.querySelector('.unlock-form button').disabled"), false, 'Authorized organizer can edit without reentering a password');
+  assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'true', 'Verified organizer login opens segment four');
   await evaluate("document.querySelector('.unlock-form button').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Prikker bewerken'"));
   assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Editing stays inside the organizer segment');
@@ -418,27 +422,68 @@ try {
   await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').click()");
   assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.length)"), queueBeforeFinalVote, 'Readonly card controls cannot clear an answer');
   assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Final-date selection also stays in the organizer segment');
+  assert.equal(await evaluate("document.querySelector('.voter-ballot [aria-label=\"Sorteer kaarten\"]') === null"), true, 'Sorting is limited to organizer final-date selection');
+  await evaluate("pollData.updateLocal(fixturePoll, row => { for (let n = 0; n < 5; n++) row.base.votes['sort-' + n] = { name: 'Sort ' + n, votesJson: '{\"2027-04-12\":\"yes\"}' }; })");
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.organizer-panel .date-cards > li')].map(card => card.dataset.day)"), ['2027-01-10', '2027-04-12'], 'Cards initially show earliest date first');
+  await evaluate("document.querySelector('.organizer-panel .date-cards button').click()");
+  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Meeste ja').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel .date-cards > li').dataset.day === '2027-04-12'"));
+  assert.equal(await evaluate("document.querySelector('.organizer-panel .date-cards button[aria-pressed=true]').closest('li').dataset.day"), '2027-01-10', 'Sorting preserves the chosen date');
+  for (const mobile of [false, true]) {
+    if (mobile) await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await pause(700);
+    assert.equal(await evaluate(`(() => {
+      const panel = document.querySelector('.organizer-panel');
+      const cards = [...panel.querySelectorAll('.date-cards > li')];
+      const aligned = cards.every(card => {
+        const date = card.querySelector('strong').getBoundingClientRect();
+        const button = card.querySelector('button').getBoundingClientRect();
+        return Math.abs((date.top + date.bottom - button.top - button.bottom) / 2) < 2 && date.right < button.left;
+      });
+      return aligned && panel.querySelector('.edit-actions').getBoundingClientRect().top - cards.at(-1).getBoundingClientRect().bottom >= 12;
+    })()`), true, 'Date buttons align beside dates and footer clears last card on desktop and mobile');
+  }
+  await command('Emulation.clearDeviceMetricsOverride');
+  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Datum').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel .date-cards > li').dataset.day === '2027-01-10'"));
+  await evaluate("pollData.updateLocal(fixturePoll, row => { for (let n = 0; n < 5; n++) delete row.base.votes['sort-' + n]; })");
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
   assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button[value=final]')"), true, 'Cancelling final-date selection returns to its own button');
   assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Final-date selection preserves the voter session');
   assert.equal(await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').disabled"), false, 'Cancelling final-date selection restores normal voting');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
-  await until(() => evaluate("document.querySelector('.unlock-form button[value=final]') === null"));
-  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), false, 'Closed polls remain editable without offering another final date');
+  await until(() => evaluate("document.querySelector('.unlock-form button[value=final]')?.textContent === 'Einddatum wijzigen'"));
+  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), false, 'Closed polls remain editable and allow replacing the final date');
   await evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copiedFinalOverview = text; } } })");
-  assert.equal(await evaluate("document.querySelector('.final-date-block .copy-button').getAttribute('aria-label')"), 'Einddatum delen', 'Confirmed date has the same compact share control');
-  await evaluate("document.querySelector('.final-date-block .copy-button').click()");
-  await until(() => evaluate("document.querySelector('.final-date-block .copy-button').getAttribute('aria-label') === 'Gekopieerd ✓'"));
+  assert.equal(await evaluate("document.querySelector('.final-date-block .copy-button') === null"), true, 'Chosen-date banner has no share button');
+  assert.equal(await evaluate("(() => { const banner = document.querySelector('.final-date-block').getBoundingClientRect(); const date = document.querySelector('.final-date').getBoundingClientRect(); return Math.abs(date.left + date.width / 2 - banner.left - banner.width / 2) < 1; })()"), true, 'Chosen date is centered');
+  await evaluate("document.querySelector('.poll-results-actions .copy-button').click()");
+  await until(() => evaluate("document.querySelector('.poll-results-actions .copy-button').getAttribute('aria-label') === 'Gekopieerd ✓'"));
   const finalOverview = await evaluate('window.copiedFinalOverview');
   assert.ok(finalOverview.startsWith('📅 Browser test ('), 'Final share includes the poll title and voting progress');
   assert.ok(finalOverview.includes('✅ gekozen') && finalOverview.includes('👥') && finalOverview.includes('Anna'), 'Final share includes the chosen date and participants');
   assert.ok(finalOverview.includes('👉 Bekijk de einddatum: ') && !finalOverview.includes('👉 Stem mee:'), 'Closed poll invites readers to view the result');
-  await until(() => evaluate("document.querySelector('.final-date-block .copy-button').getAttribute('aria-label') === 'Einddatum delen'"));
+  await until(() => evaluate("document.querySelector('.poll-results-actions .copy-button').getAttribute('aria-label') === 'Stemmenoverzicht delen'"));
+  const votesBeforeDateChange = await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))');
+  for (const confirm of [false, true]) {
+    await evaluate("document.querySelector('.unlock-form button[value=final]').click()");
+    await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Einddatum wijzigen'"));
+    assert.equal(await evaluate("document.querySelector('.organizer-panel [data-day=\"2027-01-10\"] button').getAttribute('aria-pressed')"), 'true', 'Existing final date is preselected');
+    await evaluate("document.querySelector('.organizer-panel [data-day=\"2027-04-12\"] button').click()");
+    assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).finalDateId)'), '2027-01-10', 'Selecting a replacement keeps the current date until confirmation');
+    await evaluate(`[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === '${confirm ? 'Bevestig deze datum' : 'Annuleren'}').click()`);
+    await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
+    assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).finalDateId)'), confirm ? '2027-04-12' : '2027-01-10', 'Only confirming changes the final date');
+  }
+  assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).status)'), 'closed', 'Changing the final date never reopens voting');
+  assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))'), votesBeforeDateChange, 'Changing the final date preserves every vote');
+  assert.equal(await evaluate("document.querySelector('.vote-grid .chosen-column') !== null"), true, 'Overview highlights the replacement date');
+  await evaluate("pollData.updateLocal(fixturePoll, row => { row.base = pollData.project(row); row.queue = []; })");
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = false; })");
   await until(() => evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");
-  await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 2"));
+  await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 3"));
   assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All four headers remain visible without dates or voters');
   for (const action of ['edit', 'final']) {
     await evaluate(`(async () => {
@@ -464,6 +509,7 @@ try {
     assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), null, 'Switching voters clears the voter session');
     assert.equal(await evaluate("document.querySelector('.unlock-form input') === null"), true, 'Organizer access only uses the main login form');
     assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), true, 'Organizer controls are locked immediately');
+    assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'false', 'Signing out closes the organizer segment');
     assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.filter(command => command.kind === 'lockOrganizer').length)"), 1, `Switching from ${action} queues one persistent organizer logout`);
     assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))'), votesBeforeLogout, 'Logout preserves all votes');
     await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = true; })");
@@ -576,6 +622,20 @@ try {
   })`);
   await until(() => evaluate("document.querySelector('.voter-availability').dataset.open === 'true'"));
   assert.equal(await evaluate("JSON.parse(sessionStorage.getItem('amigo-voter:' + fixturePoll)).proof"), 'e'.repeat(64), 'Organizer login uses the database-confirmed participant token');
+  assert.equal(await evaluate("document.querySelector('.poll-confetti') === null"), true, 'Open polls have no confetti');
+  await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
+  for (let visit = 0; visit < 2; visit++) {
+    await command('Page.reload');
+    await until(() => evaluate("document.querySelector('.poll-confetti')?.width > 0"));
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('.poll-confetti')).pointerEvents"), 'none', 'Confetti never blocks page controls');
+  }
+  await until(() => evaluate("document.querySelector('.poll-confetti') === null"));
+  await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await command('Page.reload');
+  await until(() => evaluate("document.querySelector('.final-date') !== null && document.querySelector('.poll-confetti') === null"));
+  assert.equal(await evaluate("document.querySelector('.poll-confetti') === null"), true, 'Reduced-motion preference skips confetti');
+  await command('Emulation.setEmulatedMedia', { features: [] });
   await command('Page.navigate', { url: `${origin}?page=planner` });
   await until(() => evaluate("document.querySelector('.participation-choice input') !== null"));
   assert.equal(await evaluate("document.querySelector('.participation-choice input').checked"), true, 'Creating a poll defaults to self participation');

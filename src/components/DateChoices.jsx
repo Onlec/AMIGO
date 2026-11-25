@@ -33,8 +33,9 @@ function readView() {
   return localStorage.getItem('amigo-date-view') === 'calendar' ? 'calendar' : 'cards';
 }
 
-export default function DateChoices({ dates, firstUnanswered, renderCard, renderDay, legend, showUnansweredJump = false }) {
+export default function DateChoices({ dates, firstUnanswered, renderCard, renderDay, legend, showUnansweredJump = false, cardOrder, cardToolbar }) {
   const days = Object.keys(dates).sort();
+  const cardDays = cardOrder || days;
   const view = useSyncExternalStore(watchView, readView);
   const [jump, setJump] = useState(null);
   const calendar = useRef(null);
@@ -62,6 +63,7 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
           <SegmentedControl label="Weergave" options={viewOptions} value={view} onChange={changeView} iconOnly size="small" />
         </div>
       </div>
+      {view === 'cards' && cardToolbar}
       <div className="date-choices__panels">
         {view === 'calendar' ? (
           <div ref={calendar} className="date-choices__calendar">
@@ -79,7 +81,7 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
         ) : (
           <div className="date-choices__cards">
             <ul className="date-cards">
-              {days.map(day => (
+              {cardDays.map(day => (
                 <li key={day} data-day={day}>
                   <strong>{formatProposal(day, dates[day].time, true)}</strong>
                   {renderCard(day)}
