@@ -131,6 +131,19 @@ h2 {
   height: var(--segment-height);
 }
 
+.collapsible-segment[data-phase='closing'] > .collapsible-segment__body {
+  transition-duration: 250ms;
+}
+
+.collapsible-segment[data-phase='opening'] > .collapsible-segment__body {
+  transition-duration: 350ms;
+}
+
+.collapsible-segment > legend:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
 .collapsible-segment__clip {
   min-height: 0;
 }
@@ -198,7 +211,7 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .collapsible-segment__body { transition: none; }
+  .collapsible-segment[data-phase] > .collapsible-segment__body { transition: none; }
 }
 
 .form label,

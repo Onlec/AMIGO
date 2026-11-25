@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { enqueue } from '../data/polls.js';
 import { voterSession } from '../data/voterSession.js';
 import { parseVotes } from '../utils/votes.js';
@@ -16,6 +16,8 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(0);
   const [error, setError] = useState('');
+  const segment = useRef(null);
+  const handledLogin = useRef(null);
 
   const matches = Object.entries(participants).filter(([, person]) => normalize(person.name) === normalize(name));
   const id = matches.length === 1 ? matches[0][0] : matches.find(([key]) => key === picked)?.[0];
@@ -27,13 +29,16 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
   const locked = busy || pending;
 
   useEffect(() => {
-    if (!submission || !outcome || outcome.rejection) return;
-    onSelect(submission.session);
-    setName(submission.name);
-    setPicked(submission.session.voter);
-    setPassword('');
-    sessionStorage.removeItem(storageKey);
-    setSubmission(null);
+    if (!submission || !outcome || outcome.rejection || handledLogin.current === submission.operation) return;
+    const accepted = segment.current.transitionContent(() => {
+      onSelect(submission.session);
+      setName(submission.name);
+      setPicked(submission.session.voter);
+      setPassword('');
+      sessionStorage.removeItem(storageKey);
+      setSubmission(null);
+    }, '.voter-ballot');
+    if (accepted) handledLogin.current = submission.operation;
   }, [outcome, submission, onSelect, storageKey]);
 
   function clearSubmission() {
@@ -42,12 +47,14 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
   }
 
   function reset() {
-    onSelect(null);
-    setName('');
-    setPicked('');
-    setPassword('');
-    clearSubmission();
-    setError('');
+    segment.current.transitionContent(() => {
+      onSelect(null);
+      setName('');
+      setPicked('');
+      setPassword('');
+      clearSubmission();
+      setError('');
+    }, '.voter-credentials input');
   }
 
   async function signIn(event) {
@@ -99,7 +106,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
 
   return (
     <div className="form">
-      <CollapsibleSegment title="01 — Jouw deelname" open={active}>
+      <CollapsibleSegment ref={segment} title="01 — Jouw deelname" open={active}>
         <form onSubmit={signIn}>
           <fieldset className="voter-credentials" disabled={busy}>
           {signedIn ? (
@@ -136,7 +143,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
           )}
           <div className="edit-actions">
             {!signedIn && <button type="submit" disabled={locked}>{locked ? 'Aanmelden…' : 'Aanmelden'}</button>}
-            {(name || session || pending) && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Van stemmer wisselen</button>}
+            {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Van stemmer wisselen</button>}
           </div>
           {pending && <p role="status" className="description">Je aanmelding wordt gecontroleerd. Wacht op verbinding met de database.</p>}
           {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}

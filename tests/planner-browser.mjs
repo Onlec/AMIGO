@@ -77,6 +77,21 @@ try {
   })()`);
   await until(() => evaluate("document.body.textContent.includes('Jouw deelname')"));
   await evaluate("window.ballotSegment = () => document.querySelector('.voter-availability'); window.participationBody = () => document.querySelector('.collapsible-segment__body')");
+  await evaluate(`window.recordMotion = action => new Promise(resolve => {
+    const samples = [];
+    const start = performance.now();
+    function sample(now) {
+      const body = participationBody();
+      const segment = body.closest('fieldset');
+      samples.push({ phase: segment.dataset.phase, height: body.getBoundingClientRect().height,
+        signedIn: ballotSegment().dataset.open, view: localStorage.getItem('amigo-date-view') || 'cards',
+        disabled: segment.disabled, inert: body.inert, duration: getComputedStyle(body).transitionDuration });
+      if (now - start < 850) requestAnimationFrame(sample);
+      else resolve(samples);
+    }
+    requestAnimationFrame(sample);
+    action();
+  })`);
   assert.equal(await evaluate("document.querySelector('.collapsible-segment legend').textContent"), '01 — Jouw deelname', 'Login and availability share one segment');
   assert.equal(await evaluate("document.querySelectorAll('.collapsible-segment legend').length"), 3, 'Three numbered segments remain');
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Ballot closed before login');
@@ -93,24 +108,18 @@ try {
   await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
   await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Wait for server confirmation');
-  await evaluate(`pollData.updateLocal(fixturePoll, row => {
+  const loginMotion = await evaluate(`recordMotion(() => pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.shift();
     row.base.votes[login.body.voter] = { name: login.body.name, votesJson: '{}' };
     row.ballotResults = { [login.operation]: {} };
-  })`);
+  }))`);
   await until(() => evaluate("ballotSegment().dataset.open === 'true'"));
-  const heights = await evaluate(`new Promise(resolve => {
-    const samples = [];
-    const start = performance.now();
-    function sample(now) {
-      samples.push(participationBody().getBoundingClientRect().height);
-      if (now - start < 750) requestAnimationFrame(sample);
-      else resolve(samples);
-    }
-    requestAnimationFrame(sample);
-  })`);
-  assert.ok(new Set(heights).size > 3, 'Segment slides open over multiple frames');
-  assert.ok(heights.every((height, index) => index === 0 || height + 1 >= heights[index - 1]), 'Opening has no reversal or overshoot');
+  assert.ok(loginMotion.some(frame => frame.phase === 'closing'), 'Confirmed login closes the segment');
+  assert.ok(loginMotion.some(frame => frame.height < 1), 'Login replacement waits until fully closed');
+  assert.ok(loginMotion.filter(frame => frame.phase === 'closing').every(frame => frame.signedIn === 'false'), 'Login form remains during closing');
+  assert.ok(loginMotion.some(frame => frame.phase === 'opening' && frame.signedIn === 'true'), 'Availability opens after the swap');
+  assert.equal(loginMotion.filter((frame, index) => frame.phase === 'closing' && (index === 0 || loginMotion[index - 1].phase !== 'closing')).length, 1, 'Login result is handled once');
+  assert.equal(await evaluate("document.activeElement.classList.contains('voter-ballot')"), true, 'Login restores focus to availability');
   assert.equal(await evaluate("document.body.textContent.includes('Stem opslaan')"), false, 'No save button');
   assert.equal(await evaluate("document.querySelectorAll('.date-view-actions [role=radio]')[0].getAttribute('aria-label')"), 'Kaarten');
   assert.equal(await evaluate("document.querySelector('.date-view-actions [role=radio]').innerText"), '', 'View options are icon only');
@@ -118,25 +127,41 @@ try {
   assert.ok(themeHeight <= 36, 'Theme toggle fits the header');
   assert.equal(await evaluate("document.querySelector('[aria-label=Weergave]').getBoundingClientRect().height"), themeHeight, 'View and theme toggle sizes match');
   for (const view of ['Kalender', 'Kaarten']) {
-    const resized = await evaluate(`new Promise(resolve => {
-      const body = participationBody();
-      const samples = [body.getBoundingClientRect().height];
-      document.querySelector('.date-view-actions [aria-label="${view}"]').click();
-      const start = performance.now();
-      function sample(now) {
-        samples.push(body.getBoundingClientRect().height);
-        if (now - start < 800) requestAnimationFrame(sample);
-        else resolve({ samples, target: body.querySelector('.collapsible-segment__content').getBoundingClientRect().height });
-      }
-      requestAnimationFrame(sample);
+    const previousView = view === 'Kalender' ? 'cards' : 'calendar';
+    const nextView = view === 'Kalender' ? 'calendar' : 'cards';
+    const frames = await evaluate(`recordMotion(() => {
+      const button = document.querySelector('.date-view-actions [aria-label="${view}"]');
+      button.focus();
+      button.click();
+      button.click();
     })`);
-    if (Math.abs(resized.samples.at(-1) - resized.samples[0]) > 1) {
-      assert.ok(new Set(resized.samples).size > 3, `Switching to ${view} animates changing frame heights`);
+    assert.ok(frames.some(frame => frame.height < 1), 'Whole segment closes before changing views');
+    assert.ok(frames.filter(frame => frame.phase === 'closing').every(frame => frame.view === previousView), 'Old view is preserved while closing');
+    assert.ok(frames.some(frame => frame.phase === 'opening' && frame.view === nextView), 'New view appears during opening');
+    assert.ok(frames.filter(frame => frame.phase === 'closing').every(frame => frame.duration === '0.25s'), 'Closing uses 250ms');
+    assert.ok(frames.filter(frame => frame.phase === 'opening').every(frame => frame.duration === '0.35s'), 'Opening uses 350ms');
+    for (const phase of ['closing', 'opening']) {
+      const samples = frames.filter(frame => frame.phase === phase);
+      const direction = phase === 'closing' ? -1 : 1;
+      assert.ok(samples.every((frame, index) => index === 0 || direction * (frame.height - samples[index - 1].height) >= -1), 'Each motion phase is smooth without reversal');
     }
-    assert.ok(Math.abs(resized.samples.at(-1) - resized.target) < 1, 'Frame follows content within the viewport limit');
-    const direction = Math.sign(resized.samples.at(-1) - resized.samples[0]);
-    assert.ok(resized.samples.every((height, index) => index === 0 || direction * (height - resized.samples[index - 1]) >= -1), 'Content resizing has no reversal');
+    assert.ok(frames.filter(frame => frame.phase !== 'idle').every(frame => frame.disabled && frame.inert), 'Interaction blocked throughout the cycle');
+    assert.equal(frames.filter((frame, index) => frame.phase === 'closing' && (index === 0 || frames[index - 1].phase !== 'closing')).length, 1, 'Repeated clicks create only one cycle');
+    assert.equal(await evaluate("document.activeElement.closest('[aria-label=Weergave]') !== null && document.activeElement.getAttribute('aria-checked') === 'true'"), true, 'View toggle receives focus after reopening');
+    const targetHeight = await evaluate("participationBody().querySelector('.collapsible-segment__content').getBoundingClientRect().height");
+    assert.ok(Math.abs(frames.at(-1).height - targetHeight) < 1, 'Reopened frame fits the new content');
   }
+  await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click()");
+  await until(() => evaluate("document.querySelector('.calendar') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  const monthMotion = await evaluate(`recordMotion(() => document.querySelector('[aria-label="Volgende maand"]').click())`);
+  assert.ok(monthMotion.every(frame => frame.phase === 'idle'), 'Month navigation does not close the segment');
+  await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
+  await until(() => evaluate("document.querySelector('.date-cards') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click(); document.querySelector('.logo').focus()");
+  await until(() => evaluate("document.querySelector('.calendar') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
+  assert.equal(await evaluate("document.activeElement.classList.contains('logo')"), true, 'Transition does not steal focus moved to the header');
+  await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
+  await until(() => evaluate("document.querySelector('.date-cards') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
   await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await evaluate(`(async () => {
     window.originalDates = (await pollData.readLocal(fixturePoll)).base.dates;
@@ -167,11 +192,14 @@ try {
   assert.ok(mobileScroll.noHorizontalOverflow, 'Mobile cards fit without horizontal scrolling');
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click()");
   await until(() => evaluate("ballotSegment().querySelector('.voter-ballot').scrollTop === 0"));
+  await until(() => evaluate("participationBody().closest('fieldset').dataset.phase === 'idle'"));
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
+  await until(() => evaluate("document.querySelector('.date-cards') && participationBody().closest('fieldset').dataset.phase === 'idle'"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = originalDates; })");
   await command('Emulation.clearDeviceMetricsOverride');
   await until(() => evaluate("document.querySelectorAll('.date-cards > li').length === 2"));
-  await evaluate("document.querySelector('.date-cards [role=radio]').click()");
+  const voteMotion = await evaluate("recordMotion(() => document.querySelector('.date-cards [role=radio]').click())");
+  assert.ok(voteMotion.every(frame => frame.phase === 'idle'), 'Automatic votes and local updates do not close the segment');
   await until(() => evaluate("document.querySelector('.date-cards [role=radio]').getAttribute('aria-checked') === 'true'"));
   let queue = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)');
   assert.equal(queue.length, 1, 'Click automatically queues a vote');
@@ -180,9 +208,11 @@ try {
   await until(() => evaluate("document.querySelector('.date-cards [role=radio]').getAttribute('aria-checked') === 'false'"));
   queue = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)');
   assert.equal(queue[1].body.changes['2027-01-10'], 'none', 'Click again clears the last vote');
-  await evaluate("[...document.querySelectorAll('button')].find(button => button.textContent === 'Van stemmer wisselen').click()");
+  const resetMotion = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Van stemmer wisselen'); button.focus(); button.click(); })");
+  assert.ok(resetMotion.some(frame => frame.height < 1 && frame.signedIn === 'true'), 'Old voter remains until fully closed');
   await until(() => evaluate("ballotSegment().dataset.open === 'false'"));
   await until(() => evaluate("ballotSegment().querySelector('.voter-ballot').getBoundingClientRect().height === 0"));
+  assert.equal(await evaluate("document.activeElement === document.querySelector('.voter-credentials input')"), true, 'Switching voter focuses the name field');
   assert.equal((await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)')).length, 2, 'Switching preserves queued votes');
   await evaluate(`(() => {
     const inputs = document.querySelectorAll('.voter-credentials input');
@@ -208,10 +238,29 @@ try {
   })()`), 0, 'Queued votes cannot restore a removed participant');
   await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   assert.equal(await evaluate("getComputedStyle(participationBody()).transitionDuration"), '0s', 'Reduced motion disables sliding');
+  await evaluate(`(() => {
+    const input = document.querySelector('.voter-credentials input[type=password]');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'test-password');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
+  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  const reducedLogin = await evaluate(`recordMotion(() => pollData.updateLocal(fixturePoll, row => {
+    const login = row.queue.pop();
+    row.ballotResults[login.operation] = {};
+  }))`);
+  assert.ok(reducedLogin.every(frame => frame.phase === 'idle'), 'Reduced-motion login replaces content without closing');
+  assert.equal(await evaluate("ballotSegment().dataset.open"), 'true', 'Reduced-motion login still succeeds');
+  const reducedView = await evaluate("recordMotion(() => document.querySelector('.date-view-actions [aria-label=Kalender]').click())");
+  assert.ok(reducedView.every(frame => frame.phase === 'idle'), 'Reduced-motion view change has no cycle');
+  assert.equal(await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').getAttribute('aria-checked')"), 'true', 'Reduced-motion view selection is applied');
+  const reducedReset = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Van stemmer wisselen'); button.focus(); button.click(); })");
+  assert.ok(reducedReset.every(frame => frame.phase === 'idle'), 'Reduced-motion voter switch has no cycle');
+  assert.equal(await evaluate("document.activeElement === document.querySelector('.voter-credentials input')"), true, 'Reduced-motion voter switch restores input focus');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");
   await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 2"));
   assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All three headers remain visible without dates or voters');
-  console.log('PASS: mobile scrolling with ten cards and pinned legend, segment motion, login gate and automatic saves');
+  console.log('PASS: close/swap/open cycles, timing, focus, repeated clicks, reduced motion, mobile scrolling and automatic saves');
 } finally {
   socket?.close();
   browser.kill();

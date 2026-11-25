@@ -7,11 +7,13 @@ export default function CopyButton({ text, label = 'Kopiëren', icon, iconOnly =
   useEffect(() => {
     if (!attempt) return;
     let live = true;
+    let timer;
     attempt.then(ok => {
       if (!live) return;
       setFeedback(ok ? 'Gekopieerd ✓' : 'Kopiëren mislukt');
+      timer = setTimeout(() => setFeedback(''), 2500);
     });
-    return () => { live = false; };
+    return () => { live = false; clearTimeout(timer); };
   }, [attempt]);
   return (
     <button type="button" className={'copy-button' + (iconOnly ? ' copy-button--icon' : '')}

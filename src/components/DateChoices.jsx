@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
 import SegmentedControl from './SegmentedControl.jsx';
+import { useSegmentTransition } from './CollapsibleSegment.jsx';
 
 import { formatProposal } from '../utils/dates.js';
 
@@ -37,17 +38,23 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
   const view = useSyncExternalStore(watchView, readView);
   const [jump, setJump] = useState(null);
   const root = useRef(null);
+  const transitionContent = useSegmentTransition();
   useLayoutEffect(() => {
     if (jump) root.current?.querySelector(`[data-day="${jump.day}"] button`)?.focus();
   }, [jump]);
 
   function changeView(next) {
-    setJump(null);
-    const scroller = root.current?.closest('.voter-ballot')
-      || root.current?.closest('.collapsible-segment--scrollable')?.querySelector('.collapsible-segment__body');
-    if (scroller) scroller.scrollTop = 0;
-    localStorage.setItem('amigo-date-view', next);
-    window.dispatchEvent(new Event('amigo-view-change'));
+    if (next === view) return;
+    const commit = () => {
+      setJump(null);
+      const scroller = root.current?.closest('.voter-ballot')
+        || root.current?.closest('.collapsible-segment--scrollable')?.querySelector('.collapsible-segment__body');
+      if (scroller) scroller.scrollTop = 0;
+      localStorage.setItem('amigo-date-view', next);
+      window.dispatchEvent(new Event('amigo-view-change'));
+    };
+    if (transitionContent) transitionContent(commit, '[aria-label="Weergave"] [aria-checked="true"]');
+    else commit();
   }
 
   return (
