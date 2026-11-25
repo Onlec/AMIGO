@@ -1,15 +1,16 @@
 import { openDB } from 'idb';
+import { PLANNER_STORAGE_NAMESPACE } from '../config.js';
 
 let database;
 const updates = new EventTarget();
-const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('amigo-polls') : null;
+const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel(PLANNER_STORAGE_NAMESPACE) : null;
 function notify(id) {
   updates.dispatchEvent(new CustomEvent('change', { detail: id }));
 }
 if (channel) channel.onmessage = ({ data }) => notify(data);
 
 function db() {
-  database ??= openDB('amigo-planner', 1, {
+  database ??= openDB(PLANNER_STORAGE_NAMESPACE, 1, {
     upgrade(connection) { connection.createObjectStore('polls', { keyPath: 'id' }); },
   });
   return database;
@@ -50,9 +51,9 @@ export function project(row) {
   if (!row) return null;
   let poll = structuredClone(row.base);
   for (const { kind, body } of row.queue) {
-    if (kind === 'create' || kind === 'createPoll') {
+    if (kind === 'createPoll') {
       poll = { title: body.title, description: body.description, status: 'open', finalDateId: null,
-        organizer: true, dates: structuredClone(body.dates), votes: {}, ownVoter: null, organizerVoter: body.voter || null };
+        organizer: true, dates: structuredClone(body.dates), votes: {}, organizerVoter: body.voter || null };
       if (body.voter) poll.votes[body.voter] = { name: body.organizerName, votesJson: '{}' };
       continue;
     }
@@ -62,8 +63,7 @@ export function project(row) {
         poll.organizer = false;
         break;
       case 'ballot': {
-        // Show durable automatic votes while waiting for server confirmation.
-        // Registration stays hidden until the server confirms the credentials.
+        // Project automatic saves only for participants confirmed by sign-in.
         const participant = poll.votes[body.voter];
         if (poll.status !== 'open' || !participant) break;
         const choices = JSON.parse(participant.votesJson || '{}');
@@ -75,25 +75,6 @@ export function project(row) {
         participant.votesJson = JSON.stringify(choices);
         break;
       }
-      case 'join':
-        if (poll.status === 'open') poll.votes[body.voter] = { name: body.name, votesJson: '{}' };
-        break;
-      case 'castVote':
-      case 'vote': {
-        if (poll.status === 'closed' || !poll.dates[body.day]) break;
-        if (kind === 'castVote' && !poll.votes[body.voter]) break;
-        const choices = JSON.parse(poll.votes[body.voter]?.votesJson || '{}');
-        choices[body.day] = body.value;
-        const participant = poll.votes[body.voter] || { name: body.name };
-        participant.votesJson = JSON.stringify(choices);
-        poll.votes[body.voter] = participant;
-        if (kind === 'vote') poll.ownVoter = body.voter;
-        break;
-      }
-      case 'details': Object.assign(poll, body); break;
-      case 'addDate':
-        if (poll.status === 'open') poll.dates[body.day] ??= { date: body.day, time: '' };
-        break;
       case 'edit':
         if (poll.status === 'closed' && (body.added.length || body.removed.length)) break;
         if (body.removed.includes(poll.finalDateId)) break;
@@ -109,18 +90,13 @@ export function project(row) {
             poll.organizerVoter = ownId;
           } else {
             delete poll.votes[ownId];
-            if (poll.ownVoter === ownId) poll.ownVoter = null;
             poll.organizerVoter = null;
           }
         }
         break;
-      case 'removeDate':
-        if (poll.status === 'open' && body.day !== poll.finalDateId) removeDay(poll, body.day);
-        break;
       case 'removeVoter':
         delete poll.votes[body.voter];
         if (poll.organizerVoter === body.voter) poll.organizerVoter = null;
-        if (poll.ownVoter === body.voter) poll.ownVoter = null;
         break;
       case 'close':
         poll.status = 'closed';
@@ -133,16 +109,6 @@ export function project(row) {
     }
   }
   return poll;
-}
-
-// Keep offline votes from the old client until their voter has a password.
-export async function deferLegacyVote(id, operation) {
-  await updateLocal(id, row => {
-    const command = row.queue.find(item => item.operation === operation);
-    if (command?.kind !== 'vote') return;
-    (row.legacyVotes ??= []).push(command);
-    row.queue = row.queue.filter(item => item !== command);
-  });
 }
 
 export async function enqueue(id, kind, body) {

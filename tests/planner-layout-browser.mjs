@@ -75,15 +75,15 @@ try {
       const data = await import('/src/data/polls.js');
       localStorage.setItem('amigo-theme', theme);
       localStorage.setItem('amigo-date-view', view);
-      sessionStorage.removeItem('amigo-ballot:' + id);
+      sessionStorage.removeItem('amigo-planner-live-v1:ballot:' + id);
       const authorized = ['organizer', 'closed', 'edit', 'final'].includes(scenario);
-      if (scenario === 'guest') sessionStorage.removeItem('amigo-voter:' + id);
-      else sessionStorage.setItem('amigo-voter:' + id, JSON.stringify({ voter: own, proof: 'b'.repeat(64), name: 'Alexandra van der Meer-Vandenberghe', organizer: authorized }));
+      if (scenario === 'guest') sessionStorage.removeItem('amigo-planner-live-v1:voter:' + id);
+      else sessionStorage.setItem('amigo-planner-live-v1:voter:' + id, JSON.stringify({ voter: own, proof: 'b'.repeat(64), name: 'Alexandra van der Meer-Vandenberghe', organizer: authorized }));
       await data.updateLocal(id, row => {
         row.queue = []; row.notices = []; row.missing = false;
         row.base = {
           title: 'Eindejaarsdiner met alle vrienden en collega’s van het hele team', description: 'Samen eten en het nieuwe jaar plannen.',
-          organizer: authorized, organizerVoter: own, ownVoter: null,
+          organizer: authorized, organizerVoter: own,
           status: scenario === 'closed' ? 'closed' : 'open', finalDateId: scenario === 'closed' ? '2026-12-06' : null,
           dates: Object.fromEntries(Array.from({ length: 10 }, (_, index) => { const day = '2026-12-' + String(index + 4).padStart(2, '0'); return [day, { date: day, time: '18:30' }]; })),
           votes: { [own]: { name: 'Alexandra van der Meer-Vandenberghe', votesJson: '{"2026-12-04":"yes"}' }, other: { name: 'Jean-Christophe De Smet-Van den Broeck', votesJson: '{}' } },

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { enqueue } from '../data/polls.js';
-import { voterSession } from '../data/voterSession.js';
+import { ballotStorageKey, voterSession } from '../data/voterSession.js';
 import { hashPassword } from '../utils/password.js';
 import { parseVotes } from '../utils/votes.js';
 import VoteCalendar from './VoteCalendar.jsx';
@@ -8,12 +8,11 @@ import CollapsibleSegment from './CollapsibleSegment.jsx';
 
 const normalize = name => name.trim().toLowerCase();
 
-export default function VoterForm({ pollId, dates, participants, legacyVoter, deferred, results, loginResults, session, onSelect, active = true, votingOpen = true, readOnly = false }) {
-  const storageKey = 'amigo-ballot:' + pollId;
+export default function VoterForm({ pollId, dates, participants, loginResults, session, onSelect, active = true, votingOpen = true, readOnly = false }) {
+  const storageKey = ballotStorageKey(pollId);
   const [submission, setSubmission] = useState(() => JSON.parse(sessionStorage.getItem(storageKey) || 'null'));
-  const [name, setName] = useState(() => submission?.name || session?.name || participants[session?.voter]?.name || '');
+  const [name, setName] = useState(() => submission?.name || session?.name || '');
   const [password, setPassword] = useState('');
-  const [picked, setPicked] = useState(submission?.session.voter || session?.voter || '');
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(0);
   const [error, setError] = useState('');
@@ -21,26 +20,23 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
   const availability = useRef(null);
   const handledLogin = useRef(null);
 
-  const matches = Object.entries(participants).filter(([, person]) => normalize(person.name) === normalize(name));
-  const id = matches.length === 1 ? matches[0][0] : matches.find(([key]) => key === picked)?.[0];
-  const person = participants[id];
+  const [id, person] = Object.entries(participants).find(([, person]) => normalize(person.name) === normalize(name)) || [];
   const activePerson = participants[session?.voter];
-  const votingSignedIn = Boolean(session && activePerson && !activePerson.needsPassword && !activePerson.localOnly);
+  const votingSignedIn = Boolean(session && activePerson);
   const signedIn = votingSignedIn || Boolean(session?.organizer);
-  const outcome = submission && (loginResults?.[submission.operation] || results?.[submission.operation]);
+  const outcome = submission && loginResults?.[submission.operation];
   const pending = Boolean(submission && !outcome);
   const locked = busy || pending;
 
   useEffect(() => {
-    if (!submission || !outcome || outcome.rejection || handledLogin.current === submission.operation) return;
+    if (!submission || !outcome?.session || outcome.rejection || handledLogin.current === submission.operation) return;
     const verified = outcome.session;
-    const authenticated = verified ? {
+    const authenticated = {
       ...verified, ...(verified.voter && { proof: verified.proof || submission.session.proof }),
-    } : submission.session;
+    };
     const accepted = segment.current.transitionContent(() => {
       onSelect(authenticated);
-      setName(authenticated.name || submission.name);
-      setPicked(authenticated.voter || '');
+      setName(authenticated.name);
       setPassword('');
       sessionStorage.removeItem(storageKey);
       setSubmission(null);
@@ -59,7 +55,6 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
     segment.current.transitionContent(() => {
       onSelect(null);
       setName('');
-      setPicked('');
       setPassword('');
       clearSubmission();
       setError('');
@@ -72,21 +67,13 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
     setError('');
     if (!navigator.onLine) return setError('Ga online om je aan te melden.');
     if (!name.trim()) return setError('Vul je naam in.');
-    if (matches.length > 1 && !id) return setError('Kies welke deelnemer je bent.');
     if (!password) return setError('Vul je wachtwoord in.');
     setBusy(true);
     try {
       const credentials = await voterSession(pollId, id || crypto.randomUUID(), password);
-      const oldVotes = deferred.filter(item => item.body.voter === id);
-      const changes = Object.fromEntries(oldVotes
-        .filter(({ body }) => dates[body.day])
-        .map(({ body }) => [body.day, body.value]));
       const organizerProof = await hashPassword(pollId, password);
       const operation = await enqueue(pollId, 'signIn', {
-        ...credentials, name: name.trim(), register: !person || Boolean(person.localOnly),
-        organizerProof,
-        claim: Boolean(id && id === legacyVoter), changes,
-        legacyOperations: oldVotes.map(item => item.operation),
+        ...credentials, name: name.trim(), organizerProof,
       });
       const receipt = { operation, session: credentials, name: name.trim() };
       sessionStorage.setItem(storageKey, JSON.stringify(receipt));
@@ -104,7 +91,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
     setSaving(count => count + 1);
     try {
       await enqueue(pollId, 'ballot', {
-        ...session, name: activePerson.name, register: false, claim: false,
+        voter: session.voter, proof: session.proof,
         changes: { [day]: value },
       });
     } catch (err) {
@@ -127,22 +114,10 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
                   <>
                     <label>Jouw naam<input value={name} required disabled={locked} onChange={e => {
                       setName(e.target.value);
-                      setPicked('');
                       setPassword('');
                       setError('');
                       clearSubmission();
                     }} /></label>
-                    {matches.length > 1 && <label>Welke deelnemer ben je?
-                      <select value={id || ''} required disabled={locked} onChange={e => {
-                        setPicked(e.target.value);
-                        setPassword('');
-                        setError('');
-                        clearSubmission();
-                      }}>
-                        <option value="">Kies je deelnemer</option>
-                        {matches.map(([key, participant]) => <option key={key} value={key}>{participant.name} ({key.slice(0, 8)})</option>)}
-                      </select>
-                    </label>}
                     <label>Wachtwoord
                       <input type="password" value={password} required disabled={locked}
                         autoComplete="current-password"
@@ -156,7 +131,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
                 {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Afmelden</button>}
               </div>
             </div>
-            {!signedIn && <p className="description access-hint">{person && !person.needsPassword && !person.localOnly
+            {!signedIn && <p className="description access-hint">{person
               ? 'Meld je aan met je wachtwoord om je antwoorden te bekijken en aan te passen.'
               : 'Gebruik je bestaande wachtwoord of kies als nieuwe deelnemer een wachtwoord.'}</p>}
             {pending && <p role="status" className="description">Je aanmelding wordt gecontroleerd. Wacht op verbinding met de database.</p>}

@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import CollapsibleSegment from './CollapsibleSegment.jsx';
 
-export default function OrganizerUnlock({ onEdit, onChooseFinal, onReopen, finalDateChosen = false, authorized = false, signedIn = false, active = true, editing = false, children }) {
+export default function OrganizerUnlock({ onEdit, onChooseFinal, onReopen, finalDateChosen = false, authorized = false, active = true, editing = false, children }) {
   const editButton = useRef(null);
   const finalButton = useRef(null);
   const lastAction = useRef('edit');
@@ -19,22 +19,15 @@ export default function OrganizerUnlock({ onEdit, onChooseFinal, onReopen, final
     <div className="form unlock-form">
       <CollapsibleSegment title="04 — Prikker beheren" open={active && authorized}>
         {editing ? children : <>
-          <div className="access-row">
-            <div className="access-fields">
-              <p>{authorized ? 'Je bent aangemeld als organisator.'
-                : signedIn ? 'Alleen de organisator kan deze prikker beheren.'
-                : 'Meld je aan bij Jouw gegevens om deze prikker te beheren.'}</p>
-            </div>
-            <div className="edit-actions access-actions organizer-actions">
-              <button ref={editButton} type="button" value="edit" disabled={!authorized} onClick={() => {
-                lastAction.current = 'edit';
-                onEdit();
-              }}>Bewerken</button>
-              {onChooseFinal && <button ref={finalButton} type="button" value="final" className="btn-secondary" disabled={!authorized} onClick={() => {
-                lastAction.current = 'final';
-                onChooseFinal();
-              }}>{finalDateChosen ? 'Einddatum wijzigen' : 'Einddatum kiezen'}</button>}
-            </div>
+          <div className="edit-actions access-actions organizer-actions">
+            <button ref={editButton} type="button" value="edit" disabled={!authorized} onClick={() => {
+              lastAction.current = 'edit';
+              onEdit();
+            }}>Bewerken</button>
+            {onChooseFinal && <button ref={finalButton} type="button" value="final" className="btn-secondary" disabled={!authorized} onClick={() => {
+              lastAction.current = 'final';
+              onChooseFinal();
+            }}>{finalDateChosen ? 'Einddatum wijzigen' : 'Einddatum kiezen'}</button>}
           </div>
           {finalDateChosen && onReopen && <div className="organizer-reopen">
             <p className="description">Verwijder de gekozen datum en laat iedereen opnieuw stemmen. Bestaande stemmen blijven behouden.</p>

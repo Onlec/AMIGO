@@ -70,11 +70,30 @@ try {
   await evaluate(`(async () => {
     window.fixturePoll = ${JSON.stringify(poll)};
     window.pollData = await import('/src/data/polls.js');
+    window.oldTestPoll = 'eeeeeeee-1111-4111-8111-111111111111';
+    sessionStorage.setItem('amigo-voter:' + oldTestPoll, JSON.stringify({ name: 'Oude teststemmer', voter: oldTestPoll }));
+    sessionStorage.setItem('amigo-ballot:' + oldTestPoll, JSON.stringify({ name: 'Oude testaanmelding' }));
+    await new Promise((resolve, reject) => {
+      const request = indexedDB.open('amigo-planner', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('polls', { keyPath: 'id' });
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const tx = database.transaction('polls', 'readwrite');
+        tx.objectStore('polls').put({ id: oldTestPoll, base: null, notices: [],
+          queue: [{ operation: crypto.randomUUID(), kind: 'createPoll', body: { title: 'Oude testprikker' } }] });
+        tx.oncomplete = () => { database.close(); resolve(); };
+        tx.onerror = () => { database.close(); reject(tx.error); };
+      };
+    });
     await pollData.updateLocal(fixturePoll, row => {
-      row.base = { title: 'Browser test', description: '', status: 'open', organizer: false,
+      row.base = { title: 'Browser test', description: '', status: 'open', organizer: false, organizerVoter: null,
         dates: { '2027-01-10': {date:'2027-01-10'}, '2027-04-12': {date:'2027-04-12'} }, votes: {} };
     });
   })()`);
+  assert.equal(await evaluate('pollData.readLocal(oldTestPoll).then(row => row === undefined)'), true, 'Production rollout ignores the old test cache');
+  assert.equal(await evaluate('pollData.pendingPolls().then(ids => ids.includes(oldTestPoll))'), false, 'Old pending test creations cannot enter the new client queue');
+  assert.equal(await evaluate("import('/src/data/voterSession.js').then(data => data.readVoterSession(oldTestPoll))"), null, 'Old voter sessions do not sign users into the live rollout');
   await until(() => evaluate("document.body.textContent.includes('Jouw gegevens')"));
   await evaluate("window.ballotSegment = () => document.querySelector('.voter-availability'); window.participationBody = () => ballotSegment().querySelector('.collapsible-segment__body'); window.loginBody = () => document.querySelector('.voter-credentials').closest('.collapsible-segment').querySelector('.collapsible-segment__body')");
   await evaluate(`window.recordMotion = (action, readBody = participationBody) => new Promise(resolve => {
@@ -109,7 +128,7 @@ try {
       await pause(700);
     }
     const layouts = await evaluate(`['.voter-credentials', '.unlock-form'].map(selector => {
-      const row = document.querySelector(selector + ' .access-row');
+      const row = document.querySelector(selector + ' .access-row') || document.querySelector(selector + ' .organizer-actions');
       const inputs = [...row.querySelectorAll('input')];
       const button = row.querySelector('button').getBoundingClientRect();
       const rects = inputs.map(input => input.getBoundingClientRect());
@@ -379,6 +398,7 @@ try {
   await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.pop();
+    row.base.organizerVoter = login.body.voter;
     row.loginResults[login.operation] = { session: { voter: login.body.voter, name: login.body.name, organizer: true } };
   })`);
   await until(() => evaluate("document.querySelector('.unlock-form button').disabled === false"));
@@ -396,7 +416,7 @@ try {
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
   assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button')"), true, 'Cancel returns focus to the organizer edit button');
   assert.equal(await evaluate("document.querySelector('.unlock-form input[type=password]') === null"), true, 'Organizer stays recognized after leaving edit mode');
-  const voterSessionBeforeEdit = await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)");
+  const voterSessionBeforeEdit = await evaluate("sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)");
   await evaluate("document.querySelector('.unlock-form button').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') !== null"));
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'true', 'Organizer editing preserves the active voter');
@@ -412,7 +432,7 @@ try {
   await until(() => evaluate("document.querySelector('.voter-ballot .calendar') !== null"));
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
-  assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Cancel keeps the voter session');
+  assert.equal(await evaluate("sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Cancel keeps the voter session');
   assert.equal(await evaluate("document.querySelector('.voter-ballot .calendar-day-button--vote').disabled"), false, 'Leaving edit mode restores normal voting');
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'true', 'Cancel leaves availability open instead of showing voter login fields');
   assert.equal(await evaluate("document.querySelector('.voter-credentials input')"), null, 'Logged-in voter fields stay hidden');
@@ -460,7 +480,7 @@ try {
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
   assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button[value=final]')"), true, 'Cancelling final-date selection returns to its own button');
-  assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Final-date selection preserves the voter session');
+  assert.equal(await evaluate("sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Final-date selection preserves the voter session');
   assert.equal(await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').disabled"), false, 'Cancelling final-date selection restores normal voting');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
   await until(() => evaluate("document.querySelector('.unlock-form button[value=final]')?.textContent === 'Einddatum wijzigen'"));
@@ -551,7 +571,7 @@ try {
   for (const action of ['edit', 'final']) {
     await evaluate(`(async () => {
       const data = await import('/src/data/polls.js');
-      sessionStorage.setItem('amigo-voter:' + ${JSON.stringify(poll)}, ${JSON.stringify(voterSessionBeforeEdit)});
+      sessionStorage.setItem('amigo-planner-live-v1:voter:' + ${JSON.stringify(poll)}, ${JSON.stringify(voterSessionBeforeEdit)});
       await data.updateLocal(${JSON.stringify(poll)}, row => {
         row.base.status = 'open';
         row.base.finalDateId = null;
@@ -569,7 +589,7 @@ try {
     await until(() => evaluate("document.querySelector('.organizer-panel') !== null"));
     await evaluate("[...document.querySelectorAll('.voter-credentials button')].find(button => button.textContent === 'Afmelden').click()");
     await until(() => evaluate("document.querySelector('.voter-availability').dataset.open === 'false' && document.querySelector('.organizer-panel') === null && document.querySelector('.unlock-form button[value=edit]').disabled"));
-    assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), null, 'Switching voters clears the voter session');
+    assert.equal(await evaluate("sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)"), null, 'Switching voters clears the voter session');
     assert.equal(await evaluate("document.querySelector('.unlock-form input') === null"), true, 'Organizer access only uses the main login form');
     assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), true, 'Organizer controls are locked immediately');
     assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'false', 'Signing out closes the organizer segment');
@@ -620,7 +640,7 @@ try {
     }
   }
   await evaluate(`(async () => {
-    sessionStorage.setItem('amigo-voter:' + fixturePoll, JSON.stringify({ name: 'Maker', voter: null, organizer: true }));
+    sessionStorage.setItem('amigo-planner-live-v1:voter:' + fixturePoll, JSON.stringify({ name: 'Maker', voter: null, organizer: true }));
     await pollData.updateLocal(fixturePoll, row => {
       row.queue = []; row.base.status = 'open'; row.base.finalDateId = null;
       row.base.organizer = true; row.base.organizerVoter = null;
@@ -646,12 +666,12 @@ try {
     const snapshot = await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row))');
     assert.equal(snapshot.organizer, true, 'Changing participation preserves organizer access');
     assert.equal(snapshot.votes.other.votesJson, '{"2027-01-10":"no"}', 'Other participants and votes remain unchanged');
-    const identity = await evaluate("JSON.parse(sessionStorage.getItem('amigo-voter:' + fixturePoll))");
+    const identity = await evaluate("JSON.parse(sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll))");
     assert.equal(identity.organizer, true);
     if (enabled) {
       assert.equal(identity.voter, snapshot.organizerVoter, 'Participation activates the own ballot');
       assert.equal(snapshot.votes[identity.voter].votesJson, '{}', 'New or renewed participation starts with no answers');
-      await evaluate("pollData.enqueue(fixturePoll, 'ballot', { voter: JSON.parse(sessionStorage.getItem('amigo-voter:' + fixturePoll)).voter, changes: { '2027-01-10': 'yes' } })");
+      await evaluate("pollData.enqueue(fixturePoll, 'ballot', { voter: JSON.parse(sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)).voter, changes: { '2027-01-10': 'yes' } })");
       await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => Object.values(pollData.project(row).votes).some(v => v.name === 'Maker' && JSON.parse(v.votesJson)['2027-01-10'] === 'yes'))"));
     } else {
       assert.equal(identity.voter, null, 'Opting out clears the active ballot without signing out');
@@ -660,7 +680,7 @@ try {
   }
   await evaluate(`(async () => {
     await pollData.updateLocal(fixturePoll, row => { row.base = pollData.project(row); row.queue = []; });
-    sessionStorage.removeItem('amigo-voter:' + fixturePoll);
+    sessionStorage.removeItem('amigo-planner-live-v1:voter:' + fixturePoll);
   })()`);
   await command('Page.reload');
   await until(() => evaluate("document.querySelector('.voter-credentials input') !== null"));
@@ -684,7 +704,7 @@ try {
     } };
   })`);
   await until(() => evaluate("document.querySelector('.voter-availability').dataset.open === 'true'"));
-  assert.equal(await evaluate("JSON.parse(sessionStorage.getItem('amigo-voter:' + fixturePoll)).proof"), 'e'.repeat(64), 'Organizer login uses the database-confirmed participant token');
+  assert.equal(await evaluate("JSON.parse(sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)).proof"), 'e'.repeat(64), 'Organizer login uses the database-confirmed participant token');
   assert.equal(await evaluate("document.querySelector('.poll-confetti') === null"), true, 'Open polls have no confetti');
   await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");

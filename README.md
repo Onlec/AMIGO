@@ -10,14 +10,20 @@ AmiGo is een React/Vite-app met dertien tools. De rotary-index op de homepage we
 4. Kopieer `.env.example` naar `.env`. Vul `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` in met de project-URL en publieke sleutel van dit project. Op Vercel kun je ook `SUPABASE_URL` en `SUPABASE_PUBLISHABLE_KEY` gebruiken. De namen met `VITE_` krijgen voorrang als beide bestaan. Alleen deze twee publieke instellingen worden vanuit de alternatieve namen aan de browser doorgegeven. Vite neemt de waarden op tijdens de build; start na een wijziging aan de variabelen een nieuwe deployment. Gebruik voor de sleutel de **publishable key** van Supabase.
 5. Start met `npm run dev`. Voor de productieversie voer je `npm run build` uit en publiceer je de inhoud van `dist/` op de root van een HTTPS-site. Met `npm run preview` test je die versie op localhost.
 
-Dit is een schone start voor de Datumprikker. Prikkers uit de Gun-prerelease worden niet geïmporteerd. Houd bij een upgrade hetzelfde webadres aan voor toegang tot de bestaande lokale Agenda, Notities en themakeuze.
+Houd bij een upgrade hetzelfde webadres aan voor toegang tot de bestaande lokale Agenda, Notities en themakeuze.
 
 ## Gebruik en offline werken
+
+### Schone productierollout
+
+Alle bestaande datumprikkers gelden vóór de eerste productierollout als testgegevens. Sluit eerst alle oude testtabbladen en stop het testgebruik. Voer daarna het **volledige** bestand `supabase/migrations/202611250012_production_reset.sql` uit na migratie 011. Deze eenmalige transactie wist alle pollgegevens, datums, deelnemers, stemmen, lidmaatschappen en opdracht-/aanmeldbevestigingen. Schema, functies, rechten, Supabase Auth-instellingen en de automatische opschoning blijven bestaan. Het resultaat toont nul polls, deelnemers en stemmen. Een unieke index voorkomt vervolgens dubbele namen binnen dezelfde poll, ongeacht hoofdletters of omringende spaties. Voer deze reset niet uit na de start van echte productiegegevens; het bestand is geen onderhoudstaak.
+
+Voer daarna migratie 013 uit om de actieve API en het schema op te schonen. Publiceer aansluitend deze versie op alle gebruikte hosts voordat je echte polls laat aanmaken. Ze gebruikt de vaste opslagnaam `amigo-planner-live-v1` voor de lokale pollcache en wachtrij, met bijbehorende aparte aanmeldsleutels. Oude browsergegevens worden niet overgenomen of opnieuw verstuurd door deze versie. Houd deze opslagnaam na de rollout ongewijzigd, zodat echte offline wijzigingen later behouden blijven. Oude, nog draaiende versies kennen deze scheiding niet; daarom moeten oude testtabbladen vóór de reset gesloten zijn. Thema, lokale Agenda en Notities worden niet gewist. De deelnemerskeuzelijst voor dubbele oude namen is verwijderd.
 
 Voorlopig staat in `src/config.js` de schakelaar `PLANNER_ONLY` op `true`: de startpagina opent meteen de Datumprikker en de link naar de toolindex is verborgen. De andere tools blijven in de broncode bewaard. Zet de waarde op `false` en bouw/publiceer opnieuw om de volledige homepage terug te tonen. Gedeelde poll-links blijven in beide standen werken.
 
 - Open `/` voor de index of `?page=planner` voor een nieuwe prikker. Kies minstens twee datums, eventueel met tijdstip, en geef een organisatornaam en wachtwoord op. **Zelf meestemmen** staat standaard aan; vink het uit als je alleen wilt organiseren.
-- Na aanmaken verschijnt het deelscherm. Deel de stemlink via **Link kopiëren**. Vul je naam en wachtwoord in en klik op **Aanmelden**. Zodra de database je aanmelding bevestigt, verschijnt je beschikbaarheid. Kies Ja, Misschien of Nee op de datumkaarten of in de agenda: elke keuze wordt automatisch opgeslagen. Met dezelfde naam en hetzelfde wachtwoord kun je je later opnieuw aanmelden, ook op een ander toestel. **Afmelden** brengt je terug naar het aanmeldformulier. Bestaande deelnemers zonder wachtwoord stellen het eerst in vanuit hun oorspronkelijke browsersessie. De organisator kan via dezelfde aanmelding op elk toestel de gegevens bewerken, deelnemers verwijderen en een einddatum kiezen.
+- Na aanmaken verschijnt het deelscherm. Deel de stemlink via **Link kopiëren**. Vul je naam en wachtwoord in en klik op **Aanmelden**. Zodra de database je aanmelding bevestigt, verschijnt je beschikbaarheid. Kies Ja, Misschien of Nee op de datumkaarten of in de agenda: elke keuze wordt automatisch opgeslagen. Met dezelfde naam en hetzelfde wachtwoord kun je je later opnieuw aanmelden, ook op een ander toestel. **Afmelden** brengt je terug naar het aanmeldformulier. De organisator kan via dezelfde aanmelding op elk toestel de gegevens bewerken, deelnemers verwijderen en een einddatum kiezen.
 - Open de productieversie eenmaal online zodat de serviceworker de app en de lettertypen kan opslaan. Open een gedeelde prikker eenmaal online om ook de gegevens op dat toestel te bewaren. Je kunt daarna offline herladen, prikkers aanmaken, stemmen met een bestaande stemmersessie en ontgrendelde prikkers beheren. Een nieuwe aanmelding vereist verbinding met de database.
 - Elke lokale wijziging krijgt een eigen ID. Bij herverbinden verstuurt de geopende app de wachtrij in volgorde. Na het sluiten van de browser gaat dit verder bij het volgende bezoek. Een nieuwe offline prikker is voor anderen bereikbaar zodra de eerste synchronisatie is bevestigd.
 - **Afmelden** sluit ook de organisatorvensters en meldt je als organisator af voor deze prikker. De stemmen blijven bewaard. Offline worden de knoppen meteen vergrendeld en wordt de afmelding bij herverbinden verwerkt; opnieuw als organisator aanmelden wacht tot die afmelding is gesynchroniseerd. Voer hiervoor ook `supabase/migrations/202611250005_organizer_logout.sql` uit op de database.
@@ -31,6 +37,14 @@ Voorlopig staat in `src/config.js` de schakelaar `PLANNER_ONLY` op `true`: de st
 - De lokale kopie, anonieme sessie en nog te versturen wijzigingen horen bij dit browserprofiel. Het wissen van sitegegevens verwijdert ze.
 
 ## Onderhoud en controle
+
+### Huidige API en migratiegeschiedenis
+
+Voer `supabase/migrations/202611250013_remove_legacy_support.sql` uit na de eenmalige reset 012. De actieve app en database ondersteunen daarna alleen de huidige aanmelding met naam en wachtwoord. Wachtwoordloze deelnemers, apparaatgebaseerd claimen van stemmen, herstel van oude offline stemmen en de aparte organisator-login zijn verwijderd. `amigo_apply` verwerkt alleen `createPoll`, `removeVoter`, `close` en `reopen`; gegevens bewerken gaat via `amigo_edit`, aanmelden via `amigo_sign_in` en stemmen via `amigo_submit_ballot`.
+
+De eerste migraties blijven als geschiedenis en voor reproduceerbare installatie bestaan; migratie 013 vervangt hun oude functiedefinities en verwijdert de ongebruikte RPC's, velden en index. De gewone offlinewachtrij, bevestigingen en retries blijven onderdeel van de huidige werking.
+
+`node tests/planner-sql-local.mjs` valideert de volledige migratiereeks en SQL-regressietest in tijdelijke PostgreSQL via PGlite 0.6.0. Deze optionele controle downloadt het vastgelegde pakket uit npm, controleert de integriteit en verwijdert het na afloop; de app krijgt geen extra dependency. Alleen Supabase Auth-context, Realtime-transport en Cron-planning zijn lokaal nagebootst. Voer de SQL-regressie daarnaast met `psql` uit op een gemigreerde Supabase-testdatabase voor controle in de echte omgeving.
 
 ### Wireframe en toegepaste layout
 

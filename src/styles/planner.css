@@ -269,8 +269,7 @@ h2 {
   .collapsible-segment[data-phase] > .collapsible-segment__body { transition: none; }
 }
 
-.form label,
-.name-field {
+.form label {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -282,8 +281,7 @@ h2 {
 
 .form input,
 .form textarea,
-.form select,
-.name-field input {
+.form select {
   font-size: 1rem;
   padding: 0.6rem 0.75rem;
   border: 1.5px solid var(--ink);
@@ -297,12 +295,10 @@ h2 {
 
 .form select:hover,
 .form input:hover,
-.form textarea:hover,
-.name-field input:hover {
+.form textarea:hover {
   border-color: var(--muted);
 }
 
-.name-field input:focus,
 .form input:not([type='checkbox']):focus,
 .form select:focus,
 .form textarea:focus {
@@ -312,14 +308,6 @@ h2 {
 
 .form textarea {
   resize: none;
-}
-
-.voter-form select {
-  width: 100%;
-}
-
-.voter-form {
-  margin-top: 0;
 }
 
 .form + .poll-results {
@@ -347,11 +335,6 @@ h2 {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-
-.name-field {
-  margin-top: 1rem;
-  max-width: 320px;
 }
 
 .eyebrow {

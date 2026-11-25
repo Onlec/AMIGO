@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { deferLegacyVote, pendingPolls, readLocal, updateLocal } from './polls.js';
+import { pendingPolls, readLocal, updateLocal } from './polls.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -39,8 +39,9 @@ export function watchStatus(id, listener) {
 }
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { signIn: 'Aanmelden', lockOrganizer: 'Afmelden als organisator', ballot: 'Stem opslaan', join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
-  removeDate: 'Datum verwijderen', close: 'Datum bevestigen', reopen: 'Poll heropenen', removeVoter: 'Deelnemer verwijderen' };
+const labels = { signIn: 'Aanmelden', lockOrganizer: 'Afmelden als organisator', ballot: 'Stem opslaan',
+  createPoll: 'Aanmaken', edit: 'Prikker bewerken', close: 'Datum bevestigen', reopen: 'Poll heropenen',
+  removeVoter: 'Deelnemer verwijderen' };
 
 async function synchronize(id) {
   if (!supportedId.test(id)) return status(id, 'Prikker niet gevonden.');
@@ -49,11 +50,6 @@ async function synchronize(id) {
   let row = await readLocal(id);
   while (row?.queue.length) {
     const command = row.queue[0];
-    if (command.kind === 'vote') {
-      await deferLegacyVote(id, command.operation);
-      row = await readLocal(id);
-      continue;
-    }
     let rejection;
     let loginSession;
     try {
@@ -70,7 +66,7 @@ async function synchronize(id) {
       }
     } catch (error) {
       if (!['P0001','23503','23505','23514','23502','22007','22P02'].includes(error.code)) throw error;
-      rejection = labels[command.kind] + (command.body.day ? ' (' + command.body.day + ')' : '') + ': ' + error.message;
+      rejection = (labels[command.kind] || 'Wijziging') + (command.body.day ? ' (' + command.body.day + ')' : '') + ': ' + error.message;
     }
     // Keep the command until both its receipt and the new snapshot can be read.
     const base = await rpc('amigo_read', { p: id });
@@ -80,17 +76,6 @@ async function synchronize(id) {
       current.queue = current.queue.filter(item => item.operation !== command.operation);
       if (command.kind === 'signIn') {
         (current.loginResults ??= {})[command.operation] = { session: loginSession, rejection };
-      }
-      if (command.kind === 'ballot' || command.kind === 'signIn') {
-        (current.ballotResults ??= {})[command.operation] = { rejection };
-        if (!rejection && (command.kind === 'ballot' || (loginSession?.voter && base?.status === 'open'))) {
-          const used = new Set(command.body.legacyOperations || []);
-          current.legacyVotes = (current.legacyVotes || []).filter(item => !used.has(item.operation));
-        }
-      }
-      if (command.kind === 'edit' && !rejection && command.body.organizerParticipation?.enabled === false) {
-        const removed = command.body.organizerParticipation.voter;
-        current.legacyVotes = (current.legacyVotes || []).filter(item => item.body.voter !== removed);
       }
       if (rejection) current.notices.push(rejection);
     });
@@ -118,20 +103,6 @@ export function sync(id) {
     .catch(error => status(id, client ? 'Synchronisatie uitgesteld. ' + error.message : error.message))
     .finally(() => running.delete(id));
   return job.promise;
-}
-
-export async function unlock(id, proof) {
-  if (!navigator.onLine) throw new Error('Ga online om het organisatorwachtwoord te controleren.');
-  await connect();
-  // An older offline logout must finish before granting a fresh session.
-  if ((await readLocal(id))?.queue.some(command => command.kind === 'lockOrganizer')) {
-    await sync(id);
-    if ((await readLocal(id))?.queue.some(command => command.kind === 'lockOrganizer')) {
-      throw new Error('Je vorige afmelding is nog niet gesynchroniseerd. Probeer opnieuw zodra de verbinding is hersteld.');
-    }
-  }
-  if (!await rpc('amigo_unlock', { p: id, proof })) throw new Error('Wachtwoord klopt niet.');
-  await sync(id);
 }
 
 export function follow(id) {

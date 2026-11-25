@@ -444,7 +444,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     function management() {
       if (state.screen === 'edit') return edit();
       if (state.screen === 'final') return final();
-      return `<div class="access-row manage-row"><p>Je bent aangemeld als organisator.</p>${actionRow(button('Bewerken', 'edit') + button(state.scenario === 'closed' ? 'Einddatum wijzigen' : 'Einddatum kiezen', 'final', true))}</div>
+      return `${actionRow(button('Bewerken', 'edit') + button(state.scenario === 'closed' ? 'Einddatum wijzigen' : 'Einddatum kiezen', 'final', true))}
         ${state.scenario === 'closed' ? `<div class="reopen"><p class="description">Verwijder de gekozen datum en laat iedereen opnieuw stemmen. Bestaande stemmen blijven behouden.</p>${button('Poll heropenen', 'reopen', true)}</div>` : ''}`;
     }
     function poll() {

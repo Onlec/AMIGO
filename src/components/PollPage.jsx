@@ -42,7 +42,7 @@ export default function PollPage({ pollId, share }) {
   const votes = poll?.votes || {};
   const [session, setSession] = useState(() => readVoterSession(pollId));
   const voterId = votes[session?.voter] ? session.voter : null;
-  const organizerVoterId = poll?.organizerVoter || (session?.organizer && voterId) || null;
+  const organizerVoterId = poll?.organizerVoter || null;
   const [mode, setMode] = useState('view');
   const [organizerSignedOut, setOrganizerSignedOut] = useState(false);
   const organizerAuthorized = Boolean(session?.organizer && poll?.organizer) && !organizerSignedOut;
@@ -116,7 +116,7 @@ export default function PollPage({ pollId, share }) {
   }, [pollId, organizerAuthorized, editing]);
 
   useEffect(() => {
-    if (!session?.organizer || !poll || !('organizerVoter' in poll)) return;
+    if (!session?.organizer || !poll) return;
     const ownId = poll.organizerVoter;
     const credentials = session.participation;
     if (ownId && credentials?.voter === ownId && session.voter !== ownId) {
@@ -186,13 +186,6 @@ export default function PollPage({ pollId, share }) {
   const hasDates = Object.keys(dates).length > 0;
   const showBallot = hasDates && poll.status === 'open';
   const hasVoters = Object.keys(votes).length > 0;
-  const deferred = row.legacyVotes || [];
-  const localParticipants = {};
-  const excludedVoters = new Set(row.queue.filter(item => item.kind === 'edit' && item.body.organizerParticipation?.enabled === false)
-    .map(item => item.body.organizerParticipation.voter));
-  for (const { body } of deferred) {
-    if (!body.existing && !votes[body.voter] && !excludedVoters.has(body.voter)) localParticipants[body.voter] = { name: body.name, localOnly: true };
-  }
   const finalDate = poll.finalDateId ? dates[poll.finalDateId] : null;
 
   return (
@@ -220,8 +213,7 @@ export default function PollPage({ pollId, share }) {
         </div>
       )}
 
-      <VoterForm pollId={pollId} dates={dates} participants={{ ...localParticipants, ...votes }}
-        legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults} loginResults={row.loginResults}
+      <VoterForm pollId={pollId} dates={dates} participants={votes} loginResults={row.loginResults}
         session={session} onSelect={selectVoter} votingOpen={showBallot} readOnly={editing} />
 
       <div className="form poll-results">
@@ -242,7 +234,7 @@ export default function PollPage({ pollId, share }) {
         </CollapsibleSegment>
       </div>
 
-      <OrganizerUnlock editing={editing} authorized={organizerAuthorized} signedIn={Boolean(session)}
+      <OrganizerUnlock editing={editing} authorized={organizerAuthorized}
         finalDateChosen={Boolean(poll.finalDateId)}
         onReopen={() => { if (organizerAuthorized) save('reopen', {}); }}
         onEdit={() => setMode('edit')} onChooseFinal={hasDates ? () => setMode('final') : null}>
@@ -257,7 +249,7 @@ export default function PollPage({ pollId, share }) {
       </OrganizerUnlock>
 
       <div className="share-hint">
-        <p>Deel deze link met je groep:<br /><code>{window.location.href}</code></p>
+        <p><code>{window.location.href}</code></p>
         <CopyButton text={window.location.href} label="Link kopiëren" secondary />
       </div>
     </div>
