@@ -77,34 +77,38 @@ export default function CreatePollPage({ onCreated }) {
   const sortedSelectedDates = Object.entries(selectedDates).sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <div className="page">
+    <div className="page planner-page">
       <div className="lab eyebrow">AMIGO / PLANNER</div>
       <h1>Nieuwe datumprikker</h1>
       <form onSubmit={handleSubmit} className="form">
         <fieldset>
           <legend>01 — Prikker instellen</legend>
-          <label>
-            Titel
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Teamuitje december" />
-          </label>
+          <div className="planner-fields">
+            <label>
+              Titel
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Teamuitje december" />
+            </label>
 
-          <label>
-            Omschrijving (optioneel)
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-          </label>
+            <label>
+              Omschrijving (optioneel)
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            </label>
+          </div>
         </fieldset>
 
         <fieldset>
           <legend>02 — Organisator</legend>
-          <label>Naam organisator<input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
-          <label>
-            Wachtwoord
-            <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </label>
-          <label className="participation-choice">
-            <input type="checkbox" checked={participating} onChange={e => setParticipating(e.target.checked)} />
-            Zelf meestemmen
-          </label>
+          <div className="planner-fields">
+            <label>Naam organisator<input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
+            <label>
+              Wachtwoord
+              <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </label>
+            <label className="participation-choice">
+              <input type="checkbox" checked={participating} onChange={e => setParticipating(e.target.checked)} />
+              Zelf meestemmen
+            </label>
+          </div>
         </fieldset>
 
         <fieldset>

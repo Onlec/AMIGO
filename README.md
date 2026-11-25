@@ -32,6 +32,16 @@ Voorlopig staat in `src/config.js` de schakelaar `PLANNER_ONLY` op `true`: de st
 
 ## Onderhoud en controle
 
+### Wireframe en toegepaste layout
+
+Open [het losse wireframe](docs/planner-wireframe.html) rechtstreeks in de browser. Het bevat aanmaken, delen, stemmen, bewerken en einddatum kiezen, met instelbare breedte, licht/donker thema, gebruikerssituatie, kaarten/kalender en lange voorbeeldinhoud. Blauwe verticale hulplijnen tonen de randen; afzonderlijk schakelbare oranje horizontale lijnen tonen de rijmiddens en de basislijn van titel/status. Naam en afmeldknop staan gecentreerd naast elkaar, de aanmeldknop sluit aan op het wachtwoordveld en datum en bediening delen een rij. De lettertypen zijn ingesloten; een server of Supabase-verbinding is niet nodig. De bediening gebruikt fictieve gegevens.
+
+De [desktopafbeelding](docs/planner-wireframe-desktop.png) en [mobiele afbeelding](docs/planner-wireframe-mobile.png) geven een eerste overzicht. Het goedgekeurde raster is toegepast op aanmaken, delen, stemmen en organisatorbeheer: één breedte van 760 px, gedeelde uitlijningslijnen en een vast ritme van afstanden. De gedeelde maten staan in `src/styles/planner-layout.css` en zijn begrensd tot de datumprikker. Kalenderdagen blijven vierkant, ook op smalle schermen en met tijdstip en stemmarkering.
+
+`node tests/wireframe-browser.mjs` controleert verticale randen, horizontale rijmiddens en de tekstbasislijn van titel/status op 320, 390, 768 en 1440 px, in beide thema's en met verschillende rollen, beide datumweergaven en lange inhoud. Voeg `--screenshots` toe om de twee voorbeeldafbeeldingen opnieuw te maken. Chrome en de gebruikelijke `CHROME_PATH`-instelling werken zoals bij de andere browsertests.
+
+`node tests/planner-layout-browser.mjs` controleert dezelfde breedtes en thema's op de werkende React-schermen, met lange namen en tien datums. De controle meet onder meer vierkante kalendercellen en knoppen, volledige tijd-/steminhoud, uitlijning, overlap en de vaste naamkolom.
+
 De plannercomponenten lezen uit de lokale kopie. `src/data/polls.js` beheert de IndexedDB-transacties en past openstaande opdrachten toe op het laatst bevestigde resultaat. `src/data/sync.js` verzorgt de Supabase-sessie, bevestigingen, retries en Realtime. Alleen de publieke RPC-functies geven toegang tot de gegevens. Een privébericht meldt dat er iets is gewijzigd, waarna de browser de actuele prikker ophaalt.
 
 De huisstijl staat onder `src/styles/`, met aparte bestanden voor lettertypen, thema, homepage met tools en Datumprikker. `src/styles.css` bepaalt de laadvolgorde. De lettertypen worden lokaal uit de Fontsource-pakketten meegebouwd. De persoonlijke tools gebruiken hun bestaande localStorage-sleutels.

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { copyToClipboard } from '../utils/clipboard.js';
 
-export default function CopyButton({ text, label = 'Kopiëren', icon, iconOnly = false }) {
+export default function CopyButton({ text, label = 'Kopiëren', icon, iconOnly = false, secondary = false }) {
   const [attempt, setAttempt] = useState(null);
   const [feedback, setFeedback] = useState('');
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function CopyButton({ text, label = 'Kopiëren', icon, iconOnly =
     return () => { live = false; clearTimeout(timer); };
   }, [attempt]);
   return (
-    <button type="button" className={'copy-button' + (iconOnly ? ' copy-button--icon' : '')}
+    <button type="button" className={'copy-button' + (iconOnly ? ' copy-button--icon' : '') + (secondary ? ' btn-secondary' : '')}
       aria-label={iconOnly ? feedback || label : undefined} title={iconOnly ? feedback || label : undefined}
       onClick={() => setAttempt(copyToClipboard(text))}>
       {iconOnly && <span aria-hidden="true">

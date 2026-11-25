@@ -163,16 +163,21 @@ export default function PollPage({ pollId, share }) {
   if (share) {
     const link = new URL('?poll=' + pollId, window.location.href).href;
     return (
-      <main className="page">
+      <main className="page planner-page">
         <h1>Deel je datumprikker</h1>
         <p>{poll.title}</p>
         <div className="form">
-          <label>Stemlink<input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
-          <p role="status" className="description">{row.base ? 'Klaar om te delen.' : 'Lokaal bewaard. Anderen kunnen de link openen na synchronisatie.'}</p>
-          <div className="edit-actions">
-            <CopyButton text={link} label="Link kopiëren" />
-            <a className="btn" href={link}>Naar de datumprikker</a>
-          </div>
+          <fieldset>
+            <legend>Stemlink</legend>
+            <div className="planner-fields">
+              <label>Stemlink<input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
+              <p role="status" className="description">{row.base ? 'Klaar om te delen.' : 'Lokaal bewaard. Anderen kunnen de link openen na synchronisatie.'}</p>
+              <div className="edit-actions">
+                <CopyButton text={link} label="Link kopiëren" secondary />
+                <a className="btn" href={link}>Naar de datumprikker</a>
+              </div>
+            </div>
+          </fieldset>
         </div>
       </main>
     );
@@ -191,7 +196,7 @@ export default function PollPage({ pollId, share }) {
   const finalDate = poll.finalDateId ? dates[poll.finalDateId] : null;
 
   return (
-    <div ref={pageRef} className="page">
+    <div ref={pageRef} className="page planner-page">
       <div className="lab eyebrow">AMIGO / STEMMEN</div>
       <div className="poll-heading">
         <h1>{poll.title}</h1>
@@ -251,10 +256,10 @@ export default function PollPage({ pollId, share }) {
         )}
       </OrganizerUnlock>
 
-      <p className="share-hint">
-        Deel deze link met je groep: <code>{window.location.href}</code>{' '}
-        <CopyButton text={window.location.href} label="Link kopiëren" />
-      </p>
+      <div className="share-hint">
+        <p>Deel deze link met je groep:<br /><code>{window.location.href}</code></p>
+        <CopyButton text={window.location.href} label="Link kopiëren" secondary />
+      </div>
     </div>
   );
 }

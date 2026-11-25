@@ -6,7 +6,7 @@ import { PLANNER_ONLY } from '../config.js';
 // heeft haar eigen koptekst, in dezelfde stijl.
 export default function SiteHeader() {
   return (
-    <header className="top">
+    <header className="top planner-header">
       <div className="wrap">
         <a className="logo" href="?">
           AMIGO

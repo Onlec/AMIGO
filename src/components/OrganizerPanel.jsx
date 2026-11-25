@@ -53,13 +53,10 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
             options={[{ value: 'date', label: 'Datum' }, { value: 'attendance', label: 'Meeste ja' }]} />
         </div>
       } renderCard={day => (
-        <>
-          <p>{tally[day].yes} ja, {tally[day].maybe} misschien, {tally[day].no} nee</p>
           <button type="button" aria-pressed={day === selectedDateId} onClick={() => setSelectedDateId(day)}>
             {day === selectedDateId ? 'Geselecteerd' : 'Kies deze datum'}
           </button>
-        </>
-      )} renderDay={(day, number) => (
+      )} renderCardMeta={day => <span>{tally[day].yes} ja, {tally[day].maybe} misschien, {tally[day].no} nee</span>} renderDay={(day, number) => (
         <button type="button" aria-label={formatDay(day)} aria-pressed={day === selectedDateId}
           className={'calendar-day-button ' + (day === selectedDateId ? 'is-selected' : '')}
           onClick={() => setSelectedDateId(day)}>

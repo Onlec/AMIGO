@@ -3,7 +3,7 @@ import MonthCalendar from './MonthCalendar.jsx';
 import SegmentedControl from './SegmentedControl.jsx';
 import { useSegmentTransition } from './CollapsibleSegment.jsx';
 
-import { formatProposal } from '../utils/dates.js';
+import { formatDay, formatTime } from '../utils/dates.js';
 
 const viewOptions = [
   {
@@ -33,7 +33,7 @@ function readView() {
   return localStorage.getItem('amigo-date-view') === 'calendar' ? 'calendar' : 'cards';
 }
 
-export default function DateChoices({ dates, firstUnanswered, renderCard, renderDay, legend, showUnansweredJump = false, cardOrder, cardToolbar }) {
+export default function DateChoices({ dates, firstUnanswered, renderCard, renderCardMeta, renderDay, legend, showUnansweredJump = false, cardOrder, cardToolbar }) {
   const days = Object.keys(dates).sort();
   const cardDays = cardOrder || days;
   const view = useSyncExternalStore(watchView, readView);
@@ -83,8 +83,12 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
             <ul className="date-cards">
               {cardDays.map(day => (
                 <li key={day} data-day={day}>
-                  <strong>{formatProposal(day, dates[day].time, true)}</strong>
+                  <strong>{formatDay(day, true)}</strong>
                   {renderCard(day)}
+                  {(dates[day].time || renderCardMeta) && <div className="date-card-meta">
+                    {dates[day].time && <span>{formatTime(dates[day].time)}</span>}
+                    {renderCardMeta?.(day)}
+                  </div>}
                 </li>
               ))}
             </ul>

@@ -815,10 +815,6 @@ button.btn-secondary:focus-visible {
     padding-inline: 0.75rem;
   }
 
-  .calendar-cell {
-    min-height: 40px;
-  }
-
   .organizer-panel,
   .form fieldset {
     padding: 0.6rem;
@@ -912,6 +908,4 @@ button.btn-secondary:focus-visible {
 
 .month-status { min-height: 1.5em; margin: 0; line-height: 1.5; font-size: .85rem; }
 .calendar-header .calendar-title:only-child { margin-inline: auto; }
-.calendar-grid { grid-auto-rows: 1fr; }
 .calendar-day-button small { font-size: .65rem; }
-.calendar:has(.month-status) .calendar-cell { width: 100%; min-height: 3.6rem; }
