@@ -98,7 +98,8 @@ export default function PollPage({ pollId, share }) {
 
   const notices = row?.notices || [];
   if (!poll) {
-    const message = status === 'Offline' ? 'Deze prikker is nog niet op dit toestel bewaard. Open de link eerst online.' : status;
+    const message = row?.missing ? 'Deze prikker bestaat niet meer. Inactieve prikkers worden na 14 dagen verwijderd.'
+      : status === 'Offline' ? 'Deze prikker is nog niet op dit toestel bewaard. Open de link eerst online.' : status;
     return <div className="page" role="status">{storageError || notices.at(-1) || message || 'Prikker laden…'}</div>;
   }
 
@@ -181,6 +182,7 @@ export default function PollPage({ pollId, share }) {
 
       <OrganizerUnlock editing={editing} authorized={organizerAuthorized} signedIn={Boolean(session)}
         finalDateChosen={Boolean(poll.finalDateId)}
+        onReopen={() => { if (organizerAuthorized) save('reopen', {}); }}
         onEdit={() => setMode('edit')} onChooseFinal={hasDates ? () => setMode('final') : null}>
         {mode === 'edit' && (
           <EditPollPanel poll={poll} initiallyParticipating={Boolean(organizerVoterId)} onSave={savePoll}

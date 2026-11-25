@@ -40,7 +40,7 @@ export function watchStatus(id, listener) {
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const labels = { signIn: 'Aanmelden', lockOrganizer: 'Afmelden als organisator', ballot: 'Stem opslaan', join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
-  removeDate: 'Datum verwijderen', close: 'Datum bevestigen', removeVoter: 'Deelnemer verwijderen' };
+  removeDate: 'Datum verwijderen', close: 'Datum bevestigen', reopen: 'Poll heropenen', removeVoter: 'Deelnemer verwijderen' };
 
 async function synchronize(id) {
   if (!supportedId.test(id)) return status(id, 'Prikker niet gevonden.');
@@ -76,6 +76,7 @@ async function synchronize(id) {
     const base = await rpc('amigo_read', { p: id });
     await updateLocal(id, current => {
       current.base = base;
+      current.missing = base === null;
       current.queue = current.queue.filter(item => item.operation !== command.operation);
       if (command.kind === 'signIn') {
         (current.loginResults ??= {})[command.operation] = { session: loginSession, rejection };
@@ -96,7 +97,7 @@ async function synchronize(id) {
     row = await readLocal(id);
   }
   const base = await rpc('amigo_read', { p: id });
-  await updateLocal(id, current => { current.base = base; });
+  await updateLocal(id, current => { current.base = base; current.missing = base === null; });
   status(id, base ? 'Gesynchroniseerd' : 'Prikker niet gevonden.');
 }
 

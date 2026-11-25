@@ -324,4 +324,109 @@ begin
   perform public.amigo_apply(p,op,'close','{"day":"2027-01-02"}');
   assert public.amigo_read(p)->>'finalDateId'='2027-01-01';
 end $$;
+do $$
+declare
+  p uuid := gen_random_uuid();
+  voter uuid := gen_random_uuid();
+  owner_actor text := auth.uid()::text;
+  op uuid := gen_random_uuid();
+  close_op uuid := gen_random_uuid();
+  snapshot jsonb;
+begin
+  perform public.amigo_apply(p,gen_random_uuid(),'createPoll',jsonb_build_object('title','Heropenen',
+    'organizerName','Maker','proof',repeat('a',64),'dates','{"2027-01-01":{},"2027-01-02":{}}'::jsonb));
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',voter,'name','Anna',
+    'proof',repeat('b',64),'register',true,'changes','{"2027-01-01":"yes"}'::jsonb));
+  perform public.amigo_apply(p,close_op,'close','{"day":"2027-01-01"}');
+  snapshot := public.amigo_read(p);
+  perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+  begin
+    perform public.amigo_apply(p,gen_random_uuid(),'reopen','{}');
+    raise exception using errcode='XX000', message='Visitor reopened poll';
+  exception when raise_exception then assert sqlerrm='Ontgrendel eerst de bewerkmodus.'; end;
+  perform set_config('request.jwt.claim.sub',owner_actor,true);
+  assert public.amigo_read(p)=snapshot;
+  perform public.amigo_apply(p,op,'reopen','{}');
+  assert public.amigo_read(p)->>'finalDateId' is null;
+  assert public.amigo_read(p)->>'status'='open';
+  assert public.amigo_read(p)->'votes'=snapshot->'votes';
+  assert public.amigo_read(p)->'dates'=snapshot->'dates';
+  assert public.amigo_read(p)->>'organizer'='true';
+  -- Retrying the old close must not close the reopened poll.
+  perform public.amigo_apply(p,close_op,'close','{"day":"2027-01-01"}');
+  assert public.amigo_read(p)->>'status'='open';
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',voter,'name','Anna',
+    'proof',repeat('b',64),'register',false,'changes','{"2027-01-02":"yes"}'::jsonb));
+  assert (public.amigo_read(p)#>>array['votes',voter::text,'votesJson'])::jsonb='{"2027-01-01":"yes","2027-01-02":"yes"}'::jsonb;
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-02"}');
+  -- Retrying the old reopen must not undo the new final date.
+  perform public.amigo_apply(p,op,'reopen','{}');
+  assert public.amigo_read(p)->>'finalDateId'='2027-01-02';
+end $$;
+do $$
+declare
+  expired uuid := gen_random_uuid();
+  closed_expired uuid := gen_random_uuid();
+  active_poll uuid := gen_random_uuid();
+  recent_poll uuid := gen_random_uuid();
+  participant uuid := gen_random_uuid();
+  active_voter uuid := gen_random_uuid();
+  baseline timestamptz := now() - interval '13 days';
+  body jsonb := jsonb_build_object('title','Bewaartermijn','organizerName','Maker','proof',repeat('a',64),
+    'dates','{"2027-01-01":{},"2027-01-02":{}}'::jsonb);
+begin
+  assert not has_function_privilege('authenticated','amigo.delete_inactive_polls()','execute');
+  assert not has_function_privilege('anon','amigo.delete_inactive_polls()','execute');
+  assert (select count(*) from cron.job where jobname='amigo-delete-inactive-polls' and active)=1;
+  perform public.amigo_apply(expired,gen_random_uuid(),'createPoll',body || jsonb_build_object(
+    'voter',participant,'voterProof',repeat('b',64)));
+  perform public.amigo_submit_ballot(expired,gen_random_uuid(),jsonb_build_object('name','Maker',
+    'voter',participant,'proof',repeat('b',64),'register',false,'changes','{"2027-01-01":"yes"}'::jsonb));
+  perform public.amigo_sign_in(expired,gen_random_uuid(),jsonb_build_object('name','Maker',
+    'voter',participant,'proof',repeat('b',64),'organizerProof',repeat('a',64),'register',false,'changes','{}'::jsonb));
+  perform public.amigo_apply(closed_expired,gen_random_uuid(),'createPoll',body);
+  perform public.amigo_apply(closed_expired,gen_random_uuid(),'close','{"day":"2027-01-01"}');
+  perform public.amigo_apply(active_poll,gen_random_uuid(),'createPoll',body);
+  perform public.amigo_apply(recent_poll,gen_random_uuid(),'createPoll',body);
+
+  update amigo.polls set last_activity_at=baseline where id=recent_poll;
+  perform public.amigo_read(recent_poll);
+  perform public.amigo_sign_in(recent_poll,gen_random_uuid(),jsonb_build_object('name','Maker',
+    'voter',gen_random_uuid(),'proof',repeat('c',64),'organizerProof',repeat('a',64),
+    'register',true,'changes','{}'::jsonb));
+  perform public.amigo_lock_organizer(recent_poll,gen_random_uuid());
+  assert (select last_activity_at from amigo.polls where id=recent_poll)=baseline;
+  assert public.amigo_unlock(recent_poll,repeat('a',64));
+  perform public.amigo_edit(recent_poll,gen_random_uuid(),'{"title":"Bewaartermijn","added":[],"removed":[]}');
+  assert (select last_activity_at from amigo.polls where id=recent_poll)=baseline;
+  perform public.amigo_edit(recent_poll,gen_random_uuid(),'{"title":"Nieuwe titel","added":[],"removed":[]}');
+  assert (select last_activity_at from amigo.polls where id=recent_poll)>baseline;
+
+  perform public.amigo_submit_ballot(active_poll,gen_random_uuid(),jsonb_build_object('name','Anna',
+    'voter',active_voter,'proof',repeat('d',64),'register',true,'changes','{"2027-01-01":"yes"}'::jsonb));
+  update amigo.polls set last_activity_at=baseline where id=active_poll;
+  perform public.amigo_submit_ballot(active_poll,gen_random_uuid(),jsonb_build_object('name','Anna',
+    'voter',active_voter,'proof',repeat('d',64),'register',false,'changes','{"2027-01-01":"yes"}'::jsonb));
+  assert (select last_activity_at from amigo.polls where id=active_poll)=baseline;
+  perform public.amigo_apply(active_poll,gen_random_uuid(),'addDate','{"day":"2027-01-03"}');
+  assert (select last_activity_at from amigo.polls where id=active_poll)>baseline;
+  update amigo.polls set last_activity_at=now()-interval '15 days' where id=active_poll;
+  perform public.amigo_submit_ballot(active_poll,gen_random_uuid(),jsonb_build_object('name','Anna',
+    'voter',active_voter,'proof',repeat('d',64),'register',false,'changes','{"2027-01-02":"no"}'::jsonb));
+  assert (select last_activity_at from amigo.polls where id=active_poll)>=now();
+
+  update amigo.polls set last_activity_at=baseline where id=recent_poll;
+  update amigo.polls set last_activity_at=now()-interval '14 days' where id=expired;
+  update amigo.polls set last_activity_at=now()-interval '15 days' where id=closed_expired;
+  perform amigo.delete_inactive_polls();
+  assert public.amigo_read(expired) is null;
+  assert public.amigo_read(closed_expired) is null;
+  assert public.amigo_read(active_poll) is not null;
+  assert public.amigo_read(recent_poll) is not null;
+  assert not exists(select from amigo.dates where poll_id=expired);
+  assert not exists(select from amigo.voters where poll_id=expired);
+  assert not exists(select from amigo.votes where poll_id=expired);
+  assert not exists(select from amigo.members where poll_id=expired);
+  assert not exists(select from amigo.login_receipts where poll_id=expired);
+end $$;
 rollback;

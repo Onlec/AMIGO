@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import CollapsibleSegment from './CollapsibleSegment.jsx';
 
-export default function OrganizerUnlock({ onEdit, onChooseFinal, finalDateChosen = false, authorized = false, signedIn = false, active = true, editing = false, children }) {
+export default function OrganizerUnlock({ onEdit, onChooseFinal, onReopen, finalDateChosen = false, authorized = false, signedIn = false, active = true, editing = false, children }) {
   const editButton = useRef(null);
   const finalButton = useRef(null);
   const lastAction = useRef('edit');
@@ -18,7 +18,7 @@ export default function OrganizerUnlock({ onEdit, onChooseFinal, finalDateChosen
   return (
     <div className="form unlock-form">
       <CollapsibleSegment title="04 — Prikker beheren" open={active && authorized}>
-        {editing ? children : (
+        {editing ? children : <>
           <div className="access-row">
             <div className="access-fields">
               <p>{authorized ? 'Je bent aangemeld als organisator.'
@@ -36,7 +36,11 @@ export default function OrganizerUnlock({ onEdit, onChooseFinal, finalDateChosen
               }}>{finalDateChosen ? 'Einddatum wijzigen' : 'Einddatum kiezen'}</button>}
             </div>
           </div>
-        )}
+          {finalDateChosen && onReopen && <div className="organizer-reopen">
+            <p className="description">Verwijder de gekozen datum en laat iedereen opnieuw stemmen. Bestaande stemmen blijven behouden.</p>
+            <button type="button" value="reopen" className="btn-secondary" disabled={!authorized} onClick={onReopen}>Poll heropenen</button>
+          </div>}
+        </>}
       </CollapsibleSegment>
     </div>
   );

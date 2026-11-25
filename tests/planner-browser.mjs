@@ -479,6 +479,17 @@ try {
   assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).status)'), 'closed', 'Changing the final date never reopens voting');
   assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))'), votesBeforeDateChange, 'Changing the final date preserves every vote');
   assert.equal(await evaluate("document.querySelector('.vote-grid .chosen-column') !== null"), true, 'Overview highlights the replacement date');
+  await evaluate("document.querySelector('.unlock-form button[value=reopen]').click()");
+  await until(() => evaluate("document.querySelector('.final-date') === null && document.querySelector('.voter-availability').dataset.open === 'true'"));
+  assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).finalDateId)'), null, 'Reopening removes the chosen date');
+  assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))'), votesBeforeDateChange, 'Reopening preserves all votes');
+  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=final]').textContent"), 'Einddatum kiezen', 'Reopened poll offers a fresh final-date choice');
+  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=reopen]') === null && document.querySelector('.vote-grid .chosen-column') === null"), true, 'Reopened poll removes final-date actions and highlights');
+  const beforeReopenedVote = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue.length)');
+  await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]:not(:disabled)').click()");
+  await until(() => evaluate(`pollData.readLocal(fixturePoll).then(row => row.queue.length === ${beforeReopenedVote + 1} && row.queue.at(-1).kind === 'ballot')`));
+  await evaluate("pollData.enqueue(fixturePoll, 'close', { day: '2027-04-12' })");
+  await until(() => evaluate("document.querySelector('.final-date') !== null"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base = pollData.project(row); row.queue = []; })");
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = false; })");
   await until(() => evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"));
@@ -636,6 +647,14 @@ try {
   await until(() => evaluate("document.querySelector('.final-date') !== null && document.querySelector('.poll-confetti') === null"));
   assert.equal(await evaluate("document.querySelector('.poll-confetti') === null"), true, 'Reduced-motion preference skips confetti');
   await command('Emulation.setEmulatedMedia', { features: [] });
+  await evaluate(`(async () => {
+    const data = await import('/src/data/polls.js');
+    await data.updateLocal(${JSON.stringify(ownerOnlyPoll)}, row => {
+      row.base = null; row.missing = true; row.queue = [];
+    });
+  })()`);
+  await until(() => evaluate("document.body.textContent.includes('Deze prikker bestaat niet meer.')"));
+  assert.equal(await evaluate("document.querySelector('.voter-credentials') === null"), true, 'Deleted polls show a clear message and no stale voting form');
   await command('Page.navigate', { url: `${origin}?page=planner` });
   await until(() => evaluate("document.querySelector('.participation-choice input') !== null"));
   assert.equal(await evaluate("document.querySelector('.participation-choice input').checked"), true, 'Creating a poll defaults to self participation');

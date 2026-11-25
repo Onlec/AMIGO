@@ -123,6 +123,10 @@ export function project(row) {
         poll.status = 'closed';
         poll.finalDateId = body.day;
         break;
+      case 'reopen':
+        poll.status = 'open';
+        poll.finalDateId = null;
+        break;
     }
   }
   return poll;
