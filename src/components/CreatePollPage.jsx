@@ -65,7 +65,7 @@ export default function CreatePollPage({ onCreated }) {
         title: title.trim(), description: description.trim(), organizerName: organizerName.trim(), proof, dates,
         ...(session && { voter: session.voter, voterProof: session.proof }),
       });
-      rememberVoterSession(pollId, session);
+      rememberVoterSession(pollId, { ...(session || { voter: null }), name: organizerName.trim(), organizer: true });
       const link = new URL('?poll=' + pollId, window.location.href).href;
       onCreated(pollId, link);
     } catch (err) {

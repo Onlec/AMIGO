@@ -187,4 +187,57 @@ begin
   perform public.amigo_lock_organizer(p,gen_random_uuid());
   assert public.amigo_read(p)->>'organizer'='false';
 end $$;
+do $$
+declare
+  p uuid := gen_random_uuid();
+  participating_poll uuid := gen_random_uuid();
+  voter uuid := gen_random_uuid();
+  organizer_voter uuid := gen_random_uuid();
+  login_op uuid := gen_random_uuid();
+  response jsonb;
+  body jsonb := jsonb_build_object('title','Eén aanmelding','description','','organizerName','Maker',
+    'proof',repeat('a',64),'dates','{"2027-01-01":{},"2027-01-02":{}}'::jsonb);
+begin
+  perform public.amigo_apply(p,gen_random_uuid(),'createPoll',body);
+  -- A normal voter never inherits the creator browser's previous organizer role.
+  response := public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('voter',voter,'name','Deelnemer',
+    'proof',repeat('b',64),'organizerProof',repeat('c',64),'register',true,'changes','{}'::jsonb));
+  assert response->>'organizer'='false' and response->>'voter'=voter::text;
+  assert public.amigo_read(p)->>'organizer'='false';
+  response := public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('voter',voter,'name','Deelnemer',
+    'proof',repeat('b',64),'organizerProof',repeat('a',64),'register',false,'changes','{}'::jsonb));
+  assert response->>'organizer'='false';
+  begin
+    perform public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('voter',gen_random_uuid(),'name','Maker',
+      'proof',repeat('d',64),'organizerProof',repeat('c',64),'register',true,'changes','{}'::jsonb));
+    raise exception using errcode='XX000', message='Organizer name granted access without its password';
+  exception when raise_exception then assert sqlerrm='Wachtwoord klopt niet.'; end;
+  assert public.amigo_read(p)->>'organizer'='false';
+  response := public.amigo_sign_in(p,login_op,jsonb_build_object('voter',gen_random_uuid(),'name','maker',
+    'proof',repeat('d',64),'organizerProof',repeat('a',64),'register',true,'changes','{}'::jsonb));
+  assert response->>'organizer'='true' and response->>'voter' is null and response->>'name'='Maker';
+  assert public.amigo_read(p)->>'organizer'='true';
+  assert (select count(*) from jsonb_object_keys(public.amigo_read(p)->'votes'))=1;
+  perform public.amigo_lock_organizer(p,gen_random_uuid());
+  -- Retrying a successful login only returns its receipt, without signing in again.
+  assert public.amigo_sign_in(p,login_op,jsonb_build_object('name','Maker'))=response;
+  assert public.amigo_read(p)->>'organizer'='false';
+  response := public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('voter',gen_random_uuid(),'name','Maker',
+    'proof',repeat('d',64),'organizerProof',repeat('a',64),'register',true,'changes','{}'::jsonb));
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-01"}');
+  perform public.amigo_lock_organizer(p,gen_random_uuid());
+  response := public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('voter',gen_random_uuid(),'name','Maker',
+    'proof',repeat('d',64),'organizerProof',repeat('a',64),'register',true,'changes','{}'::jsonb));
+  assert response->>'organizer'='true' and response->>'voter' is null;
+  response := public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('voter',voter,'name','Deelnemer',
+    'proof',repeat('b',64),'organizerProof',repeat('c',64),'register',false,'changes','{}'::jsonb));
+  assert response->>'organizer'='false' and response->>'voter'=voter::text;
+  assert public.amigo_read(p)->>'organizer'='false';
+  -- A participating organizer authenticates both roles with the same login.
+  perform public.amigo_apply(participating_poll,gen_random_uuid(),'createPoll',body || jsonb_build_object(
+    'voter',organizer_voter,'voterProof',repeat('d',64)));
+  response := public.amigo_sign_in(participating_poll,gen_random_uuid(),jsonb_build_object('voter',organizer_voter,'name','Maker',
+    'proof',repeat('d',64),'organizerProof',repeat('a',64),'register',false,'changes','{}'::jsonb));
+  assert response->>'organizer'='true' and response->>'voter'=organizer_voter::text;
+end $$;
 rollback;

@@ -1,30 +1,11 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { hashPassword } from '../utils/password.js';
+import React, { useLayoutEffect, useRef } from 'react';
 import CollapsibleSegment from './CollapsibleSegment.jsx';
 
-export default function OrganizerUnlock({ pollId, onUnlock, onEdit, onChooseFinal, authorized = false, active = true, editing = false, resetVersion = 0, children }) {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [checking, setChecking] = useState(false);
-  const [pendingAction, setPendingAction] = useState('edit');
+export default function OrganizerUnlock({ onEdit, onChooseFinal, authorized = false, signedIn = false, active = true, editing = false, children }) {
   const editButton = useRef(null);
   const finalButton = useRef(null);
   const lastAction = useRef('edit');
   const wasEditing = useRef(false);
-  const attempt = useRef(0);
-
-  useLayoutEffect(() => {
-    attempt.current += 1;
-    setPassword('');
-    setError('');
-  }, [resetVersion]);
-
-  useEffect(() => {
-    if (!authorized) {
-      setPassword('');
-      setError('');
-    }
-  }, [authorized]);
 
   useLayoutEffect(() => {
     if (wasEditing.current && !editing) {
@@ -34,69 +15,27 @@ export default function OrganizerUnlock({ pollId, onUnlock, onEdit, onChooseFina
     wasEditing.current = editing;
   }, [editing]);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    const action = event.nativeEvent.submitter?.value === 'final' ? 'final' : 'edit';
-    const proceed = action === 'final' ? onChooseFinal : onEdit;
-    lastAction.current = action;
-    if (authorized) {
-      proceed();
-      return;
-    }
-    setChecking(true);
-    const attemptId = ++attempt.current;
-    setPendingAction(action);
-    setError('');
-    try {
-      const proof = await hashPassword(pollId, password);
-      if (attemptId !== attempt.current) return;
-      await onUnlock(proof);
-      if (attemptId !== attempt.current) return;
-      setPassword('');
-      proceed();
-    } catch (err) {
-      if (attemptId === attempt.current) setError(err.message);
-    } finally {
-      setChecking(false);
-    }
-  }
-
   return (
     <div className="form unlock-form">
-      <CollapsibleSegment title="03 — Prikker beheren" open={active} disabled={checking}>
+      <CollapsibleSegment title="04 — Prikker beheren" open={active}>
         {editing ? children : (
-          <form onSubmit={handleSubmit}>
-            <div className="access-row">
-              <div className="access-fields">
-                {authorized ? <p>Je bent aangemeld als organisator.</p> : (
-                  <label>
-                    Pollwachtwoord
-                    <input
-                      type="password" autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </label>
-                )}
-              </div>
-              <div className="edit-actions access-actions organizer-actions">
-                <button ref={editButton} type={authorized ? 'button' : 'submit'} value="edit" onClick={() => {
-                  lastAction.current = 'edit';
-                  if (authorized) onEdit();
-                }}
-                  disabled={checking || (!authorized && !password)}>
-                  {checking && pendingAction === 'edit' ? 'Controleren...' : 'Bewerken'}
-                </button>
-                {onChooseFinal && <button ref={finalButton} type={authorized ? 'button' : 'submit'} value="final" className="btn-secondary" onClick={() => {
-                  lastAction.current = 'final';
-                  if (authorized) onChooseFinal();
-                }} disabled={checking || (!authorized && !password)}>
-                  {checking && pendingAction === 'final' ? 'Controleren...' : 'Einddatum kiezen'}
-                </button>}
-              </div>
+          <div className="access-row">
+            <div className="access-fields">
+              <p>{authorized ? 'Je bent aangemeld als organisator.'
+                : signedIn ? 'Alleen de organisator kan deze prikker beheren.'
+                : 'Meld je aan bij Jouw gegevens om deze prikker te beheren.'}</p>
             </div>
-            {!authorized && error && <p className="error" role="alert">{error}</p>}
-          </form>
+            <div className="edit-actions access-actions organizer-actions">
+              <button ref={editButton} type="button" value="edit" disabled={!authorized} onClick={() => {
+                lastAction.current = 'edit';
+                onEdit();
+              }}>Bewerken</button>
+              {onChooseFinal && <button ref={finalButton} type="button" value="final" className="btn-secondary" disabled={!authorized} onClick={() => {
+                lastAction.current = 'final';
+                onChooseFinal();
+              }}>Einddatum kiezen</button>}
+            </div>
+          </div>
         )}
       </CollapsibleSegment>
     </div>

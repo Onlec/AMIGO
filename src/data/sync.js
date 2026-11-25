@@ -39,7 +39,7 @@ export function watchStatus(id, listener) {
 }
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { lockOrganizer: 'Afmelden als organisator', ballot: 'Stem opslaan', join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
+const labels = { signIn: 'Aanmelden', lockOrganizer: 'Afmelden als organisator', ballot: 'Stem opslaan', join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
   removeDate: 'Datum verwijderen', close: 'Datum bevestigen', removeVoter: 'Deelnemer verwijderen' };
 
 async function synchronize(id) {
@@ -55,8 +55,11 @@ async function synchronize(id) {
       continue;
     }
     let rejection;
+    let loginSession;
     try {
-      if (command.kind === 'lockOrganizer') {
+      if (command.kind === 'signIn') {
+        loginSession = await rpc('amigo_sign_in', { p: id, operation: command.operation, body: command.body });
+      } else if (command.kind === 'lockOrganizer') {
         await rpc('amigo_lock_organizer', { p: id, operation: command.operation });
       } else if (command.kind === 'ballot') {
         await rpc('amigo_submit_ballot', { p: id, operation: command.operation, body: command.body });
@@ -74,9 +77,12 @@ async function synchronize(id) {
     await updateLocal(id, current => {
       current.base = base;
       current.queue = current.queue.filter(item => item.operation !== command.operation);
-      if (command.kind === 'ballot') {
+      if (command.kind === 'signIn') {
+        (current.loginResults ??= {})[command.operation] = { session: loginSession, rejection };
+      }
+      if (command.kind === 'ballot' || command.kind === 'signIn') {
         (current.ballotResults ??= {})[command.operation] = { rejection };
-        if (!rejection) {
+        if (!rejection && (command.kind === 'ballot' || (loginSession?.voter && base?.status === 'open'))) {
           const used = new Set(command.body.legacyOperations || []);
           current.legacyVotes = (current.legacyVotes || []).filter(item => !used.has(item.operation));
         }

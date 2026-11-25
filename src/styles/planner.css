@@ -235,12 +235,6 @@ h2 {
   .access-actions { justify-self: end; }
 }
 
-.voter-divider {
-  margin: 1.25rem 0;
-  border: 0;
-  border-top: 1px solid var(--border);
-}
-
 .voter-ballot {
   display: flow-root;
 }

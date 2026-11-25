@@ -1,7 +1,7 @@
 import { formatProposal } from '../utils/dates.js';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
-import { follow, syncStatus, unlock, watchStatus } from '../data/sync.js';
+import { follow, syncStatus, watchStatus } from '../data/sync.js';
 import { readVoterSession, rememberVoterSession } from '../data/voterSession.js';
 import VoterForm from './VoterForm.jsx';
 import VoteGrid from './VoteGrid.jsx';
@@ -40,14 +40,13 @@ export default function PollPage({ pollId, share }) {
   const voterId = votes[session?.voter] ? session.voter : null;
   const [mode, setMode] = useState('view');
   const [organizerSignedOut, setOrganizerSignedOut] = useState(false);
-  const organizerEpoch = useRef(0);
-  const organizerAuthorized = Boolean(poll?.organizer) && !organizerSignedOut;
+  const organizerAuthorized = Boolean(session?.organizer && poll?.organizer) && !organizerSignedOut;
   const editing = mode === 'edit' || mode === 'final';
   const selectVoter = useCallback(next => {
     rememberVoterSession(pollId, next);
     setSession(next);
+    if (next?.organizer) setOrganizerSignedOut(false);
     if (!next) {
-      organizerEpoch.current += 1;
       setMode('view');
       if (organizerAuthorized || editing) {
         setOrganizerSignedOut(true);
@@ -55,17 +54,6 @@ export default function PollPage({ pollId, share }) {
       }
     }
   }, [pollId, organizerAuthorized, editing]);
-
-  async function unlockOrganizer(proof) {
-    const epoch = organizerEpoch.current;
-    await unlock(pollId, proof);
-    if (epoch !== organizerEpoch.current) {
-      // A request that completed after switching voters must not sign us in again.
-      await enqueue(pollId, 'lockOrganizer', {});
-      throw new Error('De aanmelding is geannuleerd omdat je van stemmer bent gewisseld.');
-    }
-    setOrganizerSignedOut(false);
-  }
 
   function save(kind, body) {
     enqueue(pollId, kind, body).catch(err => setStorageError('Lokaal opslaan mislukt. ' + err.message));
@@ -129,11 +117,11 @@ export default function PollPage({ pollId, share }) {
       )}
 
       <VoterForm pollId={pollId} dates={dates} participants={{ ...localParticipants, ...votes }}
-        legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults}
-        session={session} onSelect={selectVoter} active={showBallot} readOnly={editing} />
+        legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults} loginResults={row.loginResults}
+        session={session} onSelect={selectVoter} votingOpen={showBallot} readOnly={editing} />
 
       <div className="form poll-results">
-        <CollapsibleSegment title="02 — Stemmenoverzicht" open={hasDates && hasVoters}>
+        <CollapsibleSegment title="03 — Stemmenoverzicht" open={hasDates && hasVoters}>
           <div className="poll-results-actions">
             <SharePollButton poll={poll} dates={dates} votes={votes} />
           </div>
@@ -150,9 +138,8 @@ export default function PollPage({ pollId, share }) {
         </CollapsibleSegment>
       </div>
 
-      <OrganizerUnlock pollId={pollId} editing={editing} authorized={organizerAuthorized} resetVersion={organizerEpoch.current}
-        onEdit={() => setMode('edit')} onChooseFinal={poll.status === 'open' && hasDates ? () => setMode('final') : null}
-        onUnlock={unlockOrganizer}>
+      <OrganizerUnlock editing={editing} authorized={organizerAuthorized} signedIn={Boolean(session)}
+        onEdit={() => setMode('edit')} onChooseFinal={poll.status === 'open' && hasDates ? () => setMode('final') : null}>
         {mode === 'edit' && (
           <EditPollPanel poll={poll} onSave={body => enqueue(pollId, 'edit', body)}
             onCancel={() => setMode('view')} />

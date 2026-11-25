@@ -52,7 +52,8 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
     const active = document.activeElement;
     const canRestore = active === legend.current || (request.direct && (active === request.origin || active === document.body));
     if (canRestore && root.current?.dataset.open === 'true') {
-      const target = root.current.querySelector(request.focusSelector) || legend.current;
+      const target = (typeof request.focusSelector === 'function'
+        ? request.focusSelector() : root.current.querySelector(request.focusSelector)) || legend.current;
       target?.focus({ preventScroll: true });
     }
   }, [phase, focusRevision]);
