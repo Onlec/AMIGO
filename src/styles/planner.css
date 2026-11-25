@@ -566,6 +566,19 @@ button.btn-secondary:focus-visible {
   flex-wrap: wrap;
 }
 
+.final-date--reveal {
+  animation: final-date-reveal 300ms cubic-bezier(.65, 0, .35, 1) both;
+}
+
+@keyframes final-date-reveal {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .final-date--reveal { animation: none; }
+}
+
 .poll-confetti {
   position: fixed;
   inset: 0;

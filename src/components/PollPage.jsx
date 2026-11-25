@@ -1,5 +1,5 @@
 import { formatProposal } from '../utils/dates.js';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
 import { follow, syncStatus, watchStatus } from '../data/sync.js';
 import { readVoterSession, rememberVoterSession } from '../data/voterSession.js';
@@ -15,6 +15,8 @@ import Confetti from './Confetti.jsx';
 
 export default function PollPage({ pollId, share }) {
   const finalDateRef = useRef(null);
+  const pageRef = useRef(null);
+  const [celebration, setCelebration] = useState(null);
   const [row, setRow] = useState(null);
   const [status, setStatus] = useState('');
   const [storageError, setStorageError] = useState('');
@@ -45,6 +47,61 @@ export default function PollPage({ pollId, share }) {
   const [organizerSignedOut, setOrganizerSignedOut] = useState(false);
   const organizerAuthorized = Boolean(session?.organizer && poll?.organizer) && !organizerSignedOut;
   const editing = mode === 'edit' || mode === 'final';
+
+  useEffect(() => {
+    if (!celebration || !poll) return;
+    const operationIndex = row.queue.findIndex(item => item.operation === celebration.operation);
+    const superseded = row.queue.slice(operationIndex + 1).some(item => ['close', 'reopen'].includes(item.kind));
+    if (celebration.operation && poll.finalDateId !== celebration.day
+        && (celebration.phase === 'revealed' || operationIndex < 0 || superseded)) {
+      setCelebration(null);
+      return;
+    }
+    if (celebration.phase !== 'waiting' || mode !== 'view' || poll.finalDateId !== celebration.day) return;
+    let cancelled = false;
+    let frame;
+    const nextFrame = () => new Promise(resolve => { frame = requestAnimationFrame(resolve); });
+    const transitions = () => [...(pageRef.current?.querySelectorAll('.collapsible-segment__body') || [])]
+      .flatMap(node => node.getAnimations()).filter(animation => ['running', 'pending'].includes(animation.playState));
+    async function revealAfterClosing() {
+      // Allow React, ResizeObserver and the browser to start every height transition.
+      await nextFrame();
+      await nextFrame();
+      while (!cancelled) {
+        const active = transitions();
+        if (active.length) await Promise.allSettled(active.map(animation => animation.finished));
+        await nextFrame();
+        if (cancelled) return;
+        if (!transitions().length) {
+          setCelebration(current => current && { ...current, phase: 'revealed' });
+          return;
+        }
+      }
+    }
+    revealAfterClosing();
+    return () => { cancelled = true; cancelAnimationFrame(frame); };
+  }, [celebration, mode, poll, row]);
+
+  useLayoutEffect(() => {
+    if (celebration?.phase !== 'revealed') return;
+    finalDateRef.current?.scrollIntoView({ behavior: 'instant', block: 'center' });
+    finalDateRef.current?.focus({ preventScroll: true });
+  }, [celebration]);
+
+  async function confirmFinalDate(day) {
+    setCelebration({ day, phase: 'saving' });
+    try {
+      const operation = await enqueue(pollId, 'close', { day });
+      // Keep the operation and its projected snapshot together, even if the
+      // IndexedDB watcher or server acknowledgement arrives in the same frame.
+      const next = await readLocal(pollId);
+      setRow(next);
+      setCelebration({ day, phase: 'waiting', operation });
+    } catch (error) {
+      setCelebration(null);
+      throw error;
+    }
+  }
   const selectVoter = useCallback(next => {
     rememberVoterSession(pollId, next);
     setSession(next);
@@ -134,7 +191,7 @@ export default function PollPage({ pollId, share }) {
   const finalDate = poll.finalDateId ? dates[poll.finalDateId] : null;
 
   return (
-    <div className="page">
+    <div ref={pageRef} className="page">
       <div className="lab eyebrow">AMIGO / STEMMEN</div>
       <div className="poll-heading">
         <h1>{poll.title}</h1>
@@ -149,10 +206,10 @@ export default function PollPage({ pollId, share }) {
       {notices.map((notice, index) => <p className="error" key={index}>Wijziging afgewezen — {notice}</p>)}
       {poll.description && <p className="description">{poll.description}</p>}
 
-      {poll.status === 'closed' && finalDate && (
+      {poll.status === 'closed' && finalDate && !['saving', 'waiting'].includes(celebration?.phase) && (
         <div className="final-date-block">
-          <Confetti key={pollId} originRef={finalDateRef} />
-          <p ref={finalDateRef} className="final-date">
+          {celebration?.phase === 'revealed' && <Confetti key={celebration.operation} originRef={finalDateRef} />}
+          <p ref={finalDateRef} tabIndex={-1} className={'final-date' + (celebration?.phase === 'revealed' ? ' final-date--reveal' : '')}>
             Gekozen datum: {formatProposal(finalDate.date, finalDate.time, true)}
           </p>
         </div>
@@ -189,7 +246,7 @@ export default function PollPage({ pollId, share }) {
             onCancel={() => setMode('view')} />
         )}
         {mode === 'final' && (
-          <OrganizerPanel dates={dates} votes={votes} finalDateId={poll.finalDateId} onConfirm={day => enqueue(pollId, 'close', { day })}
+          <OrganizerPanel dates={dates} votes={votes} finalDateId={poll.finalDateId} onConfirm={confirmFinalDate}
             onCancel={() => setMode('view')} />
         )}
       </OrganizerUnlock>

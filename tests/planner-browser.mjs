@@ -466,16 +466,36 @@ try {
   assert.ok(finalOverview.includes('👉 Bekijk de einddatum: ') && !finalOverview.includes('👉 Stem mee:'), 'Closed poll invites readers to view the result');
   await until(() => evaluate("document.querySelector('.poll-results-actions .copy-button').getAttribute('aria-label') === 'Stemmenoverzicht delen'"));
   const votesBeforeDateChange = await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))');
+  await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   for (const confirm of [false, true]) {
     await evaluate("document.querySelector('.unlock-form button[value=final]').click()");
     await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Einddatum wijzigen'"));
     assert.equal(await evaluate("document.querySelector('.organizer-panel [data-day=\"2027-01-10\"] button').getAttribute('aria-pressed')"), 'true', 'Existing final date is preselected');
     await evaluate("document.querySelector('.organizer-panel [data-day=\"2027-04-12\"] button').click()");
     assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).finalDateId)'), '2027-01-10', 'Selecting a replacement keeps the current date until confirmation');
-    await evaluate(`[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === '${confirm ? 'Bevestig deze datum' : 'Annuleren'}').click()`);
+    if (confirm) {
+      const sequence = await evaluate(`new Promise(resolve => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        const samples = [], start = performance.now();
+        function sample(now) {
+          samples.push({ banner: Boolean(document.querySelector('.final-date')), confetti: Boolean(document.querySelector('.poll-confetti')),
+            moving: [...document.querySelectorAll('.collapsible-segment__body')].some(node => node.getAnimations().some(animation => animation.playState === 'running')) });
+          if (now - start < 1500) requestAnimationFrame(sample); else resolve(samples);
+        }
+        requestAnimationFrame(sample);
+        [...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Bevestig deze datum').click();
+      })`);
+      assert.ok(sequence.some(sample => !sample.banner && sample.moving), 'Final date stays hidden while segments finish closing');
+      assert.ok(sequence.some(sample => sample.banner && sample.confetti), 'Organizer confirmation reveals the date and starts confetti');
+      assert.equal(sequence.some(sample => sample.confetti && sample.moving), false, 'Confetti waits for every segment height transition');
+      assert.equal(await evaluate("(() => { const date = document.querySelector('.final-date'); const rect = date.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight && document.activeElement === date; })()"), true, 'Confirmation brings the chosen date into view and focuses it');
+    } else {
+      await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
+    }
     await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
     assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).finalDateId)'), confirm ? '2027-04-12' : '2027-01-10', 'Only confirming changes the final date');
   }
+  await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row).status)'), 'closed', 'Changing the final date never reopens voting');
   assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))'), votesBeforeDateChange, 'Changing the final date preserves every vote');
   assert.equal(await evaluate("document.querySelector('.vote-grid .chosen-column') !== null"), true, 'Overview highlights the replacement date');
@@ -490,6 +510,7 @@ try {
   await until(() => evaluate(`pollData.readLocal(fixturePoll).then(row => row.queue.length === ${beforeReopenedVote + 1} && row.queue.at(-1).kind === 'ballot')`));
   await evaluate("pollData.enqueue(fixturePoll, 'close', { day: '2027-04-12' })");
   await until(() => evaluate("document.querySelector('.final-date') !== null"));
+  assert.equal(await evaluate("document.querySelector('.final-date--reveal') === null && document.querySelector('.poll-confetti') === null"), true, 'A later external confirmation does not replay the previous local celebration');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base = pollData.project(row); row.queue = []; })");
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = false; })");
   await until(() => evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"));
@@ -638,8 +659,8 @@ try {
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
   for (let visit = 0; visit < 2; visit++) {
     await command('Page.reload');
-    await until(() => evaluate("document.querySelector('.poll-confetti')?.width > 0"));
-    assert.equal(await evaluate("getComputedStyle(document.querySelector('.poll-confetti')).pointerEvents"), 'none', 'Confetti never blocks page controls');
+    await until(() => evaluate("document.querySelector('.final-date') !== null"));
+    assert.equal(await evaluate("document.querySelector('.poll-confetti') === null && !document.querySelector('.final-date').classList.contains('final-date--reveal')"), true, 'Reloading an already chosen date shows it immediately without replaying celebration');
   }
   await until(() => evaluate("document.querySelector('.poll-confetti') === null"));
   await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
