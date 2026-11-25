@@ -510,7 +510,78 @@ try {
       await evaluate("pollData.updateLocal(fixturePoll, row => { row.queue = row.queue.filter(command => command.kind !== 'lockOrganizer'); row.base.organizer = false; row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
     }
   }
-  console.log('PASS: unified voter/organizer sign-in, role-gated controls, nonparticipating organizer, closed-poll login, logout and voting');
+  await evaluate(`(async () => {
+    sessionStorage.setItem('amigo-voter:' + fixturePoll, JSON.stringify({ name: 'Maker', voter: null, organizer: true }));
+    await pollData.updateLocal(fixturePoll, row => {
+      row.queue = []; row.base.status = 'open'; row.base.finalDateId = null;
+      row.base.organizer = true; row.base.organizerVoter = null;
+      row.base.votes = { other: { name: 'Andere deelnemer', votesJson: '{"2027-01-10":"no"}' } };
+    });
+  })()`);
+  await command('Page.reload');
+  await until(() => evaluate("document.querySelector('.unlock-form button[value=edit]')?.disabled === false"));
+  await evaluate(`(async () => { window.fixturePoll = ${JSON.stringify(ownerOnlyPoll)}; window.pollData = await import('/src/data/polls.js'); })()`);
+  await evaluate("document.querySelector('.unlock-form button[value=edit]').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel .participation-choice input') !== null"));
+  assert.equal(await evaluate("document.querySelector('.organizer-panel .participation-choice input').checked"), false, 'Opted-out organizer can enable participation in edit');
+  await evaluate("document.querySelector('.organizer-panel .participation-choice input').click()");
+  await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
+  assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue.length)'), 0, 'Cancelling leaves participation unchanged');
+  for (const enabled of [true, false, true]) {
+    await evaluate("document.querySelector('.unlock-form button[value=edit]').click()");
+    await until(() => evaluate("document.querySelector('.organizer-panel .participation-choice input') !== null"));
+    await evaluate("document.querySelector('.organizer-panel .participation-choice input').click()");
+    await evaluate("document.querySelector('.organizer-panel button[type=submit]').click()");
+    await until(() => evaluate(`document.querySelector('.organizer-panel') === null && document.querySelector('.voter-availability').dataset.open === '${enabled}'`));
+    const snapshot = await evaluate('pollData.readLocal(fixturePoll).then(row => pollData.project(row))');
+    assert.equal(snapshot.organizer, true, 'Changing participation preserves organizer access');
+    assert.equal(snapshot.votes.other.votesJson, '{"2027-01-10":"no"}', 'Other participants and votes remain unchanged');
+    const identity = await evaluate("JSON.parse(sessionStorage.getItem('amigo-voter:' + fixturePoll))");
+    assert.equal(identity.organizer, true);
+    if (enabled) {
+      assert.equal(identity.voter, snapshot.organizerVoter, 'Participation activates the own ballot');
+      assert.equal(snapshot.votes[identity.voter].votesJson, '{}', 'New or renewed participation starts with no answers');
+      await evaluate("pollData.enqueue(fixturePoll, 'ballot', { voter: JSON.parse(sessionStorage.getItem('amigo-voter:' + fixturePoll)).voter, changes: { '2027-01-10': 'yes' } })");
+      await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => Object.values(pollData.project(row).votes).some(v => v.name === 'Maker' && JSON.parse(v.votesJson)['2027-01-10'] === 'yes'))"));
+    } else {
+      assert.equal(identity.voter, null, 'Opting out clears the active ballot without signing out');
+      assert.equal(Object.keys(snapshot.votes).length, 1, 'Opting out removes the organizer participant and all own answers');
+    }
+  }
+  await evaluate(`(async () => {
+    await pollData.updateLocal(fixturePoll, row => { row.base = pollData.project(row); row.queue = []; });
+    sessionStorage.removeItem('amigo-voter:' + fixturePoll);
+  })()`);
+  await command('Page.reload');
+  await until(() => evaluate("document.querySelector('.voter-credentials input') !== null"));
+  await evaluate(`(async () => { window.fixturePoll = ${JSON.stringify(ownerOnlyPoll)}; window.pollData = await import('/src/data/polls.js'); })()`);
+  await evaluate(`(() => {
+    const inputs = document.querySelectorAll('.voter-credentials input');
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(inputs[0], 'Maker'); inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await evaluate(`(() => {
+    const input = document.querySelector('.voter-credentials input[type=password]');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'test-password');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
+  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  await evaluate(`pollData.updateLocal(fixturePoll, row => {
+    const login = row.queue.pop();
+    (row.loginResults ??= {})[login.operation] = { session: {
+      name: 'Maker', organizer: true, voter: row.base.organizerVoter, proof: 'e'.repeat(64),
+    } };
+  })`);
+  await until(() => evaluate("document.querySelector('.voter-availability').dataset.open === 'true'"));
+  assert.equal(await evaluate("JSON.parse(sessionStorage.getItem('amigo-voter:' + fixturePoll)).proof"), 'e'.repeat(64), 'Organizer login uses the database-confirmed participant token');
+  await command('Page.navigate', { url: `${origin}?page=planner` });
+  await until(() => evaluate("document.querySelector('.participation-choice input') !== null"));
+  assert.equal(await evaluate("document.querySelector('.participation-choice input').checked"), true, 'Creating a poll defaults to self participation');
+  await evaluate("document.querySelector('.participation-choice input').click()");
+  assert.equal(await evaluate("document.querySelector('.participation-choice input').checked"), false, 'Creator can still opt out');
+  console.log('PASS: unified sign-in, organizer participation changes, own-vote removal, default checkbox, logout and voting');
 } finally {
   socket?.close();
   browser.kill();

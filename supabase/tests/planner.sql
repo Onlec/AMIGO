@@ -240,4 +240,57 @@ begin
     'proof',repeat('d',64),'organizerProof',repeat('a',64),'register',false,'changes','{}'::jsonb));
   assert response->>'organizer'='true' and response->>'voter'=organizer_voter::text;
 end $$;
+do $$
+declare
+  p uuid := gen_random_uuid();
+  own uuid := gen_random_uuid();
+  other uuid := gen_random_uuid();
+  created uuid := gen_random_uuid();
+  off_op uuid := gen_random_uuid();
+  owner_actor text := auth.uid()::text;
+  visitor text := gen_random_uuid()::text;
+  response jsonb;
+  body jsonb := jsonb_build_object('title','Deelname','description','','organizerName','Maker',
+    'proof',repeat('a',64),'dates','{"2027-01-01":{},"2027-01-02":{}}'::jsonb);
+  participation jsonb := jsonb_build_object('voter',own,'proof',repeat('b',64),'enabled',true);
+begin
+  perform public.amigo_apply(p,gen_random_uuid(),'createPoll',body);
+  assert public.amigo_read(p)->>'organizerVoter' is null;
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',other,'name','Andere',
+    'proof',repeat('c',64),'register',true,'changes','{"2027-01-01":"no"}'::jsonb));
+  perform public.amigo_edit(p,gen_random_uuid(),jsonb_build_object('organizerParticipation',
+    jsonb_build_object('voter',other,'proof',repeat('c',64),'enabled',false)));
+  assert public.amigo_read(p)->'votes' ? other::text;
+  perform public.amigo_edit(p,gen_random_uuid(),jsonb_build_object('organizerParticipation',participation));
+  assert public.amigo_read(p)->>'organizerVoter'=own::text;
+  assert (public.amigo_read(p)#>>array['votes',own::text,'votesJson'])::jsonb='{}'::jsonb;
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',own,'name','Maker',
+    'proof',repeat('b',64),'register',false,'changes','{"2027-01-01":"yes"}'::jsonb));
+  perform public.amigo_edit(p,off_op,jsonb_build_object('organizerParticipation',participation || '{"enabled":false}'));
+  assert public.amigo_read(p)->>'organizerVoter' is null;
+  assert not (public.amigo_read(p)->'votes' ? own::text);
+  assert not exists(select from amigo.votes where poll_id=p and voter=own);
+  assert public.amigo_read(p)->>'organizer'='true';
+  assert (public.amigo_read(p)#>>array['votes',other::text,'votesJson'])::jsonb='{"2027-01-01":"no"}'::jsonb;
+  perform public.amigo_edit(p,gen_random_uuid(),jsonb_build_object('organizerParticipation',participation));
+  perform public.amigo_edit(p,off_op,jsonb_build_object('organizerParticipation',participation || '{"enabled":false}'));
+  assert public.amigo_read(p)->>'organizerVoter'=own::text;
+  assert (public.amigo_read(p)#>>array['votes',own::text,'votesJson'])::jsonb='{}'::jsonb;
+  -- A fresh device uses the organizer password instead of the generated voter token.
+  perform set_config('request.jwt.claim.sub',visitor,true);
+  begin
+    perform public.amigo_edit(p,gen_random_uuid(),jsonb_build_object('organizerParticipation',participation || '{"enabled":false}'));
+    raise exception using errcode='XX000', message='Visitor changed organizer participation';
+  exception when raise_exception then assert sqlerrm='Ontgrendel eerst de bewerkmodus.'; end;
+  response := public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('name','Maker','voter',gen_random_uuid(),
+    'proof',repeat('d',64),'organizerProof',repeat('a',64),'register',true,'changes','{}'::jsonb));
+  assert response->>'voter'=own::text and response->>'proof'=repeat('b',64) and response->>'organizer'='true';
+  perform set_config('request.jwt.claim.sub',owner_actor,true);
+  perform public.amigo_apply(created,gen_random_uuid(),'createPoll',body || jsonb_build_object('voter',own,'voterProof',repeat('b',64)));
+  assert public.amigo_read(created)->>'organizerVoter'=own::text;
+  -- Legacy linkage requires verified own participant credentials.
+  update amigo.polls set organizer_voter_id=null where id=created;
+  perform public.amigo_edit(created,gen_random_uuid(),jsonb_build_object('organizerParticipation',participation || '{"enabled":false}'));
+  assert not (public.amigo_read(created)->'votes' ? own::text);
+end $$;
 rollback;

@@ -9,7 +9,7 @@ export default function CreatePollPage({ onCreated }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [organizerName, setOrganizerName] = useState('');
-  const [participating, setParticipating] = useState(false);
+  const [participating, setParticipating] = useState(true);
   const [password, setPassword] = useState('');
   const [selectedDates, setSelectedDates] = useState({});
   const [error, setError] = useState('');

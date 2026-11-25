@@ -52,7 +52,7 @@ export function project(row) {
   for (const { kind, body } of row.queue) {
     if (kind === 'create' || kind === 'createPoll') {
       poll = { title: body.title, description: body.description, status: 'open', finalDateId: null,
-        organizer: true, dates: structuredClone(body.dates), votes: {}, ownVoter: null };
+        organizer: true, dates: structuredClone(body.dates), votes: {}, ownVoter: null, organizerVoter: body.voter || null };
       if (body.voter) poll.votes[body.voter] = { name: body.organizerName, votesJson: '{}' };
       continue;
     }
@@ -98,12 +98,25 @@ export function project(row) {
         if ('description' in body) poll.description = body.description;
         for (const day of body.removed) removeDay(poll, day);
         for (const day of body.added) poll.dates[day] ??= { date: day, time: '' };
+        if (body.organizerParticipation) {
+          const participation = body.organizerParticipation;
+          const ownId = poll.organizerVoter || participation.voter;
+          if (participation.enabled) {
+            poll.votes[ownId] ??= { name: participation.name, votesJson: '{}' };
+            poll.organizerVoter = ownId;
+          } else {
+            delete poll.votes[ownId];
+            if (poll.ownVoter === ownId) poll.ownVoter = null;
+            poll.organizerVoter = null;
+          }
+        }
         break;
       case 'removeDate':
         if (body.day !== poll.finalDateId) removeDay(poll, body.day);
         break;
       case 'removeVoter':
         delete poll.votes[body.voter];
+        if (poll.organizerVoter === body.voter) poll.organizerVoter = null;
         if (poll.ownVoter === body.voter) poll.ownVoter = null;
         break;
       case 'close':

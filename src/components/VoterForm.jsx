@@ -35,7 +35,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
     if (!submission || !outcome || outcome.rejection || handledLogin.current === submission.operation) return;
     const verified = outcome.session;
     const authenticated = verified ? {
-      ...verified, ...(verified.voter && { proof: submission.session.proof }),
+      ...verified, ...(verified.voter && { proof: verified.proof || submission.session.proof }),
     } : submission.session;
     const accepted = segment.current.transitionContent(() => {
       onSelect(authenticated);

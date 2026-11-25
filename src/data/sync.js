@@ -87,6 +87,10 @@ async function synchronize(id) {
           current.legacyVotes = (current.legacyVotes || []).filter(item => !used.has(item.operation));
         }
       }
+      if (command.kind === 'edit' && !rejection && command.body.organizerParticipation?.enabled === false) {
+        const removed = command.body.organizerParticipation.voter;
+        current.legacyVotes = (current.legacyVotes || []).filter(item => item.body.voter !== removed);
+      }
       if (rejection) current.notices.push(rejection);
     });
     row = await readLocal(id);

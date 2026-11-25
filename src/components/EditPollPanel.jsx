@@ -2,11 +2,13 @@ import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
 
-export default function EditPollPanel({ poll, onSave, onCancel }) {
+export default function EditPollPanel({ poll, initiallyParticipating = false, onSave, onCancel }) {
   const [original] = useState(poll);
+  const [originalParticipation] = useState(initiallyParticipating);
   const [title, setTitle] = useState(original.title);
   const [description, setDescription] = useState(original.description);
   const [days, setDays] = useState(() => new Set(Object.keys(original.dates)));
+  const [participating, setParticipating] = useState(initiallyParticipating);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const added = [...days].filter(day => !original.dates[day]);
@@ -14,7 +16,8 @@ export default function EditPollPanel({ poll, onSave, onCancel }) {
   const changes = { added, removed };
   if (title.trim() !== original.title) changes.title = title.trim();
   if (description.trim() !== original.description) changes.description = description.trim();
-  const dirty = added.length || removed.length || 'title' in changes || 'description' in changes;
+  if (participating !== originalParticipation) changes.participating = participating;
+  const dirty = added.length || removed.length || 'title' in changes || 'description' in changes || 'participating' in changes;
 
   function toggle(day) {
     const next = new Set(days);
@@ -43,6 +46,11 @@ export default function EditPollPanel({ poll, onSave, onCancel }) {
       <form className="form" onSubmit={submit}>
         <label>Titel<input required value={title} onChange={e => setTitle(e.target.value)} /></label>
         <label>Omschrijving<textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
+        <label className="participation-choice">
+          <input type="checkbox" checked={participating} disabled={saving} onChange={e => setParticipating(e.target.checked)} />
+          Zelf meestemmen
+        </label>
+        {originalParticipation && !participating && <p className="description">Bij opslaan worden je eigen deelname en stemmen verwijderd.</p>}
         <fieldset disabled={saving}>
           <legend>Mogelijke datums</legend>
           <MonthCalendar initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (

@@ -38,6 +38,7 @@ export default function PollPage({ pollId, share }) {
   const votes = poll?.votes || {};
   const [session, setSession] = useState(() => readVoterSession(pollId));
   const voterId = votes[session?.voter] ? session.voter : null;
+  const organizerVoterId = poll?.organizerVoter || (session?.organizer && voterId) || null;
   const [mode, setMode] = useState('view');
   const [organizerSignedOut, setOrganizerSignedOut] = useState(false);
   const organizerAuthorized = Boolean(session?.organizer && poll?.organizer) && !organizerSignedOut;
@@ -54,6 +55,40 @@ export default function PollPage({ pollId, share }) {
       }
     }
   }, [pollId, organizerAuthorized, editing]);
+
+  useEffect(() => {
+    if (!session?.organizer || !poll || !('organizerVoter' in poll)) return;
+    const ownId = poll.organizerVoter;
+    const credentials = session.participation;
+    if (ownId && credentials?.voter === ownId && session.voter !== ownId) {
+      const next = { ...session, ...credentials };
+      rememberVoterSession(pollId, next);
+      setSession(next);
+    } else if (!ownId && session.voter && !poll.votes[session.voter]) {
+      const next = { ...session, voter: null, proof: undefined,
+        participation: session.participation || { voter: session.voter, proof: session.proof } };
+      rememberVoterSession(pollId, next);
+      setSession(next);
+    }
+  }, [poll, session, pollId]);
+
+  async function savePoll(changes) {
+    if (!('participating' in changes)) return enqueue(pollId, 'edit', changes);
+    const { participating, ...details } = changes;
+    let credentials = session.participation || (session.voter && session.proof
+      ? { voter: session.voter, proof: session.proof } : null);
+    if (!credentials) credentials = {
+      voter: crypto.randomUUID(),
+      proof: Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join(''),
+    };
+    const next = { ...session, participation: credentials };
+    rememberVoterSession(pollId, next);
+    setSession(next);
+    return enqueue(pollId, 'edit', { ...details, organizerParticipation: {
+      ...credentials, voter: participating ? credentials.voter : organizerVoterId || credentials.voter,
+      name: session.name || votes[session.voter]?.name, enabled: participating,
+    } });
+  }
 
   function save(kind, body) {
     enqueue(pollId, kind, body).catch(err => setStorageError('Lokaal opslaan mislukt. ' + err.message));
@@ -88,8 +123,10 @@ export default function PollPage({ pollId, share }) {
   const hasVoters = Object.keys(votes).length > 0;
   const deferred = row.legacyVotes || [];
   const localParticipants = {};
+  const excludedVoters = new Set(row.queue.filter(item => item.kind === 'edit' && item.body.organizerParticipation?.enabled === false)
+    .map(item => item.body.organizerParticipation.voter));
   for (const { body } of deferred) {
-    if (!body.existing && !votes[body.voter]) localParticipants[body.voter] = { name: body.name, localOnly: true };
+    if (!body.existing && !votes[body.voter] && !excludedVoters.has(body.voter)) localParticipants[body.voter] = { name: body.name, localOnly: true };
   }
   const finalDate = poll.finalDateId ? dates[poll.finalDateId] : null;
 
@@ -141,7 +178,7 @@ export default function PollPage({ pollId, share }) {
       <OrganizerUnlock editing={editing} authorized={organizerAuthorized} signedIn={Boolean(session)}
         onEdit={() => setMode('edit')} onChooseFinal={poll.status === 'open' && hasDates ? () => setMode('final') : null}>
         {mode === 'edit' && (
-          <EditPollPanel poll={poll} onSave={body => enqueue(pollId, 'edit', body)}
+          <EditPollPanel poll={poll} initiallyParticipating={Boolean(organizerVoterId)} onSave={savePoll}
             onCancel={() => setMode('view')} />
         )}
         {mode === 'final' && poll.status === 'open' && (
