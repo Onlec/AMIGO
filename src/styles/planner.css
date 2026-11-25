@@ -139,7 +139,8 @@ h2 {
   --segment-viewport: min(36rem, 65svh);
 }
 
-.collapsible-segment--scrollable > .collapsible-segment__body {
+.collapsible-segment--scrollable > .collapsible-segment__body,
+.voter-ballot {
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scroll-padding-block: 7rem 1rem;
@@ -150,7 +151,8 @@ h2 {
   height: min(var(--segment-height), var(--segment-viewport));
 }
 
-.collapsible-segment--scrollable .date-choices__toolbar {
+.collapsible-segment--scrollable .date-choices__toolbar,
+.voter-ballot .date-choices__toolbar {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -162,7 +164,8 @@ h2 {
   background: var(--bg);
 }
 
-.collapsible-segment--scrollable .date-choices__toolbar .vote-legend {
+.collapsible-segment--scrollable .date-choices__toolbar .vote-legend,
+.voter-ballot .date-choices__toolbar .vote-legend {
   margin: 0;
 }
 
@@ -172,6 +175,22 @@ h2 {
 
 .collapsible-segment__content {
   padding: 1rem;
+}
+
+.form .voter-credentials {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.voter-divider {
+  margin: 1.25rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.voter-ballot {
+  max-height: min(36rem, 65svh);
 }
 
 @media (max-width: 480px) {
@@ -408,10 +427,38 @@ button.btn-secondary:focus-visible {
   flex-wrap: wrap;
 }
 
-.share-actions {
+.poll-results-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1rem;
+}
+
+.copy-button.copy-button--icon {
+  position: relative;
+  width: 36px;
+  min-height: 36px;
+  padding: 0.4rem;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.copy-button--icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.copy-button--icon [aria-live] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.poll-results .vote-grid-scroll {
+  margin-top: 0.75rem;
 }
 
 .calendar {
@@ -596,8 +643,7 @@ button.btn-secondary:focus-visible {
   word-break: break-all;
 }
 
-.organizer-panel > button,
-.share-actions + button {
+.organizer-panel > button {
   margin-top: 1rem;
 }
 

@@ -122,7 +122,14 @@ export default function PollPage({ pollId, share }) {
         <button type="button" onClick={() => setMode('view')}>Klaar</button>
       )}
       <div className="form poll-results">
-        <CollapsibleSegment title="03 — Stemmenoverzicht" open={hasDates && hasVoters}>
+        <CollapsibleSegment title="02 — Stemmenoverzicht" open={hasDates && hasVoters}>
+          <div className="poll-results-actions">
+            <CopyButton text={buildShareText(poll, dates, votes, window.location.href)} label="Stemmenoverzicht delen" iconOnly
+              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                <path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4" />
+              </svg>} />
+          </div>
           <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
             <VoteGrid
               dates={dates}
@@ -136,21 +143,15 @@ export default function PollPage({ pollId, share }) {
         </CollapsibleSegment>
       </div>
 
-      {hasDates && (
-        <div className="share-actions">
-          <CopyButton text={buildShareText(poll, dates, votes, window.location.href)} label="Update kopiëren" />
-        </div>
-      )}
+      <OrganizerUnlock pollId={pollId} active={mode === 'view'} onUnlock={async proof => {
+        await unlock(pollId, proof);
+        setMode('edit');
+      }} />
 
       <p className="share-hint">
         Deel deze link met je groep: <code>{window.location.href}</code>{' '}
         <CopyButton text={window.location.href} label="Link kopiëren" />
       </p>
-
-      <OrganizerUnlock pollId={pollId} active={mode === 'view'} onUnlock={async proof => {
-        await unlock(pollId, proof);
-        setMode('edit');
-      }} />
     </div>
   );
 }

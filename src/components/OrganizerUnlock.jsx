@@ -23,7 +23,7 @@ export default function OrganizerUnlock({ pollId, onUnlock, active = true }) {
 
   return (
     <form onSubmit={handleSubmit} className="form unlock-form">
-      <CollapsibleSegment title="04 — Prikker beheren" open={active} disabled={checking}>
+      <CollapsibleSegment title="03 — Prikker beheren" open={active} disabled={checking}>
         <label>
           Pollwachtwoord
           <input

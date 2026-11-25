@@ -99,8 +99,9 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
 
   return (
     <div className="form">
-      <form onSubmit={signIn}>
-        <CollapsibleSegment title="01 — Jouw gegevens" open={active} disabled={busy}>
+      <CollapsibleSegment title="01 — Jouw deelname" open={active}>
+        <form onSubmit={signIn}>
+          <fieldset className="voter-credentials" disabled={busy}>
           {signedIn ? (
             <p>Je stemt als <strong>{activePerson.name}</strong>.</p>
           ) : (
@@ -139,13 +140,17 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
           </div>
           {pending && <p role="status" className="description">Je aanmelding wordt gecontroleerd. Wacht op verbinding met de database.</p>}
           {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
-        </CollapsibleSegment>
-      </form>
-      <CollapsibleSegment title="02 — Jouw beschikbaarheid" open={active && signedIn} scrollable>
-        <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} />
-        <p className="description" role="status">{saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
+          </fieldset>
+        </form>
+        <div className="voter-availability" data-open={signedIn} hidden={!signedIn}>
+          <hr className="voter-divider" />
+          <div className="voter-ballot" role="region" aria-label="Jouw beschikbaarheid" tabIndex={signedIn && active ? 0 : undefined}>
+            <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} />
+            <p className="description" role="status">{saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
+          </div>
+        </div>
+        {error && <p role="alert" className="error">{error}</p>}
       </CollapsibleSegment>
-      {error && <p role="alert" className="error">{error}</p>}
     </div>
   );
 }

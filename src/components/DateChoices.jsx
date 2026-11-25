@@ -43,7 +43,8 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
 
   function changeView(next) {
     setJump(null);
-    const scroller = root.current?.closest('.collapsible-segment--scrollable')?.querySelector('.collapsible-segment__body');
+    const scroller = root.current?.closest('.voter-ballot')
+      || root.current?.closest('.collapsible-segment--scrollable')?.querySelector('.collapsible-segment__body');
     if (scroller) scroller.scrollTop = 0;
     localStorage.setItem('amigo-date-view', next);
     window.dispatchEvent(new Event('amigo-view-change'));

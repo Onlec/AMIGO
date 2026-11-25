@@ -75,21 +75,22 @@ try {
         dates: { '2027-01-10': {date:'2027-01-10'}, '2027-04-12': {date:'2027-04-12'} }, votes: {} };
     });
   })()`);
-  await until(() => evaluate("document.body.textContent.includes('Jouw gegevens')"));
-  await evaluate("window.ballotSegment = () => [...document.querySelectorAll('fieldset')].find(node => node.querySelector('legend')?.textContent.startsWith('02'))");
-  assert.equal(await evaluate("ballotSegment().querySelector('legend').getBoundingClientRect().height > 0"), true, 'Collapsed ballot title remains visible');
+  await until(() => evaluate("document.body.textContent.includes('Jouw deelname')"));
+  await evaluate("window.ballotSegment = () => document.querySelector('.voter-availability'); window.participationBody = () => document.querySelector('.collapsible-segment__body')");
+  assert.equal(await evaluate("document.querySelector('.collapsible-segment legend').textContent"), '01 — Jouw deelname', 'Login and availability share one segment');
+  assert.equal(await evaluate("document.querySelectorAll('.collapsible-segment legend').length"), 3, 'Three numbered segments remain');
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Ballot closed before login');
-  assert.equal(await evaluate("ballotSegment().querySelector('.collapsible-segment__body').getBoundingClientRect().height"), 0, 'Closed content takes no space');
-  assert.equal(await evaluate("ballotSegment().disabled && ballotSegment().querySelector('.collapsible-segment__body').inert"), true, 'Closed controls cannot receive focus');
+  assert.equal(await evaluate("ballotSegment().querySelector('.voter-ballot').getBoundingClientRect().height"), 0, 'Closed content takes no space');
+  assert.equal(await evaluate("ballotSegment().hidden"), true, 'Availability stays hidden until login');
   await evaluate(`(() => {
-    const inputs = document.querySelectorAll('.form > form input');
+    const inputs = document.querySelectorAll('.voter-credentials input');
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     for (const [input, value] of [[inputs[0], 'Anna'], [inputs[1], 'test-password']]) {
       setter.call(input, value);
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
   })()`);
-  await evaluate("document.querySelector('.form > form button[type=submit]').click()");
+  await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
   await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Wait for server confirmation');
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
@@ -102,7 +103,7 @@ try {
     const samples = [];
     const start = performance.now();
     function sample(now) {
-      samples.push(ballotSegment().querySelector('.collapsible-segment__body').getBoundingClientRect().height);
+      samples.push(participationBody().getBoundingClientRect().height);
       if (now - start < 750) requestAnimationFrame(sample);
       else resolve(samples);
     }
@@ -118,17 +119,14 @@ try {
   assert.equal(await evaluate("document.querySelector('[aria-label=Weergave]').getBoundingClientRect().height"), themeHeight, 'View and theme toggle sizes match');
   for (const view of ['Kalender', 'Kaarten']) {
     const resized = await evaluate(`new Promise(resolve => {
-      const body = ballotSegment().querySelector('.collapsible-segment__body');
+      const body = participationBody();
       const samples = [body.getBoundingClientRect().height];
       document.querySelector('.date-view-actions [aria-label="${view}"]').click();
       const start = performance.now();
       function sample(now) {
         samples.push(body.getBoundingClientRect().height);
         if (now - start < 800) requestAnimationFrame(sample);
-        else resolve({ samples, target: Math.min(
-          ballotSegment().querySelector('.collapsible-segment__content').getBoundingClientRect().height,
-          innerHeight * 0.65, parseFloat(getComputedStyle(document.documentElement).fontSize) * 36
-        ) });
+        else resolve({ samples, target: body.querySelector('.collapsible-segment__content').getBoundingClientRect().height });
       }
       requestAnimationFrame(sample);
     })`);
@@ -152,7 +150,7 @@ try {
   await until(() => evaluate("document.querySelectorAll('.date-cards > li').length === 10"));
   await pause(800);
   const mobileScroll = await evaluate(`new Promise(resolve => {
-    const body = ballotSegment().querySelector('.collapsible-segment__body');
+    const body = ballotSegment().querySelector('.voter-ballot');
     const toolbar = ballotSegment().querySelector('.date-choices__toolbar');
     body.scrollTop = body.scrollHeight;
     requestAnimationFrame(() => {
@@ -168,7 +166,7 @@ try {
   assert.ok(Math.abs(mobileScroll.bodyTop - mobileScroll.after) < 1, 'Legend and view toggle remain pinned');
   assert.ok(mobileScroll.noHorizontalOverflow, 'Mobile cards fit without horizontal scrolling');
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click()");
-  await until(() => evaluate("ballotSegment().querySelector('.collapsible-segment__body').scrollTop === 0"));
+  await until(() => evaluate("ballotSegment().querySelector('.voter-ballot').scrollTop === 0"));
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = originalDates; })");
   await command('Emulation.clearDeviceMetricsOverride');
@@ -184,17 +182,17 @@ try {
   assert.equal(queue[1].body.changes['2027-01-10'], 'none', 'Click again clears the last vote');
   await evaluate("[...document.querySelectorAll('button')].find(button => button.textContent === 'Van stemmer wisselen').click()");
   await until(() => evaluate("ballotSegment().dataset.open === 'false'"));
-  await until(() => evaluate("ballotSegment().querySelector('.collapsible-segment__body').getBoundingClientRect().height === 0"));
+  await until(() => evaluate("ballotSegment().querySelector('.voter-ballot').getBoundingClientRect().height === 0"));
   assert.equal((await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)')).length, 2, 'Switching preserves queued votes');
   await evaluate(`(() => {
-    const inputs = document.querySelectorAll('.form > form input');
+    const inputs = document.querySelectorAll('.voter-credentials input');
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     for (const [input, value] of [[inputs[0], 'Anna'], [inputs[1], 'wrong-password']]) {
       setter.call(input, value);
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
   })()`);
-  await evaluate("document.querySelector('.form > form button[type=submit]').click()");
+  await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
   await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.pop();
@@ -209,10 +207,10 @@ try {
     return Object.keys(pollData.project(row).votes).length;
   })()`), 0, 'Queued votes cannot restore a removed participant');
   await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  assert.equal(await evaluate("getComputedStyle(ballotSegment().querySelector('.collapsible-segment__body')).transitionDuration"), '0s', 'Reduced motion disables sliding');
+  assert.equal(await evaluate("getComputedStyle(participationBody()).transitionDuration"), '0s', 'Reduced motion disables sliding');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");
-  await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 3"));
-  assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All four headers remain visible without dates or voters');
+  await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 2"));
+  assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All three headers remain visible without dates or voters');
   console.log('PASS: mobile scrolling with ten cards and pinned legend, segment motion, login gate and automatic saves');
 } finally {
   socket?.close();
