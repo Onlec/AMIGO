@@ -164,11 +164,21 @@ try {
   const themeHeight = await evaluate("document.querySelector('[aria-label=Thema]').getBoundingClientRect().height");
   assert.ok(themeHeight <= 36, 'Theme toggle fits the header');
   assert.equal(await evaluate("document.querySelector('[aria-label=Weergave]').getBoundingClientRect().height"), themeHeight, 'View and theme toggle sizes match');
+  for (const side of [0, 0, 1, 1]) {
+    const before = await evaluate("document.querySelector('[aria-label=Thema] [aria-checked=true]').getAttribute('aria-label')");
+    await evaluate(`document.querySelectorAll('[aria-label=Thema] button')[${side}].click()`);
+    const after = await evaluate("document.querySelector('[aria-label=Thema] [aria-checked=true]').getAttribute('aria-label')");
+    assert.notEqual(after, before, 'Every click on either half flips the binary theme toggle');
+  }
+  const themeBeforePadding = await evaluate("document.querySelector('[aria-label=Thema] [aria-checked=true]').getAttribute('aria-label')");
+  await evaluate("document.querySelector('[aria-label=Thema]').click()");
+  assert.notEqual(await evaluate("document.querySelector('[aria-label=Thema] [aria-checked=true]').getAttribute('aria-label')"), themeBeforePadding, 'Clicking the toggle padding also flips it');
+  await evaluate("document.querySelector('[aria-label=Thema]').click()");
   for (const view of ['Kalender', 'Kaarten']) {
     const previousView = view === 'Kalender' ? 'cards' : 'calendar';
     const nextView = view === 'Kalender' ? 'calendar' : 'cards';
     const frames = await evaluate(`recordMotion(() => {
-      const button = document.querySelector('.date-view-actions [aria-label="${view}"]');
+      const button = document.querySelector('.date-view-actions [aria-checked=true]');
       button.focus();
       button.click();
       button.click();
@@ -426,7 +436,7 @@ try {
   await evaluate("pollData.updateLocal(fixturePoll, row => { for (let n = 0; n < 5; n++) row.base.votes['sort-' + n] = { name: 'Sort ' + n, votesJson: '{\"2027-04-12\":\"yes\"}' }; })");
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.organizer-panel .date-cards > li')].map(card => card.dataset.day)"), ['2027-01-10', '2027-04-12'], 'Cards initially show earliest date first');
   await evaluate("document.querySelector('.organizer-panel .date-cards button').click()");
-  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Meeste ja').click()");
+  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Datum').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel .date-cards > li').dataset.day === '2027-04-12'"));
   assert.equal(await evaluate("document.querySelector('.organizer-panel .date-cards button[aria-pressed=true]').closest('li').dataset.day"), '2027-01-10', 'Sorting preserves the chosen date');
   for (const mobile of [false, true]) {
@@ -444,7 +454,7 @@ try {
     })()`), true, 'Date buttons align beside dates and footer clears last card on desktop and mobile');
   }
   await command('Emulation.clearDeviceMetricsOverride');
-  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Datum').click()");
+  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Meeste ja').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel .date-cards > li').dataset.day === '2027-01-10'"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { for (let n = 0; n < 5; n++) delete row.base.votes['sort-' + n]; })");
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");

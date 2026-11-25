@@ -1,14 +1,23 @@
 import React, { useRef } from 'react';
 import '../styles/segmented-control.css';
 
-// Controlled single-choice input. allowDeselect preserves optional answers.
+// Two choices flip on every click; longer lists select the clicked answer.
+// allowDeselect preserves optional answers.
 export default function SegmentedControl({
   options, value, onChange, label, variant = 'default', disabled = false, allowDeselect = false, iconOnly = false, size = 'default',
 }) {
   const buttons = useRef([]);
+  const binary = options.length === 2 && !allowDeselect;
   const selected = options.findIndex(option => option.value === value);
   const focusIndex = selected >= 0 && !options[selected].disabled
     ? selected : options.findIndex(option => !option.disabled);
+
+  function handleClick(index) {
+    if (disabled || buttons.current[index]?.matches(':disabled')) return;
+    const next = binary && selected >= 0 ? 1 - selected : index;
+    if (options[next].disabled) return;
+    onChange(allowDeselect && next === selected ? null : options[next].value);
+  }
 
   function handleKeyDown(event, index) {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
@@ -26,6 +35,9 @@ export default function SegmentedControl({
   return (
     <div className={'segmented-control segmented-control--' + variant + (size === 'small' ? ' segmented-control--small' : '')}
       role="radiogroup" aria-label={label} aria-disabled={disabled || undefined}
+      onClick={event => {
+        if (binary && event.target === event.currentTarget) handleClick(Math.max(0, selected));
+      }}
       data-status={variant === 'status' ? options[selected]?.status : undefined}
       style={{ '--segment-count': options.length, '--segment-index': Math.max(0, selected) }}>
       <span className="segmented-control__track" aria-hidden="true" hidden={selected < 0}>
@@ -39,7 +51,7 @@ export default function SegmentedControl({
           aria-checked={index === selected} disabled={disabled || option.disabled}
           tabIndex={index === focusIndex && !disabled ? 0 : -1}
           onKeyDown={event => handleKeyDown(event, index)}
-          onClick={() => onChange(allowDeselect && index === selected ? null : option.value)}>
+          onClick={() => handleClick(index)}>
           {option.icon && <span className="segmented-control__icon" aria-hidden="true">{option.icon}</span>}
           {!iconOnly && option.label}
         </button>
