@@ -7,9 +7,11 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
   const root = useRef(null);
   const legend = useRef(null);
   const content = useRef(null);
+  const body = useRef(null);
   const task = useRef(null);
   const focusAfter = useRef(null);
   const [height, setHeight] = useState(0);
+  const [frameVisible, setFrameVisible] = useState(false);
   const [phase, setPhase] = useState('idle');
   const [focusRevision, setFocusRevision] = useState(0);
   const expanded = Boolean(open && (phase === 'idle' || phase === 'opening'));
@@ -92,17 +94,23 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
     const node = content.current;
     const measure = () => setHeight(node.getBoundingClientRect().height);
     measure();
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target === node) measure();
+        else setFrameVisible(entry.contentRect.height > 0);
+      }
+    });
     observer.observe(node);
+    observer.observe(body.current);
     return () => observer.disconnect();
   }, []);
 
   return (
     <fieldset ref={root} className={'collapsible-segment' + (scrollable ? ' collapsible-segment--scrollable' : '')}
-      data-open={expanded} data-phase={phase} disabled={disabled || !expanded || phase !== 'idle'} aria-busy={phase !== 'idle' || undefined}
+      data-open={expanded} data-frame={expanded || frameVisible} data-phase={phase} disabled={disabled || !expanded || phase !== 'idle'} aria-busy={phase !== 'idle' || undefined}
       style={{ '--segment-height': `${height}px` }}>
       <legend ref={legend} tabIndex={-1}>{title}</legend>
-      <div className="collapsible-segment__body" aria-hidden={!expanded || phase !== 'idle'} inert={expanded && phase === 'idle' ? undefined : ''}
+      <div ref={body} className="collapsible-segment__body" aria-hidden={!expanded || phase !== 'idle'} inert={expanded && phase === 'idle' ? undefined : ''}
         onTransitionEnd={event => {
           if (event.target !== event.currentTarget || event.propertyName !== 'height') return;
           if (phase === 'closing') setPhase('closed');

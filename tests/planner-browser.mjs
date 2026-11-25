@@ -83,7 +83,11 @@ try {
     function sample(now) {
       const body = participationBody();
       const segment = body.closest('fieldset');
+      const frameStyle = getComputedStyle(segment);
       samples.push({ time: now - start, phase: segment.dataset.phase, height: body.getBoundingClientRect().height,
+        frameEdges: [frameStyle.borderLeftColor, frameStyle.borderRightColor, frameStyle.borderBottomColor],
+        frameInk: frameStyle.borderTopColor,
+        bottomGap: segment.getBoundingClientRect().bottom - body.getBoundingClientRect().bottom,
         signedIn: ballotSegment().dataset.open, view: localStorage.getItem('amigo-date-view') || 'cards',
         disabled: segment.disabled, inert: body.inert, duration: getComputedStyle(body).transitionDuration });
       if (now - start < 1000) requestAnimationFrame(sample);
@@ -107,9 +111,11 @@ try {
       const inputs = [...row.querySelectorAll('input')];
       const button = row.querySelector('button').getBoundingClientRect();
       const rects = inputs.map(input => input.getBoundingClientRect());
+      const compactOrganizer = selector === '.unlock-form' && innerWidth <= 600;
+      const buttons = [...row.querySelectorAll('button')].map(node => node.getBoundingClientRect());
       return { fieldsLeft: rects.every(rect => Math.abs(rect.left - rects[0].left) < 1),
-        buttonRight: rects.every(rect => rect.right < button.left),
-        alignedBottom: Math.abs(rects.at(-1).bottom - button.bottom) < 1,
+        buttonRight: compactOrganizer ? rects.every(rect => rect.bottom < button.top) : rects.every(rect => rect.right < button.left),
+        alignedBottom: compactOrganizer ? buttons.every(rect => Math.abs(rect.top - button.top) < 1) : Math.abs(rects.at(-1).bottom - button.bottom) < 1,
         noOverflow: row.scrollWidth <= row.clientWidth };
     })`);
     assert.ok(layouts.every(layout => layout.fieldsLeft && layout.buttonRight && layout.alignedBottom && layout.noOverflow),
@@ -159,6 +165,9 @@ try {
     const closed = frames.filter(frame => frame.phase === 'closed');
     assert.ok(closed.length >= 3 && closed.at(-1).time - closed[0].time >= 40, 'Two movements are separated by a visible full stop');
     assert.ok(closed.every(frame => frame.height === 0 && frame.view === previousView), 'Segment is fully closed before replacing content');
+    assert.ok(frames.filter(frame => frame.height > 0).every(frame => frame.frameEdges.every(color => color === frame.frameInk)), 'Side and bottom borders remain visible throughout closing and opening');
+    assert.ok(frames.filter(frame => frame.height > 0).every(frame => frame.bottomGap >= 0 && frame.bottomGap <= 2), 'Bottom border follows the moving content edge');
+    assert.ok(closed.every(frame => frame.frameEdges.every(color => color === 'rgba(0, 0, 0, 0)')), 'Only the title line remains when fully closed');
     assert.ok(frames.filter(frame => frame.phase === 'closing').every(frame => frame.view === previousView), 'Old view is preserved while closing');
     assert.ok(frames.some(frame => frame.phase === 'opening' && frame.view === nextView), 'New view appears during opening');
     assert.ok(frames.filter(frame => frame.phase === 'closing').every(frame => frame.duration === '0.25s'), 'Closing uses 250ms');
@@ -332,10 +341,51 @@ try {
   assert.equal(await evaluate("document.querySelector('.unlock-form button').disabled"), false, 'Authorized organizer can edit without reentering a password');
   await evaluate("document.querySelector('.unlock-form button').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Prikker bewerken'"));
+  assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Editing stays inside the organizer segment');
+  assert.equal(await evaluate("[...document.querySelectorAll('.organizer-panel button')].some(button => button.textContent === 'Einddatum kiezen')"), false, 'Date confirmation is independent from the edit form');
+  assert.equal(await evaluate("document.querySelector('form form') === null"), true, 'Organizer editor does not nest forms');
+  assert.equal(await evaluate("participationBody().closest('fieldset').dataset.open"), 'true', 'Editing does not collapse or reset the voter login segment');
   assert.equal(await evaluate("document.querySelector('.unlock-form input[type=password]') === null"), true, 'Password is absent during editing');
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
+  assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button')"), true, 'Cancel returns focus to the organizer edit button');
   assert.equal(await evaluate("document.querySelector('.unlock-form input[type=password]') === null"), true, 'Organizer stays recognized after leaving edit mode');
+  await evaluate(`(() => {
+    const inputs = document.querySelectorAll('.voter-credentials input');
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    for (const [input, value] of [[inputs[0], 'Anna'], [inputs[1], 'test-password']]) {
+      setter.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  })()`);
+  await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
+  await until(() => evaluate("document.body.textContent.includes('Je aanmelding wordt gecontroleerd')"));
+  await evaluate(`pollData.updateLocal(fixturePoll, row => {
+    const login = row.queue.pop();
+    row.ballotResults[login.operation] = {};
+  })`);
+  await until(() => evaluate("ballotSegment().dataset.open === 'true'"));
+  const voterSessionBeforeEdit = await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)");
+  await evaluate("document.querySelector('.unlock-form button').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel') !== null"));
+  assert.equal(await evaluate("ballotSegment().dataset.open"), 'true', 'Organizer editing preserves the active voter');
+  await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
+  assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Cancel keeps the voter session');
+  assert.equal(await evaluate("ballotSegment().dataset.open"), 'true', 'Cancel leaves availability open instead of showing voter login fields');
+  assert.equal(await evaluate("document.querySelector('.voter-credentials input')"), null, 'Logged-in voter fields stay hidden');
+  assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button')"), true, 'Cancel stays at the organizer segment while signed in');
+  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=final]').disabled"), false, 'Final-date selection is directly available to the organizer');
+  await evaluate("document.querySelector('.unlock-form button[value=final]').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Einddatum kiezen'"));
+  assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Final-date selection also stays in the organizer segment');
+  await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
+  assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button[value=final]')"), true, 'Cancelling final-date selection returns to its own button');
+  assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Final-date selection preserves the voter session');
+  await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
+  await until(() => evaluate("document.querySelector('.unlock-form button[value=final]') === null"));
+  assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), false, 'Closed polls remain editable without offering another final date');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = false; })");
   await until(() => evaluate("document.querySelector('.unlock-form input[type=password]') !== null"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");

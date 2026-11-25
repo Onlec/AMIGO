@@ -74,7 +74,7 @@ export default function PollPage({ pollId, share }) {
   }
 
   const hasDates = Object.keys(dates).length > 0;
-  const showBallot = !editing && hasDates && poll.status === 'open';
+  const showBallot = hasDates && poll.status === 'open';
   const hasVoters = Object.keys(votes).length > 0;
   const deferred = row.legacyVotes || [];
   const localParticipants = {};
@@ -109,18 +109,6 @@ export default function PollPage({ pollId, share }) {
         legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults}
         session={session} onSelect={selectVoter} active={showBallot} />
 
-      {mode === 'edit' && (
-        <EditPollPanel poll={poll} onSave={body => enqueue(pollId, 'edit', body)}
-          onCancel={() => setMode('view')}
-          onChooseFinal={poll.status === 'open' && hasDates ? () => setMode('final') : null} />
-      )}
-      {mode === 'final' && poll.status === 'open' && (
-        <OrganizerPanel dates={dates} votes={votes} onConfirm={day => enqueue(pollId, 'close', { day })}
-          onCancel={() => setMode('view')} />
-      )}
-      {mode === 'final' && poll.status === 'closed' && (
-        <button type="button" onClick={() => setMode('view')}>Klaar</button>
-      )}
       <div className="form poll-results">
         <CollapsibleSegment title="02 — Stemmenoverzicht" open={hasDates && hasVoters}>
           <div className="poll-results-actions">
@@ -143,11 +131,21 @@ export default function PollPage({ pollId, share }) {
         </CollapsibleSegment>
       </div>
 
-      <OrganizerUnlock pollId={pollId} active={mode === 'view'} authorized={Boolean(poll.organizer)}
-        onEdit={() => setMode('edit')} onUnlock={async proof => {
-        await unlock(pollId, proof);
-        setMode('edit');
-      }} />
+      <OrganizerUnlock pollId={pollId} editing={editing} authorized={Boolean(poll.organizer)}
+        onEdit={() => setMode('edit')} onChooseFinal={poll.status === 'open' && hasDates ? () => setMode('final') : null}
+        onUnlock={proof => unlock(pollId, proof)}>
+        {mode === 'edit' && (
+          <EditPollPanel poll={poll} onSave={body => enqueue(pollId, 'edit', body)}
+            onCancel={() => setMode('view')} />
+        )}
+        {mode === 'final' && poll.status === 'open' && (
+          <OrganizerPanel dates={dates} votes={votes} onConfirm={day => enqueue(pollId, 'close', { day })}
+            onCancel={() => setMode('view')} />
+        )}
+        {mode === 'final' && poll.status === 'closed' && (
+          <button type="button" onClick={() => setMode('view')}>Klaar</button>
+        )}
+      </OrganizerUnlock>
 
       <p className="share-hint">
         Deel deze link met je groep: <code>{window.location.href}</code>{' '}

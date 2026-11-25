@@ -114,7 +114,7 @@ h2 {
   border-bottom-color: transparent;
 }
 
-.form .collapsible-segment[data-open='true'] {
+.form .collapsible-segment[data-frame='true'] {
   border-inline-color: var(--ink);
   border-bottom-color: var(--ink);
 }
@@ -238,6 +238,16 @@ h2 {
 
 .access-hint {
   margin: 0.75rem 0 0;
+}
+
+.edit-actions.organizer-actions {
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 600px) {
+  .unlock-form .access-row { grid-template-columns: minmax(0, 1fr); }
+  .unlock-form .organizer-actions { width: 100%; justify-self: stretch; }
+  .organizer-actions button[type] { flex: 1; min-width: 0; max-width: none; }
 }
 
 @media (max-width: 360px) {
@@ -710,8 +720,11 @@ button.btn-secondary:focus-visible {
   margin-top: 2rem;
 }
 
-.unlock-form label {
-  max-width: 320px;
+.unlock-form .organizer-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .edit-actions {

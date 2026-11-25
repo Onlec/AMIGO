@@ -2,7 +2,7 @@ import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
 
-export default function EditPollPanel({ poll, onSave, onCancel, onChooseFinal }) {
+export default function EditPollPanel({ poll, onSave, onCancel }) {
   const [original] = useState(poll);
   const [title, setTitle] = useState(original.title);
   const [description, setDescription] = useState(original.description);
@@ -57,8 +57,6 @@ export default function EditPollPanel({ poll, onSave, onCancel, onChooseFinal })
           <button type="button" className="btn-secondary" disabled={saving} onClick={onCancel}>Annuleren</button>
         </div>
       </form>
-      {onChooseFinal && <button type="button" disabled={Boolean(dirty) || saving} onClick={onChooseFinal}>Einddatum kiezen</button>}
-      {onChooseFinal && Boolean(dirty) && <p>Sla je wijzigingen op voordat je een einddatum kiest.</p>}
     </section>
   );
 }
