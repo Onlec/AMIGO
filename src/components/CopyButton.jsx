@@ -7,13 +7,11 @@ export default function CopyButton({ text, label = 'Kopiëren', initialCopy }) {
   useEffect(() => {
     if (!attempt) return;
     let live = true;
-    let timer;
     attempt.then(ok => {
       if (!live) return;
       setFeedback(ok ? 'Gekopieerd ✓' : 'Kopiëren mislukt');
-      timer = setTimeout(() => setFeedback(''), 2500);
     });
-    return () => { live = false; clearTimeout(timer); };
+    return () => { live = false; };
   }, [attempt]);
   return (
     <button type="button" className="copy-button" onClick={() => setAttempt(copyToClipboard(text))}>

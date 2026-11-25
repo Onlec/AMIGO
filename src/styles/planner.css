@@ -142,11 +142,15 @@ h2 {
 }
 
 .name-field input:focus,
-.form input:focus,
+.form input:not([type='checkbox']):focus,
 .form select:focus,
 .form textarea:focus {
   outline: 3px solid var(--amigo-signal-red);
   outline-offset: 1px;
+}
+
+.form textarea {
+  resize: none;
 }
 
 .voter-form select {
@@ -402,7 +406,7 @@ button.btn-secondary:focus-visible {
   right: 30%;
   height: 2px;
   background: var(--amigo-signal-red);
-  box-shadow: 0 0 0 1px var(--amigo-paper);
+  box-shadow: 0 0 0 1px var(--surface);
   pointer-events: none;
 }
 
@@ -602,6 +606,9 @@ button.btn-secondary:focus-visible {
 .participation-choice input:checked {
   background: var(--amigo-signal-red);
   border-color: var(--amigo-signal-red);
+}
+.form .participation-choice input:focus:not(:focus-visible) {
+  outline: none;
 }
 .participation-choice input:checked::after {
   content: '';
