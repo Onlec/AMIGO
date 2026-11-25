@@ -508,6 +508,32 @@ button.btn-secondary:focus-visible {
   gap: 0.6rem;
 }
 
+.poll-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.poll-heading > h1 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.poll-heading > .poll-heading__status {
+  flex: 0 1 auto;
+  max-width: 45%;
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.poll-heading__status:empty {
+  display: none;
+}
+
 .final-date {
   background: var(--amigo-red);
   color: var(--amigo-paper);

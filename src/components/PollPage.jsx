@@ -1,5 +1,5 @@
 import { formatProposal } from '../utils/dates.js';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
 import { follow, syncStatus, watchStatus } from '../data/sync.js';
 import { readVoterSession, rememberVoterSession } from '../data/voterSession.js';
@@ -14,6 +14,7 @@ import CollapsibleSegment from './CollapsibleSegment.jsx';
 import Confetti from './Confetti.jsx';
 
 export default function PollPage({ pollId, share }) {
+  const finalDateRef = useRef(null);
   const [row, setRow] = useState(null);
   const [status, setStatus] = useState('');
   const [storageError, setStorageError] = useState('');
@@ -134,21 +135,23 @@ export default function PollPage({ pollId, share }) {
   return (
     <div className="page">
       <div className="lab eyebrow">AMIGO / STEMMEN</div>
-      <h1>{poll.title}</h1>
-      <p role="status" className="description">
-        {row.queue.some(item => ['create', 'createPoll'].includes(item.kind))
-          ? 'Lokaal bewaard. Anderen kunnen de link openen na de eerste synchronisatie.'
-          : row.queue.length ? 'Wijzigingen lokaal bewaard.' : ''}
-        {' '}{row.queue.length && status === 'Gesynchroniseerd' ? '' : status}
-      </p>
+      <div className="poll-heading">
+        <h1>{poll.title}</h1>
+        <p role="status" className="description poll-heading__status">
+          {row.queue.some(item => ['create', 'createPoll'].includes(item.kind))
+            ? 'Lokaal bewaard. Anderen kunnen de link openen na de eerste synchronisatie.'
+            : row.queue.length ? 'Wijzigingen lokaal bewaard.' : ''}
+          {' '}{row.queue.length && status === 'Gesynchroniseerd' ? '' : status}
+        </p>
+      </div>
       {storageError && <p role="alert" className="error">{storageError}</p>}
       {notices.map((notice, index) => <p className="error" key={index}>Wijziging afgewezen — {notice}</p>)}
       {poll.description && <p className="description">{poll.description}</p>}
 
       {poll.status === 'closed' && finalDate && (
         <div className="final-date-block">
-          <Confetti key={pollId} />
-          <p className="final-date">
+          <Confetti key={pollId} originRef={finalDateRef} />
+          <p ref={finalDateRef} className="final-date">
             Gekozen datum: {formatProposal(finalDate.date, finalDate.time, true)}
           </p>
         </div>
