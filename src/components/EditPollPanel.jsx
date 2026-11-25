@@ -55,14 +55,13 @@ export default function EditPollPanel({ poll, initiallyParticipating = false, on
         </label>
         {originalParticipation && !participating && <p className="description">Bij opslaan worden je eigen deelname en stemmen verwijderd.</p>}
         {datesLocked && <p className="description">De datums zijn vergrendeld omdat er een einddatum gekozen is. Heropen de poll om datums aan te passen.</p>}
-        <fieldset disabled={saving || datesLocked}>
-          <legend>Mogelijke datums</legend>
-          <MonthCalendar initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (
+        <div role="group" aria-label="Mogelijke datums">
+          <MonthCalendar disabled={saving || datesLocked} initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (
             <button type="button" className={`calendar-day-button ${days.has(day) ? 'is-selected' : ''}`}
-              aria-label={formatDay(day)} aria-pressed={days.has(day)} disabled={day === poll.finalDateId}
+              aria-label={formatDay(day)} aria-pressed={days.has(day)} disabled={saving || datesLocked || day === poll.finalDateId}
               onClick={() => toggle(day)}>{number}</button>
           )} />
-        </fieldset>
+        </div>
         {error && <p className="error" role="alert">{error}</p>}
         <div className="edit-actions">
           <button type="submit" disabled={saving}>Opslaan</button>

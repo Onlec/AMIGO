@@ -433,7 +433,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       const locked = state.scenario === 'closed';
       return `<h2>Prikker bewerken</h2><form class="fields" data-form="edit">${label('Titel', title())}${description()}${participation()}
         ${locked ? '<p class="description">De datums zijn vergrendeld. Heropen de poll om datums aan te passen.</p>' : ''}
-        ${segment('Mogelijke datums', calendar(true, locked))}
+        <div role="group" aria-label="Mogelijke datums">${calendar(true, locked)}</div>
         ${actionRow(button('Opslaan', 'poll') + button('Annuleren', 'poll', true))}</form>`;
     }
     function final() {

@@ -29,7 +29,7 @@ function getMonthGrid(year, month) {
   return cells;
 }
 
-export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDays }) {
+export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDays, disabled = false }) {
   const now = new Date();
   const todayKey = toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
   const first = proposedDays?.[0]?.slice(0, 7);
@@ -50,13 +50,13 @@ export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDay
   return (
     <div className="calendar">
       <div className="calendar-header">
-        {arrows && <button type="button" disabled={monthKey === first} onClick={() => changeMonth(-1)} aria-label="Vorige maand">
+        {arrows && <button type="button" disabled={disabled || monthKey === first} onClick={() => changeMonth(-1)} aria-label="Vorige maand">
           ‹
         </button>}
         <span className="calendar-title">
           {monthHeading.format(new Date(year, month, 1, 12))}
         </span>
-        {arrows && <button type="button" disabled={monthKey === last} onClick={() => changeMonth(1)} aria-label="Volgende maand">
+        {arrows && <button type="button" disabled={disabled || monthKey === last} onClick={() => changeMonth(1)} aria-label="Volgende maand">
           ›
         </button>}
       </div>

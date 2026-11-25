@@ -406,6 +406,8 @@ try {
   await evaluate("document.querySelector('.unlock-form button').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Prikker bewerken'"));
   assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Editing stays inside the organizer segment');
+  assert.equal(await evaluate("document.querySelector('.organizer-panel fieldset')"), null, 'Editing dates does not nest a second segment inside organizer management');
+  assert.equal(await evaluate("document.querySelector('.organizer-panel [role=group][aria-label=\"Mogelijke datums\"] .calendar') !== null"), true, 'Date calendar remains directly available in the organizer editor');
   assert.ok(await evaluate("document.querySelectorAll('.vote-grid button[aria-label^=Verwijder]').length > 0"), 'Removing participants is available in edit mode');
   assert.equal(await evaluate("[...document.querySelectorAll('.organizer-panel button')].some(button => button.textContent === 'Einddatum kiezen')"), false, 'Date confirmation is independent from the edit form');
   assert.equal(await evaluate("document.querySelector('form form') === null"), true, 'Organizer editor does not nest forms');
