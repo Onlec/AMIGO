@@ -125,6 +125,27 @@ try {
       if (node.scrollWidth > node.clientWidth + 1) errors.push('segment content overflow');
     }
     const visible = node => node.getBoundingClientRect().height > 0 && !node.closest('.collapsible-segment[data-open=false]');
+    for (const legend of page.querySelectorAll('fieldset > legend')) {
+      const fieldset = legend.parentElement;
+      const range = document.createRange();
+      range.selectNodeContents(legend);
+      const textLeft = range.getBoundingClientRect().left;
+      near(textLeft, fieldset.getBoundingClientRect().left + 1.5 + parseFloat(getComputedStyle(page).getPropertyValue('--planner-inset')), 'segment title/content alignment');
+      if (legend.getBoundingClientRect().left - fieldset.getBoundingClientRect().left < 5) errors.push('missing frame before title');
+    }
+    const login = page.querySelector('.access-row:has(input)');
+    if (login && visible(login)) {
+      const inputs = [...login.querySelectorAll('input')].map(node => node.getBoundingClientRect());
+      const button = login.querySelector('button').getBoundingClientRect();
+      if (innerWidth <= 600) {
+        for (const input of inputs) near(input.width, login.getBoundingClientRect().width, 'mobile login full-width field');
+        if (button.top < inputs.at(-1).bottom + 15) errors.push('mobile login button spacing');
+      } else {
+        near(inputs[0].width, inputs[1].width, 'equal login field widths');
+        near(inputs[0].top, inputs[1].top, 'login input row');
+        near(inputs[1].bottom, button.bottom, 'login button baseline');
+      }
+    }
     const actions = '.edit-actions > button,.edit-actions > .btn,.organizer-reopen > button,.share-hint > button,.date-jump-actions > button,.date-cards > li > button';
     for (const button of page.querySelectorAll(actions)) {
       if (!visible(button)) continue;

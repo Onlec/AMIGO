@@ -138,11 +138,10 @@ try {
           alignedBottom: buttons.every(rect => Math.abs(rect.top - button.top) < 1),
           noOverflow: row.scrollWidth <= row.clientWidth };
       }
-      const compactOrganizer = selector === '.unlock-form' && innerWidth <= 600;
-      const buttons = [...row.querySelectorAll('button')].map(node => node.getBoundingClientRect());
-      return { fieldsLeft: rects.every(rect => Math.abs(rect.left - rects[0].left) < 1),
-        buttonRight: compactOrganizer ? rects.every(rect => rect.bottom < button.top) : rects.every(rect => rect.right < button.left),
-        alignedBottom: compactOrganizer ? buttons.every(rect => Math.abs(rect.top - button.top) < 1) : Math.abs(rects.at(-1).bottom - button.bottom) < 1,
+      const compact = innerWidth <= 600;
+      return { fieldsLeft: compact ? rects.every(rect => Math.abs(rect.left - rects[0].left) < 1) : rects.every(rect => Math.abs(rect.top - rects[0].top) < 1),
+        buttonRight: compact ? rects.every(rect => rect.bottom < button.top) : rects.every(rect => rect.right < button.left),
+        alignedBottom: compact ? Math.abs(button.right - row.getBoundingClientRect().right) < 1 : Math.abs(rects.at(-1).bottom - button.bottom) < 1,
         noOverflow: row.scrollWidth <= row.clientWidth };
     })`);
     assert.ok(layouts.every(layout => layout.fieldsLeft && layout.buttonRight && layout.alignedBottom && layout.noOverflow),

@@ -343,7 +343,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <div class="stage"><iframe id="preview" title="Wireframe van de datumprikker"></iframe></div>
     <div class="notes">
       <section class="note"><h2>A · Buitenlijn</h2><p>Logo, titel en segmentkaders beginnen op dezelfde lijn. Header en pagina delen een breedte van maximaal 760 px.</p></section>
-      <section class="note"><h2>B · Horizontale lijnen</h2><p>Naam en afmeldknop, datum en keuzeknop en legenda en toggle delen één rijmidden. De aanmeldknop staat op de hoogte van het wachtwoordveld. Titel en status delen hun eerste tekstbasislijn.</p></section>
+      <section class="note"><h2>B · Horizontale lijnen</h2><p>Segmenttitels volgen de linkerrand van de inhoud. Op brede schermen staan naam, wachtwoord en aanmelden op één rij. Op mobiel staan de velden onder elkaar over de volle breedte, met de knop eronder rechts. Titel en status delen hun eerste tekstbasislijn.</p></section>
       <section class="note"><h2>Ritme</h2><p>24 px tussen segmenten, 16 px tussen velden, 8 px tussen label en veld en 12 px tussen kaarten en knoppen. De pagina groeit mee; alleen de tabel scrolt horizontaal.</p></section>
     </div>
   </main>
@@ -480,14 +480,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .poll-heading { display:grid; grid-template-columns:minmax(0,1fr) fit-content(45%); align-items:baseline; gap:16px; margin:8px 0 16px; }
       .poll-heading h1 { margin:0; } .status { text-align:right; font-size:12px; }
       .segments { display:grid; gap:24px; margin-top:24px; } .segment { min-width:0; margin:0; padding:0; border:1.5px solid var(--ink); }
-      .segment>legend { margin-left:12px; padding:0 4px; font:600 12px/1.6 'Space Grotesk',sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+      .segment>legend { margin-inline-start:calc(var(--inset) - 4px); padding:0 4px; font:600 12px/1.6 'Space Grotesk',sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
       .segment-content { padding:var(--inset); min-width:0; } .closed { border-inline-color:transparent; border-bottom-color:transparent; }
       .fields { display:grid; gap:16px; min-width:0; } label { display:flex; flex-direction:column; gap:8px; color:var(--muted); font-size:12px; letter-spacing:.05em; text-transform:uppercase; }
       input,textarea { width:100%; min-width:0; min-height:48px; padding:10px 12px; border:1.5px solid var(--ink); border-radius:0; background:var(--surface); color:var(--ink); font-size:16px; line-height:1.4; letter-spacing:normal; text-transform:none; }
       textarea { resize:none; } .fields>.description { margin:0; } .participation { flex-direction:row; align-items:center; letter-spacing:normal; text-transform:none; color:var(--ink); font-size:14px; }
       input[type=checkbox] { appearance:none; width:20px; height:20px; min-height:0; padding:0; flex:none; display:grid; place-items:center; background:#d21f26; border-color:#d21f26; }
       input[type=checkbox]:checked:after { content:'✓'; color:white; font-size:14px; line-height:1; }
-      .access-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:16px; } .access-row:has(>.fields) { align-items:end; } .access-row>.fields { max-width:320px; }
+      .access-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:16px; } .access-row:has(>.fields) { align-items:end; } .access-row>.fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .access-row p { overflow-wrap:anywhere; } .actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; }
       .actions>button,.reopen>button,.share-footer>button,.final-card>button { width:128px; min-width:128px; max-width:128px; height:48px; min-height:48px; flex:0 0 128px; padding:4px 8px; line-height:1.2; }
       .page-actions,.share-footer { padding-inline:calc(var(--inset) + 1.5px); }
@@ -525,7 +525,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .guides:before,.guides:after { content:''; position:absolute; top:60px; bottom:0; border-left:1px dashed #247db54d; } .guides:before { left:var(--inset); } .guides:after { right:var(--inset); }
       .row-guides { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); width:calc(min(760px,100%) - var(--gutter)*2); pointer-events:none; z-index:5; }
       .row-guide { position:absolute; left:0; right:0; border-top:1px dashed #c9362b70; }
-      @media(max-width:600px) { :root { --gutter:12px; --inset:12px; } .page { padding-top:24px; } h1 { font-size:28px; } .manage-row { grid-template-columns:minmax(0,1fr); } .manage-row>.actions { justify-self:end; } nav { gap:8px; } .poll-heading { gap:12px; } }
+      @media(max-width:600px) { :root { --gutter:12px; --inset:12px; } .page { padding-top:24px; } h1 { font-size:28px; } .access-row,.access-row>.fields { grid-template-columns:minmax(0,1fr); } .access-row>.actions { justify-self:end; } .manage-row { grid-template-columns:minmax(0,1fr); } .manage-row>.actions { justify-self:end; } nav { gap:8px; } .poll-heading { gap:12px; } }
       @media(max-width:360px) { .access-row { grid-template-columns:minmax(0,1fr); } .access-row>.actions { justify-self:end; } .date-row { grid-template-columns:minmax(0,1fr) 40px; } .date-row>span { grid-column:1/-1; } .toolbar>.legend { gap:8px; } }
     `;
     let revision = 0;

@@ -39,6 +39,8 @@
 .planner-page > .form { gap: var(--planner-section-gap); margin-top: var(--planner-section-gap); }
 .planner-page .form fieldset { margin-inline: 0; padding: var(--planner-inset); }
 .planner-page .form .collapsible-segment { padding: 0; }
+.planner-page .form fieldset > legend { padding-inline: 4px; margin-inline-start: -4px; }
+.planner-page .form .collapsible-segment > legend { margin-inline-start: calc(var(--planner-inset) - 4px); }
 .planner-page .form .voter-credentials { margin: 0; padding: 0; }
 .planner-page .collapsible-segment__content { padding: var(--planner-inset); }
 .planner-page .planner-fields { display: grid; gap: var(--planner-field-gap); min-width: 0; }
@@ -51,6 +53,8 @@
 .planner-page .access-row { align-items: center; gap: 16px; }
 .planner-page .access-row:has(.access-fields input) { align-items: end; }
 .planner-page .access-fields { gap: var(--planner-field-gap); }
+.planner-page .access-fields:has(input) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.planner-page .access-fields label { max-width: none; }
 .planner-page .access-fields p { overflow-wrap: anywhere; }
 .planner-page .edit-actions { align-items: center; gap: var(--planner-control-gap); }
 .planner-page :is(.edit-actions, .organizer-reopen, .share-hint, .date-jump-actions) > :is(button, .btn),
@@ -122,6 +126,9 @@
   .planner-header nav { gap: 8px; }
   .planner-header nav a { font-size: 11px; letter-spacing: .06em; }
   .planner-page .poll-heading { gap: 12px; }
+  .planner-page .access-row { grid-template-columns: minmax(0, 1fr); }
+  .planner-page .access-fields:has(input) { grid-template-columns: minmax(0, 1fr); }
+  .planner-page .access-actions { justify-self: end; }
   .planner-page .organizer-actions { width: auto; justify-self: end; }
   .planner-page .calendar-day-button { gap: 1px; padding: 2px; font-size: 11px; }
   .planner-page .calendar-day-button small { font-size: 9px; line-height: 1; }
