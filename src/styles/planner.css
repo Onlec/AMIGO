@@ -121,7 +121,7 @@ h2 {
 
 .collapsible-segment__body {
   height: 0;
-  overflow: hidden;
+  overflow: clip;
   /* Quintic minimum-jerk motion: zero velocity and acceleration at both ends. */
   transition: height 600ms cubic-bezier(0.65, 0, 0.35, 1);
   transition-timing-function: linear(0, 0.000045, 0.000352, 0.001158, 0.002675, 0.005088, 0.00856, 0.01323, 0.019216, 0.026612, 0.035494, 0.045917, 0.05792, 0.071521, 0.086724, 0.103516, 0.121869, 0.141742, 0.16308, 0.185818, 0.209877, 0.235169, 0.261599, 0.28906, 0.31744, 0.346619, 0.376474, 0.406873, 0.437685, 0.468773, 0.5, 0.531227, 0.562315, 0.593127, 0.623526, 0.653381, 0.68256, 0.71094, 0.738401, 0.764831, 0.790123, 0.814182, 0.83692, 0.858258, 0.878131, 0.896484, 0.913276, 0.928479, 0.94208, 0.954083, 0.964506, 0.973388, 0.980784, 0.98677, 0.99144, 0.994912, 0.997325, 0.998842, 0.999648, 0.999955, 1);
@@ -154,26 +154,7 @@ h2 {
   min-height: 0;
 }
 
-.collapsible-segment--scrollable {
-  --segment-viewport: min(36rem, 65svh);
-}
-
-.collapsible-segment--scrollable > .collapsible-segment__body {
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scroll-padding-block: 7rem 1rem;
-  scrollbar-gutter: stable;
-}
-
-.collapsible-segment--scrollable[data-open='true'] > .collapsible-segment__body {
-  height: min(var(--segment-height), var(--segment-viewport));
-}
-
-.collapsible-segment--scrollable .date-choices__toolbar,
-.voter-ballot .date-choices__toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+.date-choices__toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -182,8 +163,7 @@ h2 {
   background: var(--bg);
 }
 
-.collapsible-segment--scrollable .date-choices__toolbar .vote-legend,
-.voter-ballot .date-choices__toolbar .vote-legend {
+.date-choices__toolbar .vote-legend {
   margin: 0;
 }
 
@@ -265,41 +245,8 @@ h2 {
   display: flow-root;
 }
 
-.voter-ballot .date-choices__toolbar {
-  position: static;
-}
-
-.date-choices__panels {
-  position: relative;
-}
-
 .date-choices__calendar {
   display: flow-root;
-}
-
-.date-choices__calendar[aria-hidden='true'] {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.date-choices__calendar .calendar-header {
-  min-height: 40px;
-}
-
-.date-choices__calendar .month-status {
-  min-height: 3em;
-}
-
-.date-choices__calendar .date-jump-actions {
-  min-height: 48px;
-}
-
-.date-choices__cards {
-  position: absolute;
-  inset: 0;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scrollbar-gutter: stable;
 }
 
 .date-choices__cards > .date-cards {

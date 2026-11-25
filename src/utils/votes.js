@@ -68,7 +68,7 @@ export function buildShareText(poll, dates, votes, pollUrl) {
     .filter(Boolean)
     .join(' ');
 
-  const linkLine = `👉 Stem mee: ${pollUrl}`;
+  const linkLine = `👉 ${poll.status === 'closed' ? 'Bekijk de einddatum' : 'Stem mee'}: ${pollUrl}`;
 
   return [headerLine, '', ...gridLines, '', peopleLine, linkLine].join('\n');
 }

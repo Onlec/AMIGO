@@ -7,7 +7,7 @@ import CollapsibleSegment from './CollapsibleSegment.jsx';
 
 const normalize = name => name.trim().toLowerCase();
 
-export default function VoterForm({ pollId, dates, participants, legacyVoter, deferred, results, session, onSelect, active = true }) {
+export default function VoterForm({ pollId, dates, participants, legacyVoter, deferred, results, session, onSelect, active = true, readOnly = false }) {
   const storageKey = 'amigo-ballot:' + pollId;
   const [submission, setSubmission] = useState(() => JSON.parse(sessionStorage.getItem(storageKey) || 'null'));
   const [name, setName] = useState(() => submission?.name || participants[session?.voter]?.name || '');
@@ -89,7 +89,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
   }
 
   async function castVote(day, value) {
-    if (!signedIn) return;
+    if (!signedIn || readOnly) return;
     setError('');
     setSaving(count => count + 1);
     try {
@@ -156,8 +156,9 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
         <div className="voter-availability" data-open={signedIn} hidden={!signedIn}>
           <hr className="voter-divider" />
           <div className="voter-ballot" role="region" aria-label="Jouw beschikbaarheid" tabIndex={signedIn && active ? 0 : undefined}>
-            <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} />
-            <p className="description" role="status">{saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
+            <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly} />
+            <p className="description" role="status">{readOnly ? 'Je stemmen zijn alleen-lezen tijdens het kiezen van een einddatum.'
+              : saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
           </div>
         </div>
         {error && <p role="alert" className="error">{error}</p>}

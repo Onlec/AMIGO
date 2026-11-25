@@ -8,7 +8,7 @@ function sortDateEntries(dates) {
 
 // Alleen-lezen overzicht van wie wat stemde. Het aanpassen van je eigen stem
 // gebeurt via <VoteCalendar>; `canManage` (enkel waar voor de ontgrendelde
-// organisator) voegt een kolom toe om deelnemers te verwijderen.
+// organisator in de bewerkmodus) voegt een kolom toe om deelnemers te verwijderen.
 export default function VoteGrid({ dates, votes, currentVoterId, finalDateId, canManage, onRemoveVoter }) {
   const dateEntries = sortDateEntries(dates);
   const voterEntries = Object.entries(votes);

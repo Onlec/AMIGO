@@ -217,25 +217,19 @@ try {
   })()`);
   await until(() => evaluate("document.querySelectorAll('.date-cards > li').length === 10"));
   await pause(800);
-  const mobileScroll = await evaluate(`new Promise(resolve => {
+  const mobileLayout = await evaluate(`(() => {
     const body = ballotSegment().querySelector('.date-choices__cards');
-    const toolbar = ballotSegment().querySelector('.date-choices__toolbar');
-    const before = toolbar.getBoundingClientRect().top;
     window.mobileCardsHeight = participationBody().getBoundingClientRect().height;
-    body.scrollTop = body.scrollHeight;
-    requestAnimationFrame(() => {
-      const last = ballotSegment().querySelector('.date-cards > li:last-child').getBoundingClientRect();
-      resolve({ before, after: toolbar.getBoundingClientRect().top,
-        referenceHeight: ballotSegment().querySelector('.date-choices__calendar').getBoundingClientRect().height,
-        height: body.clientHeight, scrolling: body.scrollHeight > body.clientHeight,
-        lastVisible: last.bottom <= body.getBoundingClientRect().bottom + 1 && last.top >= body.getBoundingClientRect().top,
-        noHorizontalOverflow: body.scrollWidth <= body.clientWidth });
-    });
-  })`);
-  assert.ok(Math.abs(mobileScroll.height - mobileScroll.referenceHeight) < 1, 'Cards use the full calendar height instead of a viewport cap');
-  assert.ok(mobileScroll.scrolling && mobileScroll.lastVisible, 'Internal scrolling reaches the final card');
-  assert.ok(Math.abs(mobileScroll.before - mobileScroll.after) < 1, 'Legend and view toggle stay outside the cards scroll area');
-  assert.ok(mobileScroll.noHorizontalOverflow, 'Mobile cards fit without horizontal scrolling');
+    body.scrollTop = 100;
+    const last = body.querySelector('.date-cards > li:last-child').getBoundingClientRect();
+    return { scrolling: body.scrollTop !== 0 || body.scrollHeight > body.clientHeight + 1,
+      lastVisible: last.bottom <= body.getBoundingClientRect().bottom + 1,
+      noHorizontalOverflow: body.scrollWidth <= body.clientWidth,
+      noReferenceCalendar: document.querySelector('.date-choices__calendar') === null };
+  })()`);
+  assert.ok(!mobileLayout.scrolling && mobileLayout.lastVisible, 'Segment expands to contain all ten cards without internal scrolling');
+  assert.ok(mobileLayout.noHorizontalOverflow, 'Mobile cards fit without horizontal scrolling');
+  assert.ok(mobileLayout.noReferenceCalendar, 'Cards do not reserve an invisible fixed calendar height');
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').click()");
   await until(() => evaluate("document.querySelector('.date-choices').dataset.view === 'calendar' && participationBody().closest('fieldset').dataset.phase === 'idle'"));
   assert.equal(await evaluate(`(() => {
@@ -244,9 +238,9 @@ try {
     const reference = ballot.querySelector('.date-choices__calendar');
     return ballot.scrollTop === 0 && ballot.scrollHeight <= ballot.clientHeight + 1
       && reference.querySelector('.calendar-grid').getBoundingClientRect().bottom <= reference.getBoundingClientRect().bottom
-      && Math.abs(participationBody().getBoundingClientRect().height - mobileCardsHeight) < 1
+      && participationBody().getBoundingClientRect().height < mobileCardsHeight
       && ballot.querySelector('.date-choices__cards') === null;
-  })()`), true, 'Mobile calendar is complete, cannot scroll internally and keeps the cards segment height');
+  })()`), true, 'Calendar uses its own content height instead of the larger ten-card height');
   for (const viewport of [{ width: 390, height: 420 }, { width: 844, height: 390 }, { width: 320, height: 568 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...viewport, deviceScaleFactor: 1, mobile: true });
     await until(() => evaluate("Math.abs(participationBody().getBoundingClientRect().height - participationBody().querySelector('.collapsible-segment__content').getBoundingClientRect().height) < 1"));
@@ -260,14 +254,15 @@ try {
     })()`), true, `Full calendar has no internal scroll at ${viewport.width}x${viewport.height}`);
   }
   await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await until(() => evaluate("Math.abs(participationBody().getBoundingClientRect().height - mobileCardsHeight) < 1"));
+  await until(() => evaluate("Math.abs(participationBody().getBoundingClientRect().height - participationBody().querySelector('.collapsible-segment__content').getBoundingClientRect().height) < 1"));
+  const calendarBeforeCompletion = await evaluate('participationBody().getBoundingClientRect().height');
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
     const voter = Object.values(row.base.votes)[0];
     voter.votesJson = JSON.stringify(Object.fromEntries(Object.keys(row.base.dates).map(day => [day, 'yes'])));
   })`);
   await until(() => evaluate("document.querySelector('[aria-label=\"Ga naar de eerste onbeantwoorde datum\"]') === null"));
   await pause(700);
-  assert.ok(Math.abs(await evaluate('participationBody().getBoundingClientRect().height - mobileCardsHeight')) < 1, 'Completing the final answer preserves the maximum calendar height');
+  assert.ok(await evaluate('participationBody().getBoundingClientRect().height') < calendarBeforeCompletion, 'Segment shrinks naturally when the unanswered-date action disappears');
   await evaluate("pollData.updateLocal(fixturePoll, row => { Object.values(row.base.votes)[0].votesJson = '{}'; })");
   await until(() => evaluate("document.querySelector('[aria-label=\"Ga naar de eerste onbeantwoorde datum\"]') !== null"));
   await evaluate("document.querySelector('.date-view-actions [aria-label=Kaarten]').click()");
@@ -276,6 +271,17 @@ try {
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = originalDates; })");
   await command('Emulation.clearDeviceMetricsOverride');
   await until(() => evaluate("document.querySelectorAll('.date-cards > li').length === 2"));
+  await until(() => evaluate("Math.abs(participationBody().getBoundingClientRect().height - participationBody().querySelector('.collapsible-segment__content').getBoundingClientRect().height) < 1"));
+  const wheelPoint = await evaluate(`(() => {
+    const card = document.querySelector('.date-cards > li');
+    card.scrollIntoView({ block: 'center', behavior: 'instant' });
+    const rect = card.getBoundingClientRect();
+    return { x: rect.left + 10, y: rect.top + rect.height / 2, start: scrollY };
+  })()`);
+  await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: wheelPoint.x, y: wheelPoint.y });
+  await command('Input.dispatchMouseEvent', { type: 'mouseWheel', x: wheelPoint.x, y: wheelPoint.y, deltaX: 0, deltaY: 250 });
+  await until(() => evaluate(`scrollY > ${wheelPoint.start} + 20`));
+  assert.equal(await evaluate("document.querySelector('.date-choices__cards').scrollTop"), 0, 'Wheel scrolls the page rather than being captured by cards');
   const voteMotion = await evaluate("recordMotion(() => document.querySelector('.date-cards [role=radio]').click())");
   assert.ok(voteMotion.every(frame => frame.phase === 'idle'), 'Automatic votes and local updates do not close the segment');
   await until(() => evaluate("document.querySelector('.date-cards [role=radio]').getAttribute('aria-checked') === 'true'"));
@@ -342,6 +348,7 @@ try {
   await evaluate("document.querySelector('.unlock-form button').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Prikker bewerken'"));
   assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Editing stays inside the organizer segment');
+  assert.ok(await evaluate("document.querySelectorAll('.vote-grid button[aria-label^=Verwijder]').length > 0"), 'Removing participants is available in edit mode');
   assert.equal(await evaluate("[...document.querySelectorAll('.organizer-panel button')].some(button => button.textContent === 'Einddatum kiezen')"), false, 'Date confirmation is independent from the edit form');
   assert.equal(await evaluate("document.querySelector('form form') === null"), true, 'Organizer editor does not nest forms');
   assert.equal(await evaluate("participationBody().closest('fieldset').dataset.open"), 'true', 'Editing does not collapse or reset the voter login segment');
@@ -378,20 +385,41 @@ try {
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=final]').disabled"), false, 'Final-date selection is directly available to the organizer');
   await evaluate("document.querySelector('.unlock-form button[value=final]').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Einddatum kiezen'"));
+  assert.equal(await evaluate("document.querySelectorAll('.vote-grid button').length"), 0, 'Final-date selection cannot remove any participant');
+  assert.equal(await evaluate("document.querySelector('.vote-grid .my-row') !== null"), true, 'Regression covers the organizer voting as their own participant');
+  const queueBeforeFinalVote = await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.length)");
+  assert.equal(await evaluate("[...document.querySelectorAll('.voter-ballot .calendar-day-button--vote')].every(button => button.disabled)"), true, 'Own calendar votes are read-only during final-date selection');
+  await evaluate("document.querySelector('.voter-ballot .calendar-day-button--vote').click()");
+  assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.length)"), queueBeforeFinalVote, 'Clicking own vote cannot queue a change while choosing a final date');
+  await evaluate("document.querySelector('.voter-ballot [aria-label=Kaarten]').click()");
+  await until(() => evaluate("document.querySelector('.voter-ballot .date-cards') !== null"));
+  assert.equal(await evaluate("[...document.querySelectorAll('.voter-ballot .date-cards [role=radio]')].every(button => button.disabled)"), true, 'Own card votes are also read-only during final-date selection');
+  await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').click()");
+  assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.length)"), queueBeforeFinalVote, 'Readonly card controls cannot clear an answer');
   assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Final-date selection also stays in the organizer segment');
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
   assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button[value=final]')"), true, 'Cancelling final-date selection returns to its own button');
   assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Final-date selection preserves the voter session');
+  assert.equal(await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').disabled"), false, 'Cancelling final-date selection restores normal voting');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
   await until(() => evaluate("document.querySelector('.unlock-form button[value=final]') === null"));
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), false, 'Closed polls remain editable without offering another final date');
+  await evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copiedFinalOverview = text; } } })");
+  assert.equal(await evaluate("document.querySelector('.final-date-block .copy-button').getAttribute('aria-label')"), 'Einddatum delen', 'Confirmed date has the same compact share control');
+  await evaluate("document.querySelector('.final-date-block .copy-button').click()");
+  await until(() => evaluate("document.querySelector('.final-date-block .copy-button').getAttribute('aria-label') === 'Gekopieerd ✓'"));
+  const finalOverview = await evaluate('window.copiedFinalOverview');
+  assert.ok(finalOverview.startsWith('📅 Browser test ('), 'Final share includes the poll title and voting progress');
+  assert.ok(finalOverview.includes('✅ gekozen') && finalOverview.includes('👥') && finalOverview.includes('Anna'), 'Final share includes the chosen date and participants');
+  assert.ok(finalOverview.includes('👉 Bekijk de einddatum: ') && !finalOverview.includes('👉 Stem mee:'), 'Closed poll invites readers to view the result');
+  await until(() => evaluate("document.querySelector('.final-date-block .copy-button').getAttribute('aria-label') === 'Einddatum delen'"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = false; })");
   await until(() => evaluate("document.querySelector('.unlock-form input[type=password]') !== null"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");
   await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 2"));
   assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All three headers remain visible without dates or voters');
-  console.log('PASS: full calendar without internal scrolling, cards bounded by calendar height, responsive layouts, segment motion and automatic saves');
+  console.log('PASS: natural content heights, page wheel scrolling, responsive layouts, segment motion and automatic saves');
 } finally {
   socket?.close();
   browser.kill();

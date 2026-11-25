@@ -2,7 +2,6 @@ import { formatProposal } from '../utils/dates.js';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
 import { follow, syncStatus, unlock, watchStatus } from '../data/sync.js';
-import { buildShareText } from '../utils/votes.js';
 import { readVoterSession, rememberVoterSession } from '../data/voterSession.js';
 import VoterForm from './VoterForm.jsx';
 import VoteGrid from './VoteGrid.jsx';
@@ -10,6 +9,7 @@ import OrganizerPanel from './OrganizerPanel.jsx';
 import OrganizerUnlock from './OrganizerUnlock.jsx';
 import EditPollPanel from './EditPollPanel.jsx';
 import CopyButton from './CopyButton.jsx';
+import SharePollButton from './SharePollButton.jsx';
 import CollapsibleSegment from './CollapsibleSegment.jsx';
 
 export default function PollPage({ pollId, share }) {
@@ -102,21 +102,18 @@ export default function PollPage({ pollId, share }) {
           <p className="final-date">
             Gekozen datum: {formatProposal(finalDate.date, finalDate.time, true)}
           </p>
+          <SharePollButton poll={poll} dates={dates} votes={votes} label="Einddatum delen" />
         </div>
       )}
 
       <VoterForm pollId={pollId} dates={dates} participants={{ ...localParticipants, ...votes }}
         legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults}
-        session={session} onSelect={selectVoter} active={showBallot} />
+        session={session} onSelect={selectVoter} active={showBallot} readOnly={mode === 'final'} />
 
       <div className="form poll-results">
         <CollapsibleSegment title="02 — Stemmenoverzicht" open={hasDates && hasVoters}>
           <div className="poll-results-actions">
-            <CopyButton text={buildShareText(poll, dates, votes, window.location.href)} label="Stemmenoverzicht delen" iconOnly
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                <path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4" />
-              </svg>} />
+            <SharePollButton poll={poll} dates={dates} votes={votes} />
           </div>
           <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
             <VoteGrid
@@ -124,8 +121,8 @@ export default function PollPage({ pollId, share }) {
               votes={votes}
               finalDateId={poll.finalDateId}
               currentVoterId={voterId}
-              canManage={editing}
-              onRemoveVoter={voter => save('removeVoter', { voter })}
+              canManage={mode === 'edit'}
+              onRemoveVoter={voter => { if (mode === 'edit') save('removeVoter', { voter }); }}
             />
           </div>
         </CollapsibleSegment>

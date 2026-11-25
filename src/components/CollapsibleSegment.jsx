@@ -3,7 +3,7 @@ import React, { createContext, forwardRef, useCallback, useContext, useImperativ
 const SegmentTransition = createContext(null);
 export const useSegmentTransition = () => useContext(SegmentTransition);
 
-const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open, disabled = false, scrollable = false, children }, ref) {
+const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open, disabled = false, children }, ref) {
   const root = useRef(null);
   const legend = useRef(null);
   const content = useRef(null);
@@ -106,7 +106,7 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
   }, []);
 
   return (
-    <fieldset ref={root} className={'collapsible-segment' + (scrollable ? ' collapsible-segment--scrollable' : '')}
+    <fieldset ref={root} className="collapsible-segment"
       data-open={expanded} data-frame={expanded || frameVisible} data-phase={phase} disabled={disabled || !expanded || phase !== 'idle'} aria-busy={phase !== 'idle' || undefined}
       style={{ '--segment-height': `${height}px` }}>
       <legend ref={legend} tabIndex={-1}>{title}</legend>
@@ -116,8 +116,7 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
           if (phase === 'closing') setPhase('closed');
           else if (phase === 'opening') { restoreFocus(); setPhase('idle'); }
         }}
-        role={scrollable ? 'region' : undefined} aria-label={scrollable ? title : undefined}
-        tabIndex={scrollable && open ? 0 : undefined}>
+      >
         <div className="collapsible-segment__clip">
           <div ref={content} className="collapsible-segment__content">
             <SegmentTransition.Provider value={transitionContent}>{children}</SegmentTransition.Provider>
