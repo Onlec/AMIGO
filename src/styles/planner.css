@@ -135,6 +135,12 @@ h2 {
   transition-duration: 250ms;
 }
 
+.collapsible-segment[data-phase='closed'] > .collapsible-segment__body,
+.collapsible-segment[data-phase='swapping'] > .collapsible-segment__body {
+  height: 0;
+  transition: none;
+}
+
 .collapsible-segment[data-phase='opening'] > .collapsible-segment__body {
   transition-duration: 350ms;
 }
@@ -194,6 +200,50 @@ h2 {
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+.access-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+}
+
+.access-fields {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.access-fields label {
+  width: 100%;
+  max-width: 320px;
+  min-width: 0;
+}
+
+.access-fields input,
+.access-fields select {
+  width: 100%;
+  min-width: 0;
+}
+
+.access-fields p {
+  margin: 0;
+}
+
+.access-actions button[type] {
+  width: auto;
+  min-width: 7rem;
+  max-width: 12rem;
+}
+
+.access-hint {
+  margin: 0.75rem 0 0;
+}
+
+@media (max-width: 360px) {
+  .access-row { grid-template-columns: minmax(0, 1fr); }
+  .access-actions { justify-self: end; }
 }
 
 .voter-divider {
@@ -622,10 +672,6 @@ button.btn-secondary:focus-visible {
 
 .unlock-form label {
   max-width: 320px;
-}
-
-.unlock-form .edit-actions {
-  margin-top: 1rem;
 }
 
 .edit-actions {

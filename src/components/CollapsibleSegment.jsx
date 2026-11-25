@@ -12,7 +12,7 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
   const [height, setHeight] = useState(0);
   const [phase, setPhase] = useState('idle');
   const [focusRevision, setFocusRevision] = useState(0);
-  const expanded = Boolean(open && phase !== 'closing' && phase !== 'swapping');
+  const expanded = Boolean(open && (phase === 'idle' || phase === 'opening'));
 
   const restoreFocus = useCallback(() => {
     const current = task.current;
@@ -61,19 +61,27 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
   }, []);
 
   useLayoutEffect(() => {
+    if (phase === 'closed') {
+      // A visible rest at zero height separates the two S-curve movements.
+      const timer = setTimeout(() => setPhase('swapping'), 80);
+      return () => clearTimeout(timer);
+    }
     if (phase === 'swapping') {
       task.current?.commit();
+      let openingFrame;
       const frame = requestAnimationFrame(() => {
         setHeight(content.current.getBoundingClientRect().height);
-        setPhase('opening');
+        // Paint the new content at zero height with transitions disabled first.
+        // Opening then starts a fresh curve rather than reversing a transition.
+        openingFrame = requestAnimationFrame(() => setPhase('opening'));
       });
-      return () => cancelAnimationFrame(frame);
+      return () => { cancelAnimationFrame(frame); cancelAnimationFrame(openingFrame); };
     }
     // transitionend is primary; the fallback also handles a motion preference
     // changing mid-transition, or a segment that was already at zero height.
     if (phase === 'closing' || phase === 'opening') {
       const timer = setTimeout(() => {
-        if (phase === 'closing') setPhase('swapping');
+        if (phase === 'closing') setPhase('closed');
         else { restoreFocus(); setPhase('idle'); }
       }, phase === 'closing' ? 300 : 400);
       return () => clearTimeout(timer);
@@ -97,7 +105,7 @@ const CollapsibleSegment = forwardRef(function CollapsibleSegment({ title, open,
       <div className="collapsible-segment__body" aria-hidden={!expanded || phase !== 'idle'} inert={expanded && phase === 'idle' ? undefined : ''}
         onTransitionEnd={event => {
           if (event.target !== event.currentTarget || event.propertyName !== 'height') return;
-          if (phase === 'closing') setPhase('swapping');
+          if (phase === 'closing') setPhase('closed');
           else if (phase === 'opening') { restoreFocus(); setPhase('idle'); }
         }}
         role={scrollable ? 'region' : undefined} aria-label={scrollable ? title : undefined}

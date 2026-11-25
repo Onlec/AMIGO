@@ -143,7 +143,8 @@ export default function PollPage({ pollId, share }) {
         </CollapsibleSegment>
       </div>
 
-      <OrganizerUnlock pollId={pollId} active={mode === 'view'} onUnlock={async proof => {
+      <OrganizerUnlock pollId={pollId} active={mode === 'view'} authorized={Boolean(poll.organizer)}
+        onEdit={() => setMode('edit')} onUnlock={async proof => {
         await unlock(pollId, proof);
         setMode('edit');
       }} />

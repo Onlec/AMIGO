@@ -83,10 +83,10 @@ try {
     function sample(now) {
       const body = participationBody();
       const segment = body.closest('fieldset');
-      samples.push({ phase: segment.dataset.phase, height: body.getBoundingClientRect().height,
+      samples.push({ time: now - start, phase: segment.dataset.phase, height: body.getBoundingClientRect().height,
         signedIn: ballotSegment().dataset.open, view: localStorage.getItem('amigo-date-view') || 'cards',
         disabled: segment.disabled, inert: body.inert, duration: getComputedStyle(body).transitionDuration });
-      if (now - start < 850) requestAnimationFrame(sample);
+      if (now - start < 1000) requestAnimationFrame(sample);
       else resolve(samples);
     }
     requestAnimationFrame(sample);
@@ -97,6 +97,26 @@ try {
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Ballot closed before login');
   assert.equal(await evaluate("ballotSegment().querySelector('.voter-ballot').getBoundingClientRect().height"), 0, 'Closed content takes no space');
   assert.equal(await evaluate("ballotSegment().hidden"), true, 'Availability stays hidden until login');
+  for (const mobile of [false, true]) {
+    if (mobile) {
+      await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+      await pause(700);
+    }
+    const layouts = await evaluate(`['.voter-credentials', '.unlock-form'].map(selector => {
+      const row = document.querySelector(selector + ' .access-row');
+      const inputs = [...row.querySelectorAll('input')];
+      const button = row.querySelector('button').getBoundingClientRect();
+      const rects = inputs.map(input => input.getBoundingClientRect());
+      return { fieldsLeft: rects.every(rect => Math.abs(rect.left - rects[0].left) < 1),
+        buttonRight: rects.every(rect => rect.right < button.left),
+        alignedBottom: Math.abs(rects.at(-1).bottom - button.bottom) < 1,
+        noOverflow: row.scrollWidth <= row.clientWidth };
+    })`);
+    assert.ok(layouts.every(layout => layout.fieldsLeft && layout.buttonRight && layout.alignedBottom && layout.noOverflow),
+      `Voter and organizer fields align left with room for buttons on the right (${mobile ? 'mobile' : 'desktop'})`);
+  }
+  await command('Emulation.clearDeviceMetricsOverride');
+  await pause(700);
   await evaluate(`(() => {
     const inputs = document.querySelectorAll('.voter-credentials input');
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -136,6 +156,9 @@ try {
       button.click();
     })`);
     assert.ok(frames.some(frame => frame.height < 1), 'Whole segment closes before changing views');
+    const closed = frames.filter(frame => frame.phase === 'closed');
+    assert.ok(closed.length >= 3 && closed.at(-1).time - closed[0].time >= 40, 'Two movements are separated by a visible full stop');
+    assert.ok(closed.every(frame => frame.height === 0 && frame.view === previousView), 'Segment is fully closed before replacing content');
     assert.ok(frames.filter(frame => frame.phase === 'closing').every(frame => frame.view === previousView), 'Old view is preserved while closing');
     assert.ok(frames.some(frame => frame.phase === 'opening' && frame.view === nextView), 'New view appears during opening');
     assert.ok(frames.filter(frame => frame.phase === 'closing').every(frame => frame.duration === '0.25s'), 'Closing uses 250ms');
@@ -144,6 +167,10 @@ try {
       const samples = frames.filter(frame => frame.phase === phase);
       const direction = phase === 'closing' ? -1 : 1;
       assert.ok(samples.every((frame, index) => index === 0 || direction * (frame.height - samples[index - 1].height) >= -1), 'Each motion phase is smooth without reversal');
+      const speeds = samples.slice(1).map((frame, index) => Math.abs(frame.height - samples[index].height) / (frame.time - samples[index].time));
+      const peak = Math.max(...speeds);
+      assert.ok(speeds.length >= 6 && peak > 0, 'Each movement has its own measurable velocity profile');
+      assert.ok(speeds[0] < peak * 0.7 && speeds.at(-1) < peak * 0.7, `${phase} accelerates from rest and decelerates back to rest`);
     }
     assert.ok(frames.filter(frame => frame.phase !== 'idle').every(frame => frame.disabled && frame.inert), 'Interaction blocked throughout the cycle');
     assert.equal(frames.filter((frame, index) => frame.phase === 'closing' && (index === 0 || frames[index - 1].phase !== 'closing')).length, 1, 'Repeated clicks create only one cycle');
@@ -257,10 +284,22 @@ try {
   const reducedReset = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Van stemmer wisselen'); button.focus(); button.click(); })");
   assert.ok(reducedReset.every(frame => frame.phase === 'idle'), 'Reduced-motion voter switch has no cycle');
   assert.equal(await evaluate("document.activeElement === document.querySelector('.voter-credentials input')"), true, 'Reduced-motion voter switch restores input focus');
+  assert.equal(await evaluate("document.querySelector('.unlock-form button').type"), 'submit', 'Visitors still need the organizer password');
+  await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = true; })");
+  await until(() => evaluate("document.querySelector('.unlock-form input[type=password]') === null"));
+  assert.equal(await evaluate("document.querySelector('.unlock-form button').disabled"), false, 'Authorized organizer can edit without reentering a password');
+  await evaluate("document.querySelector('.unlock-form button').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Prikker bewerken'"));
+  assert.equal(await evaluate("document.querySelector('.unlock-form input[type=password]') === null"), true, 'Password is absent during editing');
+  await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
+  assert.equal(await evaluate("document.querySelector('.unlock-form input[type=password]') === null"), true, 'Organizer stays recognized after leaving edit mode');
+  await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = false; })");
+  await until(() => evaluate("document.querySelector('.unlock-form input[type=password]') !== null"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");
   await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 2"));
   assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All three headers remain visible without dates or voters');
-  console.log('PASS: close/swap/open cycles, timing, focus, repeated clicks, reduced motion, mobile scrolling and automatic saves');
+  console.log('PASS: aligned access forms, organizer recognition, segment motion, focus, mobile scrolling and automatic saves');
 } finally {
   socket?.close();
   browser.kill();

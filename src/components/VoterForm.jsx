@@ -109,44 +109,48 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
       <CollapsibleSegment ref={segment} title="01 — Jouw deelname" open={active}>
         <form onSubmit={signIn}>
           <fieldset className="voter-credentials" disabled={busy}>
-          {signedIn ? (
-            <p>Je stemt als <strong>{activePerson.name}</strong>.</p>
-          ) : (
-            <>
-              <label>Jouw naam<input value={name} required disabled={locked} onChange={e => {
-                setName(e.target.value);
-                setPicked('');
-                setPassword('');
-                setError('');
-                clearSubmission();
-              }} /></label>
-              {matches.length > 1 && <label>Welke deelnemer ben je?
-                <select value={id || ''} required disabled={locked} onChange={e => {
-                  setPicked(e.target.value);
-                  setPassword('');
-                  setError('');
-                  clearSubmission();
-                }}>
-                  <option value="">Kies je deelnemer</option>
-                  {matches.map(([key, participant]) => <option key={key} value={key}>{participant.name} ({key.slice(0, 8)})</option>)}
-                </select>
-              </label>}
-              <label>Stemwachtwoord
-                <input type="password" value={password} required disabled={locked}
-                  autoComplete={person && !person.needsPassword ? 'current-password' : 'new-password'}
-                  onChange={e => { setPassword(e.target.value); setError(''); clearSubmission(); }} />
-              </label>
-              <p className="description">{person && !person.needsPassword && !person.localOnly
-                ? 'Meld je aan met je stemwachtwoord om je antwoorden te bekijken en aan te passen.'
-                : 'Kies een stemwachtwoord om je later opnieuw aan te melden.'}</p>
-            </>
-          )}
-          <div className="edit-actions">
-            {!signedIn && <button type="submit" disabled={locked}>{locked ? 'Aanmelden…' : 'Aanmelden'}</button>}
-            {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Van stemmer wisselen</button>}
-          </div>
-          {pending && <p role="status" className="description">Je aanmelding wordt gecontroleerd. Wacht op verbinding met de database.</p>}
-          {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
+            <div className="access-row">
+              <div className="access-fields">
+                {signedIn ? (
+                  <p>Je stemt als <strong>{activePerson.name}</strong>.</p>
+                ) : (
+                  <>
+                    <label>Jouw naam<input value={name} required disabled={locked} onChange={e => {
+                      setName(e.target.value);
+                      setPicked('');
+                      setPassword('');
+                      setError('');
+                      clearSubmission();
+                    }} /></label>
+                    {matches.length > 1 && <label>Welke deelnemer ben je?
+                      <select value={id || ''} required disabled={locked} onChange={e => {
+                        setPicked(e.target.value);
+                        setPassword('');
+                        setError('');
+                        clearSubmission();
+                      }}>
+                        <option value="">Kies je deelnemer</option>
+                        {matches.map(([key, participant]) => <option key={key} value={key}>{participant.name} ({key.slice(0, 8)})</option>)}
+                      </select>
+                    </label>}
+                    <label>Stemwachtwoord
+                      <input type="password" value={password} required disabled={locked}
+                        autoComplete={person && !person.needsPassword ? 'current-password' : 'new-password'}
+                        onChange={e => { setPassword(e.target.value); setError(''); clearSubmission(); }} />
+                    </label>
+                  </>
+                )}
+              </div>
+              <div className="edit-actions access-actions">
+                {!signedIn && <button type="submit" disabled={locked}>{locked ? 'Aanmelden…' : 'Aanmelden'}</button>}
+                {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Van stemmer wisselen</button>}
+              </div>
+            </div>
+            {!signedIn && <p className="description access-hint">{person && !person.needsPassword && !person.localOnly
+              ? 'Meld je aan met je stemwachtwoord om je antwoorden te bekijken en aan te passen.'
+              : 'Kies een stemwachtwoord om je later opnieuw aan te melden.'}</p>}
+            {pending && <p role="status" className="description">Je aanmelding wordt gecontroleerd. Wacht op verbinding met de database.</p>}
+            {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
           </fieldset>
         </form>
         <div className="voter-availability" data-open={signedIn} hidden={!signedIn}>
