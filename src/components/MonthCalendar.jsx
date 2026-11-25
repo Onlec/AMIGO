@@ -1,10 +1,6 @@
 import React, { useMemo, useState } from 'react';
 
-const WEEKDAYS = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
-const MONTH_NAMES = [
-  'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
-  'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December',
-];
+import { monthHeading, weekdays } from '../utils/dates.js';
 
 function pad(n) {
   return String(n).padStart(2, '0');
@@ -58,7 +54,7 @@ export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDay
           ‹
         </button>}
         <span className="calendar-title">
-          {MONTH_NAMES[month]} {year}
+          {monthHeading.format(new Date(year, month, 1, 12))}
         </span>
         {arrows && <button type="button" disabled={monthKey === last} onClick={() => changeMonth(1)} aria-label="Volgende maand">
           ›
@@ -70,7 +66,7 @@ export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDay
       </p>}
       <div className="calendar-page">
         <div className="calendar-weekdays">
-          {WEEKDAYS.map((day) => (
+          {weekdays.map((day) => (
             <span key={day}>{day}</span>
           ))}
         </div>

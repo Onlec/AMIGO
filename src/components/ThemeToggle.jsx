@@ -19,8 +19,8 @@ export default function ThemeToggle() {
   }
 
   return (
-    <button type="button" className="theme-toggle" onClick={handleClick}>
-      {theme === 'dark' ? '☀︎ Licht' : '☾ Donker'}
+    <button type="button" className="theme-toggle" role="switch" aria-label="Donker thema" aria-checked={theme === 'dark'} onClick={handleClick}>
+      <span aria-hidden="true">{theme === 'dark' ? '☾' : '☀'}</span>
     </button>
   );
 }

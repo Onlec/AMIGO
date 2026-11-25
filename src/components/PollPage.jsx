@@ -1,3 +1,4 @@
+import { formatProposal } from '../utils/dates.js';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
 import { follow, syncStatus, unlock, watchStatus } from '../data/sync.js';
@@ -10,7 +11,7 @@ import OrganizerUnlock from './OrganizerUnlock.jsx';
 import EditPollPanel from './EditPollPanel.jsx';
 import CopyButton from './CopyButton.jsx';
 
-export default function PollPage({ pollId }) {
+export default function PollPage({ pollId, share, initialCopy }) {
   const [row, setRow] = useState(null);
   const [status, setStatus] = useState('');
   const [storageError, setStorageError] = useState('');
@@ -53,6 +54,24 @@ export default function PollPage({ pollId }) {
     return <div className="page" role="status">{storageError || notices.at(-1) || message || 'Prikker laden…'}</div>;
   }
 
+  if (share) {
+    const link = new URL('?poll=' + pollId, window.location.href).href;
+    return (
+      <main className="page">
+        <h1>Deel je datumprikker</h1>
+        <p>{poll.title}</p>
+        <div className="form">
+          <label>Stemlink<input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
+          <p role="status" className="description">{row.base ? 'Klaar om te delen.' : 'Lokaal bewaard. Anderen kunnen de link openen na synchronisatie.'}</p>
+          <div className="edit-actions">
+            <CopyButton text={link} label="Link kopiëren" initialCopy={initialCopy} />
+            <a className="btn" href={link}>Naar de datumprikker</a>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const hasDates = Object.keys(dates).length > 0;
   const showBallot = !editing && hasDates && poll.status === 'open';
   const hasVoters = Object.keys(votes).length > 0;
@@ -80,7 +99,7 @@ export default function PollPage({ pollId }) {
       {poll.status === 'closed' && finalDate && (
         <div className="final-date-block">
           <p className="final-date">
-            Gekozen datum: {finalDate.date} {finalDate.time}
+            Gekozen datum: {formatProposal(finalDate.date, finalDate.time, true)}
           </p>
         </div>
       )}
@@ -113,6 +132,7 @@ export default function PollPage({ pollId }) {
               <VoteGrid
                 dates={dates}
                 votes={votes}
+                finalDateId={poll.finalDateId}
                 currentVoterId={voterId}
                 canManage={editing}
                 onRemoveVoter={voter => save('removeVoter', { voter })}
@@ -128,9 +148,8 @@ export default function PollPage({ pollId }) {
         </div>
       )}
 
-      {mode === 'view' && <button type="button" onClick={() => setMode('password')}>Prikker beheren</button>}
-      {mode === 'password' && (
-        <OrganizerUnlock pollId={pollId} onCancel={() => setMode('view')} onUnlock={async proof => {
+      {mode === 'view' && (
+        <OrganizerUnlock pollId={pollId} onUnlock={async proof => {
           await unlock(pollId, proof);
           setMode('edit');
         }} />

@@ -1,3 +1,4 @@
+import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
 
@@ -46,7 +47,7 @@ export default function EditPollPanel({ poll, onSave, onCancel, onChooseFinal })
           <legend>Mogelijke datums</legend>
           <MonthCalendar initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (
             <button type="button" className={`calendar-day-button ${days.has(day) ? 'is-selected' : ''}`}
-              aria-label={day} aria-pressed={days.has(day)} disabled={day === poll.finalDateId}
+              aria-label={formatDay(day)} aria-pressed={days.has(day)} disabled={day === poll.finalDateId}
               onClick={() => toggle(day)}>{number}</button>
           )} />
         </fieldset>

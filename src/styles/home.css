@@ -39,20 +39,28 @@
 }
 
 .theme-toggle {
-  padding: 8px 12px;
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  font: 600 0.75rem Inter;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: inherit;
+  width: 54px;
+  height: 30px;
+  padding: 2px;
+  border-radius: 15px;
+  border: 2px solid var(--ink);
+  color: var(--bg);
+  background: var(--surface);
   cursor: pointer;
 }
 
-.theme-toggle:hover {
-  border-color: var(--sig);
+.theme-toggle span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--ink);
 }
+
+.theme-toggle[aria-checked='true'] span { margin-inline-start: auto; }
+.theme-toggle:focus-visible { outline: 3px solid var(--sig); outline-offset: 2px; }
 
 .top nav a {
   padding: 8px 12px;

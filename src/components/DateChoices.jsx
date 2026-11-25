@@ -2,7 +2,8 @@ import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from '
 import MonthCalendar from './MonthCalendar.jsx';
 import SegmentedControl from './SegmentedControl.jsx';
 
-const dateLabel = new Intl.DateTimeFormat('nl-NL', { dateStyle: 'full' });
+import { formatProposal } from '../utils/dates.js';
+
 const viewOptions = [
   {
     value: 'calendar', label: 'Kalender',
@@ -58,7 +59,7 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
         <ul className="date-cards">
           {days.map(day => (
             <li key={day} data-day={day}>
-              <strong>{dateLabel.format(new Date(day + 'T12:00:00'))}{dates[day].time && ' · ' + dates[day].time}</strong>
+              <strong>{formatProposal(day, dates[day].time, true)}</strong>
               {renderCard(day)}
             </li>
           ))}

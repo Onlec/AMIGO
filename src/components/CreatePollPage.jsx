@@ -1,16 +1,17 @@
+import { copyToClipboard } from '../utils/clipboard.js';
+import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
 import { enqueue } from '../data/polls.js';
 import { hashPassword } from '../utils/password.js';
 import { rememberVoterSession, voterSession } from '../data/voterSession.js';
 import MonthCalendar from './MonthCalendar.jsx';
 
-export default function CreatePollPage() {
+export default function CreatePollPage({ onCreated }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [organizerName, setOrganizerName] = useState('');
   const [participating, setParticipating] = useState(false);
   const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [selectedDates, setSelectedDates] = useState({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +43,6 @@ export default function CreatePollPage() {
     if (!title.trim()) return 'Geef de prikker een titel.';
     if (!organizerName.trim()) return 'Vul je naam als organisator in.';
     if (!password) return 'Kies een wachtwoord voor jezelf als organisator.';
-    if (password !== passwordConfirm) return 'De twee wachtwoorden komen niet overeen.';
     if (Object.keys(selectedDates).length < 2) return 'Selecteer minstens 2 datums in de kalender.';
     return '';
   }
@@ -67,7 +67,8 @@ export default function CreatePollPage() {
         ...(session && { voter: session.voter, voterProof: session.proof }),
       });
       rememberVoterSession(pollId, session);
-      window.location.href = window.location.pathname + '?poll=' + pollId;
+      const link = new URL('?poll=' + pollId, window.location.href).href;
+      onCreated(pollId, link, copyToClipboard(link));
     } catch (err) {
       setError('Lokaal opslaan mislukt. ' + err.message);
       setSubmitting(false);
@@ -97,24 +98,13 @@ export default function CreatePollPage() {
         <fieldset>
           <legend>02 — Organisator</legend>
           <label>Naam organisator<input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
-          <p className="description">
-            Hiermee kan je nadien de prikker bewerken, deelnemers verwijderen en de uiteindelijke datum kiezen.
-          </p>
           <label>
             Wachtwoord
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </label>
-          <label>
-            Bevestig wachtwoord
-            <input
-              type="password"
-              value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
-            />
+            <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
           <label className="participation-choice">
             <input type="checkbox" checked={participating} onChange={e => setParticipating(e.target.checked)} />
-            Zelf meestemmen met mijn naam en wachtwoord
+            Zelf meestemmen
           </label>
         </fieldset>
 
@@ -141,10 +131,10 @@ export default function CreatePollPage() {
               </p>
               {sortedSelectedDates.map(([dateKey, info]) => (
                 <div key={dateKey} className="date-row">
-                  <span>{dateKey}</span>
+                  <span>{formatDay(dateKey)}</span>
                   <input
                     type="time"
-                    aria-label={`Tijdstip voor ${dateKey}`}
+                    aria-label={`Tijdstip voor ${formatDay(dateKey)}`}
                     value={info.time}
                     onChange={(e) => updateTime(dateKey, e.target.value)}
                   />

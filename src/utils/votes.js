@@ -1,3 +1,6 @@
+import { formatProposal } from './dates.js';
+
+export const VOTE_ICONS = { yes: '✓', maybe: '?', no: '✗', none: '–' };
 export const VOTE_CYCLE = ['none', 'yes', 'maybe', 'no'];
 
 export const VOTE_LABELS = {
@@ -21,15 +24,6 @@ export function parseVotes(votesJson) {
 }
 
 const VOTE_EMOJI = { yes: '🟩', maybe: '🟨', no: '🟥', none: '⬜' };
-const WEEKDAY_ABBR = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za']; // Date.getDay(): 0 = zondag
-const MONTH_ABBR = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-
-function formatDateKeyShort(dateKey) {
-  const [year, month, day] = dateKey.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  return `${WEEKDAY_ABBR[date.getDay()]} ${day} ${MONTH_ABBR[month - 1]}`;
-}
-
 function hasVoted(votesJson) {
   const myVotes = parseVotes(votesJson);
   return Object.values(myVotes).some((value) => value !== 'none');
@@ -62,7 +56,7 @@ export function buildShareText(poll, dates, votes, pollUrl) {
     const squares = valuesForDate.map((value) => VOTE_EMOJI[value] || VOTE_EMOJI.none).join('');
     const yesCount = valuesForDate.filter((value) => value === 'yes').length;
     const isChosen = poll.status === 'closed' && poll.finalDateId === dateId;
-    return `${formatDateKeyShort(dateId)}${info.time ? ` ${info.time}` : ''}  ${squares} (${yesCount})${
+    return `${formatProposal(dateId, info.time)}  ${squares} (${yesCount})${
       isChosen ? ' ✅ gekozen' : ''
     }`;
   });

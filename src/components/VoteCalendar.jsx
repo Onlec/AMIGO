@@ -1,11 +1,11 @@
 import React from 'react';
 import DateChoices from './DateChoices.jsx';
 import SegmentedControl from './SegmentedControl.jsx';
-import { VOTE_LABELS, nextVoteValue } from '../utils/votes.js';
+import { VOTE_ICONS, VOTE_LABELS, nextVoteValue } from '../utils/votes.js';
 
-const voteIcons = { yes: '✓', maybe: '?', no: '✗', none: '–' };
+import { formatDay, formatTime } from '../utils/dates.js';
 const answerOptions = ['yes', 'maybe', 'no'].map(value => ({
-  value, label: VOTE_LABELS[value], icon: voteIcons[value], status: value,
+  value, label: VOTE_LABELS[value], icon: VOTE_ICONS[value], status: value,
 }));
 
 export default function VoteCalendar({ dates, myVotes, onVote }) {
@@ -20,17 +20,17 @@ export default function VoteCalendar({ dates, myVotes, onVote }) {
         <li><span className="vote-legend__swatch vote-legend__swatch--none" aria-hidden="true" />Onbeantwoord</li>
       </ul>
       <DateChoices dates={dates} firstUnanswered={unanswered} renderCard={day => (
-        <SegmentedControl label={'Beschikbaarheid op ' + day} variant="status" allowDeselect iconOnly
+        <SegmentedControl label={'Beschikbaarheid op ' + formatDay(day)} variant="status" allowDeselect iconOnly
           options={answerOptions} value={myVotes[day] || 'none'} onChange={value => onVote(day, value || 'none')} />
       )} renderDay={(day, number) => {
         const value = myVotes[day] || 'none';
         return (
           <button type="button" className={'calendar-day-button calendar-day-button--vote vote-' + value}
-            aria-label={[day, dates[day].time, value === 'none' ? 'Onbeantwoord' : VOTE_LABELS[value]].filter(Boolean).join(' ')}
+            aria-label={[formatDay(day), formatTime(dates[day].time), value === 'none' ? 'Onbeantwoord' : VOTE_LABELS[value]].filter(Boolean).join(' ')}
             onClick={() => onVote(day, nextVoteValue(value))}>
             <span>{number}</span>
-            {dates[day].time && <small>{dates[day].time}</small>}
-            <span className="calendar-day-vote" aria-hidden="true">{voteIcons[value]}</span>
+            {dates[day].time && <small>{formatTime(dates[day].time)}</small>}
+            <span className="calendar-day-vote" aria-hidden="true">{VOTE_ICONS[value]}</span>
           </button>
         );
       }} />

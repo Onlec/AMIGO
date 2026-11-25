@@ -1,3 +1,4 @@
+import { formatDay } from '../utils/dates.js';
 import React, { useEffect, useState } from 'react';
 import { enqueue } from '../data/polls.js';
 import { voterSession } from '../data/voterSession.js';
@@ -133,7 +134,6 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
       </fieldset>
       <fieldset disabled={locked}>
         <legend>02 — Jouw beschikbaarheid</legend>
-        <p>Kies Ja, Misschien of Nee. In de agenda klik je door de antwoorden heen.</p>
         <VoteCalendar key={id || 'new'} dates={dates} myVotes={answers} onVote={(day, value) => {
           clearSubmission();
           setEditingId(id || null);
@@ -141,7 +141,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
           setEdits(previous => ({ ...previous, [day]: value }));
         }} />
       </fieldset>
-      {removed.length > 0 && <p role="status">Verwijderd uit deze prikker: {removed.join(', ')}. Bij opslaan tellen alleen de overige datums mee.</p>}
+      {removed.length > 0 && <p role="status">Verwijderd uit deze prikker: {removed.map(day => formatDay(day)).join(', ')}. Bij opslaan tellen alleen de overige datums mee.</p>}
       {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
       {error && <p role="alert" className="error">{error}</p>}
       {submission && !outcome?.rejection && <p role="status">

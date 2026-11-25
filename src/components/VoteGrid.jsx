@@ -1,5 +1,6 @@
+import { formatProposal } from '../utils/dates.js';
 import React from 'react';
-import { VOTE_LABELS, parseVotes } from '../utils/votes.js';
+import { VOTE_LABELS, VOTE_ICONS, parseVotes } from '../utils/votes.js';
 
 function sortDateEntries(dates) {
   return Object.entries(dates).sort(([a], [b]) => a.localeCompare(b));
@@ -8,7 +9,7 @@ function sortDateEntries(dates) {
 // Alleen-lezen overzicht van wie wat stemde. Het aanpassen van je eigen stem
 // gebeurt via <VoteCalendar>; `canManage` (enkel waar voor de ontgrendelde
 // organisator) voegt een kolom toe om deelnemers te verwijderen.
-export default function VoteGrid({ dates, votes, currentVoterId, canManage, onRemoveVoter }) {
+export default function VoteGrid({ dates, votes, currentVoterId, finalDateId, canManage, onRemoveVoter }) {
   const dateEntries = sortDateEntries(dates);
   const voterEntries = Object.entries(votes);
 
@@ -18,9 +19,9 @@ export default function VoteGrid({ dates, votes, currentVoterId, canManage, onRe
         <tr>
           <th>Naam</th>
           {dateEntries.map(([dateId, info]) => (
-            <th key={dateId}>
-              {info.date}
-              {info.time ? ` ${info.time}` : ''}
+            <th key={dateId} scope="col" className={dateId === finalDateId ? 'chosen-column' : undefined}>
+              {formatProposal(info.date, info.time)}
+              {dateId === finalDateId && <strong className="chosen-label">Einddatum</strong>}
             </th>
           ))}
           {canManage && <th />}
@@ -38,7 +39,10 @@ export default function VoteGrid({ dates, votes, currentVoterId, canManage, onRe
               </td>
               {dateEntries.map(([dateId]) => {
                 const value = myVotes[dateId] || 'none';
-                return <td key={dateId}>{VOTE_LABELS[value]}</td>;
+                const label = value === 'none' ? 'Onbeantwoord' : VOTE_LABELS[value];
+                return <td key={dateId} className={dateId === finalDateId ? 'chosen-column' : undefined}>
+                  <span role="img" aria-label={label} title={label}>{VOTE_ICONS[value]}</span>
+                </td>;
               })}
               {canManage && (
                 <td>

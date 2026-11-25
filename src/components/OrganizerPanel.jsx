@@ -1,3 +1,4 @@
+import { formatDay, formatTime, formatProposal } from '../utils/dates.js';
 import React, { useMemo, useState } from 'react';
 import DateChoices from './DateChoices.jsx';
 import { parseVotes } from '../utils/votes.js';
@@ -49,13 +50,13 @@ export default function OrganizerPanel({ dates, votes, onConfirm, onCancel }) {
           </button>
         </>
       )} renderDay={(day, number) => (
-        <button type="button" aria-label={day} aria-pressed={day === selectedDateId}
+        <button type="button" aria-label={formatDay(day)} aria-pressed={day === selectedDateId}
           className={'calendar-day-button ' + (day === selectedDateId ? 'is-selected' : '')}
           onClick={() => setSelectedDateId(day)}>
-          {number}<small>{dates[day].time}</small>
+          {number}<small>{formatTime(dates[day].time)}</small>
         </button>
       )} />
-      {selected && <p role="status">{selected.date} {selected.time} — {counts.yes} ja, {counts.maybe} misschien, {counts.no} nee</p>}
+      {selected && <p role="status">{formatProposal(selected.date, selected.time)} — {counts.yes} ja, {counts.maybe} misschien, {counts.no} nee</p>}
       {error && <p className="error" role="alert">{error}</p>}
       <div className="edit-actions">
         <button type="button" onClick={handleConfirm} disabled={!selected || saving}>Bevestig deze datum</button>

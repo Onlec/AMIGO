@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
 import SiteHeader from './components/SiteHeader.jsx';
 import HomePage from './components/HomePage.jsx';
 import CreatePollPage from './components/CreatePollPage.jsx';
@@ -8,7 +8,7 @@ function getRoute() {
   const params = new URLSearchParams(window.location.search);
   const pollId = params.get('poll');
   if (pollId) {
-    return { name: 'poll', pollId };
+    return { name: 'poll', pollId, share: params.get('screen') === 'share' };
   }
   if (params.get('page') === 'planner') {
     return { name: 'planner' };
@@ -17,7 +17,12 @@ function getRoute() {
 }
 
 export default function App() {
-  const route = useMemo(getRoute, []);
+  const [route, setRoute] = useState(getRoute);
+
+  function showShare(pollId, link, initialCopy) {
+    window.history.replaceState(null, '', link + '&screen=share');
+    setRoute({ name: 'poll', pollId, share: true, initialCopy });
+  }
 
   if (route.name === 'home') {
     return <HomePage />;
@@ -26,8 +31,8 @@ export default function App() {
   return (
     <>
       <SiteHeader />
-      {route.name === 'poll' && <PollPage pollId={route.pollId} />}
-      {route.name === 'planner' && <CreatePollPage />}
+      {route.name === 'poll' && <PollPage pollId={route.pollId} share={route.share} initialCopy={route.initialCopy} />}
+      {route.name === 'planner' && <CreatePollPage onCreated={showShare} />}
     </>
   );
 }

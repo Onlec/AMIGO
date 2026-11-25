@@ -1,6 +1,6 @@
 .segmented-control {
-  --segment-active-bg: var(--amigo-ivory);
-  --segment-active-ink: var(--amigo-black);
+  --segment-active-bg: var(--bg);
+  --segment-active-ink: var(--ink);
   position: relative;
   isolation: isolate;
   display: inline-grid;
@@ -8,22 +8,13 @@
   max-width: 100%;
   padding: 4px;
   border-radius: 3px;
-  background: #252a27;
+  background: var(--ink);
   vertical-align: middle;
 }
 
-.segmented-control--status[data-status='yes'] {
-  --segment-active-bg: var(--vote-yes);
-  --segment-active-ink: var(--amigo-paper);
-}
-
-.segmented-control--status[data-status='maybe'] {
-  --segment-active-bg: var(--vote-maybe);
-}
-
-.segmented-control--status[data-status='no'] {
-  --segment-active-bg: var(--vote-no);
-  --segment-active-ink: var(--amigo-paper);
+.segmented-control--status {
+  --segment-active-bg: var(--amigo-signal-red);
+  --segment-active-ink: #fff;
 }
 
 .segmented-control__track {
@@ -54,7 +45,7 @@
   border: 0;
   border-radius: 1px;
   background: transparent;
-  color: var(--amigo-grey);
+  color: var(--bg);
   font: 600 0.875rem/1.25 var(--font-display);
   cursor: pointer;
   overflow-wrap: anywhere;
@@ -65,7 +56,7 @@
 }
 
 .segmented-control__option:not(:disabled):not([aria-checked='true']):hover {
-  background: rgb(255 255 255 / 8%);
+  background: color-mix(in srgb, var(--bg) 15%, transparent);
   color: var(--amigo-ivory);
 }
 
