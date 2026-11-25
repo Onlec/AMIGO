@@ -19,9 +19,9 @@ function getRoute() {
 export default function App() {
   const [route, setRoute] = useState(getRoute);
 
-  function showShare(pollId, link, initialCopy) {
+  function showShare(pollId, link) {
     window.history.replaceState(null, '', link + '&screen=share');
-    setRoute({ name: 'poll', pollId, share: true, initialCopy });
+    setRoute({ name: 'poll', pollId, share: true });
   }
 
   if (route.name === 'home') {
@@ -31,7 +31,7 @@ export default function App() {
   return (
     <>
       <SiteHeader />
-      {route.name === 'poll' && <PollPage pollId={route.pollId} share={route.share} initialCopy={route.initialCopy} />}
+      {route.name === 'poll' && <PollPage pollId={route.pollId} share={route.share} />}
       {route.name === 'planner' && <CreatePollPage onCreated={showShare} />}
     </>
   );

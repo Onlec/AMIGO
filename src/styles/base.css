@@ -32,3 +32,8 @@ a {
   outline: 3px solid var(--sig);
   outline-offset: 2px;
 }
+
+:is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}

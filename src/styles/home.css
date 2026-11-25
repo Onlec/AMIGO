@@ -38,43 +38,6 @@
   gap: 4px;
 }
 
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  width: 64px;
-  height: 36px;
-  padding: 2px;
-  border-radius: 0;
-  border: 2px solid var(--ink);
-  color: var(--bg);
-  background: var(--surface);
-  cursor: pointer;
-}
-
-.theme-toggle span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  line-height: 1;
-  background: var(--ink);
-}
-
-.theme-toggle svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.theme-toggle:hover { border-color: var(--sig); }
-.theme-toggle[aria-checked='true'] span { margin-inline-start: auto; }
-.theme-toggle:focus-visible { outline: 3px solid var(--sig); outline-offset: 2px; }
-
 .top nav a {
   padding: 8px 12px;
   text-decoration: none;
@@ -444,7 +407,7 @@ svg#sv:active {
 .fld input:focus,
 .fld select:focus,
 .add input:focus {
-  outline: 3px solid var(--sig);
+  outline: 2px solid var(--ink);
   outline-offset: 0;
 }
 

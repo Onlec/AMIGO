@@ -22,18 +22,23 @@ export default function OrganizerUnlock({ pollId, onUnlock }) {
 
   return (
     <form onSubmit={handleSubmit} className="form unlock-form">
-      <label>
-        Pollwachtwoord
-        <input
-          type="password" autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </label>
-      {error && <p className="error" role="alert">{error}</p>}
-      <button type="submit" disabled={checking || !password}>
-        {checking ? 'Controleren...' : 'Bewerken'}
-      </button>
+      <fieldset disabled={checking}>
+        <legend>04 — Prikker beheren</legend>
+        <label>
+          Pollwachtwoord
+          <input
+            type="password" autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        {error && <p className="error" role="alert">{error}</p>}
+        <div className="edit-actions">
+          <button type="submit" disabled={checking || !password}>
+            {checking ? 'Controleren...' : 'Bewerken'}
+          </button>
+        </div>
+      </fieldset>
     </form>
   );
 }

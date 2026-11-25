@@ -109,28 +109,38 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
 
   return (
     <form className="form" onSubmit={submit}>
-      <fieldset disabled={locked}>
+      <fieldset disabled={busy}>
         <legend>01 — Jouw gegevens</legend>
-        <label>Jouw naam<input value={name} required onChange={e => changeName(e.target.value)} /></label>
-        {matches.length > 1 && <label>Welke deelnemer ben je?
-          <select value={id || ''} required onChange={e => {
-            if (id && !discardAllowed()) return;
-            setPicked(e.target.value);
-            if (id) { setEdits({}); setPassword(''); }
-          }}>
-            <option value="">Kies je deelnemer</option>
-            {matches.map(([key, participant]) => <option key={key} value={key}>{participant.name} ({key.slice(0, 8)})</option>)}
-          </select>
-        </label>}
-        <label>Stemwachtwoord
-          <input type="password" value={password} required={!remembered}
-            autoComplete={person && !person.needsPassword ? 'current-password' : 'new-password'}
-            placeholder={remembered ? 'Al ingevuld voor deze sessie' : undefined}
-            onChange={e => { setPassword(e.target.value); setError(''); clearSubmission(); }} />
-        </label>
-        <p className="description">{person && !person.needsPassword && !person.localOnly
-          ? 'Je eerdere antwoorden staan hieronder. Gebruik je wachtwoord om ze aan te passen.'
-          : 'Kies een wachtwoord om je antwoorden later te kunnen aanpassen.'}</p>
+        {remembered ? (
+          <p>Je stemt als <strong>{person.name}</strong>.</p>
+        ) : (
+          <>
+            <label>Jouw naam<input value={name} required disabled={locked} onChange={e => changeName(e.target.value)} /></label>
+            {matches.length > 1 && <label>Welke deelnemer ben je?
+              <select value={id || ''} required disabled={locked} onChange={e => {
+                if (id && !discardAllowed()) return;
+                setPicked(e.target.value);
+                if (id) { setEdits({}); setPassword(''); }
+              }}>
+                <option value="">Kies je deelnemer</option>
+                {matches.map(([key, participant]) => <option key={key} value={key}>{participant.name} ({key.slice(0, 8)})</option>)}
+              </select>
+            </label>}
+            <label>Stemwachtwoord
+              <input type="password" value={password} required disabled={locked}
+                autoComplete={person && !person.needsPassword ? 'current-password' : 'new-password'}
+                onChange={e => { setPassword(e.target.value); setError(''); clearSubmission(); }} />
+            </label>
+            <p className="description">{person && !person.needsPassword && !person.localOnly
+              ? 'Je eerdere antwoorden staan hieronder. Gebruik je wachtwoord om ze aan te passen.'
+              : 'Kies een wachtwoord om je antwoorden later te kunnen aanpassen.'}</p>
+          </>
+        )}
+        {(name || session) && (
+          <div className="edit-actions">
+            <button type="button" className="btn-secondary" disabled={busy} onClick={reset}>Van stemmer wisselen</button>
+          </div>
+        )}
       </fieldset>
       <fieldset disabled={locked}>
         <legend>02 — Jouw beschikbaarheid</legend>
@@ -149,7 +159,6 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
       </p>}
       <div className="edit-actions">
         <button type="submit" disabled={locked}>Stem opslaan</button>
-        {(name || session) && <button type="button" className="btn-secondary" disabled={busy} onClick={reset}>Van stemmer wisselen</button>}
       </div>
     </form>
   );

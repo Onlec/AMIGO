@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { copyToClipboard } from '../utils/clipboard.js';
 
-export default function CopyButton({ text, label = 'Kopiëren', initialCopy }) {
-  const [attempt, setAttempt] = useState(initialCopy);
+export default function CopyButton({ text, label = 'Kopiëren' }) {
+  const [attempt, setAttempt] = useState(null);
   const [feedback, setFeedback] = useState('');
   useEffect(() => {
     if (!attempt) return;

@@ -11,7 +11,7 @@ import OrganizerUnlock from './OrganizerUnlock.jsx';
 import EditPollPanel from './EditPollPanel.jsx';
 import CopyButton from './CopyButton.jsx';
 
-export default function PollPage({ pollId, share, initialCopy }) {
+export default function PollPage({ pollId, share }) {
   const [row, setRow] = useState(null);
   const [status, setStatus] = useState('');
   const [storageError, setStorageError] = useState('');
@@ -64,7 +64,7 @@ export default function PollPage({ pollId, share, initialCopy }) {
           <label>Stemlink<input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
           <p role="status" className="description">{row.base ? 'Klaar om te delen.' : 'Lokaal bewaard. Anderen kunnen de link openen na synchronisatie.'}</p>
           <div className="edit-actions">
-            <CopyButton text={link} label="Link kopiëren" initialCopy={initialCopy} />
+            <CopyButton text={link} label="Link kopiëren" />
             <a className="btn" href={link}>Naar de datumprikker</a>
           </div>
         </div>
@@ -148,17 +148,17 @@ export default function PollPage({ pollId, share, initialCopy }) {
         </div>
       )}
 
+      <p className="share-hint">
+        Deel deze link met je groep: <code>{window.location.href}</code>{' '}
+        <CopyButton text={window.location.href} label="Link kopiëren" />
+      </p>
+
       {mode === 'view' && (
         <OrganizerUnlock pollId={pollId} onUnlock={async proof => {
           await unlock(pollId, proof);
           setMode('edit');
         }} />
       )}
-
-      <p className="share-hint">
-        Deel deze link met je groep: <code>{window.location.href}</code>{' '}
-        <CopyButton text={window.location.href} label="Link kopiëren" />
-      </p>
     </div>
   );
 }

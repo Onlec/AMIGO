@@ -51,9 +51,6 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
     <div ref={root}>
       <div className="date-view-actions">
         <SegmentedControl label="Weergave" options={viewOptions} value={view} onChange={changeView} />
-        {view === 'calendar' && firstUnanswered && <button type="button" className="btn-secondary" onClick={() =>
-          setJump({ day: firstUnanswered, count: (jump?.count || 0) + 1 })
-        }>Naar eerste onbeantwoorde datum</button>}
       </div>
       {view === 'cards' ? (
         <ul className="date-cards">
@@ -67,6 +64,13 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
       ) : (
         <MonthCalendar key={jump?.count || 0} proposedDays={days} initialMonthFrom={jump?.day || firstUnanswered || days[0]}
           renderDay={(day, number) => dates[day] ? renderDay(day, number) : <span className="calendar-day-plain">{number}</span>} />
+      )}
+      {view === 'calendar' && firstUnanswered && (
+        <div className="date-view-actions date-jump-actions">
+          <button type="button" className="btn-secondary" aria-label="Ga naar de eerste onbeantwoorde datum" onClick={() =>
+            setJump({ day: firstUnanswered, count: (jump?.count || 0) + 1 })
+          }>Nog invullen</button>
+        </div>
       )}
     </div>
   );

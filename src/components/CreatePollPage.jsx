@@ -1,4 +1,3 @@
-import { copyToClipboard } from '../utils/clipboard.js';
 import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
 import { enqueue } from '../data/polls.js';
@@ -68,7 +67,7 @@ export default function CreatePollPage({ onCreated }) {
       });
       rememberVoterSession(pollId, session);
       const link = new URL('?poll=' + pollId, window.location.href).href;
-      onCreated(pollId, link, copyToClipboard(link));
+      onCreated(pollId, link);
     } catch (err) {
       setError('Lokaal opslaan mislukt. ' + err.message);
       setSubmitting(false);

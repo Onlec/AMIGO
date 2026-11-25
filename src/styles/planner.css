@@ -10,7 +10,7 @@
 .btn,
 button[type='submit'],
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle, .segmented-control__option)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .segmented-control__option)
   ) {
   font: 600 1rem 'Space Grotesk', sans-serif;
   display: inline-flex;
@@ -32,7 +32,7 @@ button[type='button']:not(
 .btn:hover,
 button[type='submit']:hover,
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle, .segmented-control__option)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .segmented-control__option)
   ):hover {
   background: var(--bg);
   color: var(--ink);
@@ -41,7 +41,7 @@ button[type='button']:not(
 .btn:active,
 button[type='submit']:active,
 button[type='button']:not(
-    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .theme-toggle, .segmented-control__option)
+    :where(.date-row button, .calendar button, .vote-grid button, .go, .ctl button, .it button, .segmented-control__option)
   ):active {
   transform: translateY(2px);
 }
@@ -145,7 +145,7 @@ h2 {
 .form input:not([type='checkbox']):focus,
 .form select:focus,
 .form textarea:focus {
-  outline: 3px solid var(--amigo-signal-red);
+  outline: 2px solid var(--ink);
   outline-offset: 1px;
 }
 
@@ -483,8 +483,15 @@ button.btn-secondary:focus-visible {
 }
 
 .unlock-form {
-  margin: 1rem 0 0 auto;
+  margin-top: 2rem;
+}
+
+.unlock-form label {
   max-width: 320px;
+}
+
+.unlock-form .edit-actions {
+  margin-top: 1rem;
 }
 
 .edit-actions {
@@ -543,6 +550,7 @@ button.btn-secondary:focus-visible {
   gap: .5rem;
 }
 .date-view-actions { justify-content: flex-end; }
+.date-jump-actions { margin-top: 1rem; }
 .vote-legend {
   display: flex;
   flex-wrap: wrap;
