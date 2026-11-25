@@ -418,6 +418,8 @@ h2 {
   left: 0;
   z-index: 1;
   background: var(--surface);
+  width: 12rem;
+  min-width: 12rem;
   max-width: 12rem;
   overflow-wrap: anywhere;
 }

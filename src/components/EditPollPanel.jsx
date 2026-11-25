@@ -11,6 +11,7 @@ export default function EditPollPanel({ poll, initiallyParticipating = false, on
   const [participating, setParticipating] = useState(initiallyParticipating);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const datesLocked = poll.status === 'closed';
   const added = [...days].filter(day => !original.dates[day]);
   const removed = Object.keys(original.dates).filter(day => !days.has(day));
   const changes = { added, removed };
@@ -20,6 +21,7 @@ export default function EditPollPanel({ poll, initiallyParticipating = false, on
   const dirty = added.length || removed.length || 'title' in changes || 'description' in changes || 'participating' in changes;
 
   function toggle(day) {
+    if (datesLocked) return;
     const next = new Set(days);
     if (next.has(day)) next.delete(day);
     else next.add(day);
@@ -29,6 +31,7 @@ export default function EditPollPanel({ poll, initiallyParticipating = false, on
   async function submit(event) {
     event.preventDefault();
     if (!title.trim()) return setError('Geef de prikker een titel.');
+    if (datesLocked && (added.length || removed.length)) return setError('Heropen de poll om datums aan te passen.');
     if (removed.includes(poll.finalDateId)) return setError('De gekozen einddatum blijft behouden.');
     setSaving(true);
     try {
@@ -51,7 +54,8 @@ export default function EditPollPanel({ poll, initiallyParticipating = false, on
           Zelf meestemmen
         </label>
         {originalParticipation && !participating && <p className="description">Bij opslaan worden je eigen deelname en stemmen verwijderd.</p>}
-        <fieldset disabled={saving}>
+        {datesLocked && <p className="description">De datums zijn vergrendeld omdat er een einddatum gekozen is. Heropen de poll om datums aan te passen.</p>}
+        <fieldset disabled={saving || datesLocked}>
           <legend>Mogelijke datums</legend>
           <MonthCalendar initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (
             <button type="button" className={`calendar-day-button ${days.has(day) ? 'is-selected' : ''}`}

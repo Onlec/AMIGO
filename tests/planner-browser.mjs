@@ -455,6 +455,22 @@ try {
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.status = 'closed'; row.base.finalDateId = '2027-01-10'; })");
   await until(() => evaluate("document.querySelector('.unlock-form button[value=final]')?.textContent === 'Einddatum wijzigen'"));
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), false, 'Closed polls remain editable and allow replacing the final date');
+  await evaluate("document.querySelector('.unlock-form button[value=edit]').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel textarea') !== null"));
+  assert.equal(await evaluate("[...document.querySelectorAll('.organizer-panel .calendar button')].every(button => button.matches(':disabled'))"), true, 'All date controls are locked after final-date confirmation');
+  assert.equal(await evaluate("document.querySelector('.organizer-panel input').matches(':disabled') || document.querySelector('.organizer-panel textarea').matches(':disabled')"), false, 'Title and description remain editable');
+  await evaluate(`(() => {
+    const input = document.querySelector('.organizer-panel textarea');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Aangepaste omschrijving');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await evaluate("document.querySelector('.organizer-panel button[type=submit]').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
+  const metadataEdit = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue.at(-1))');
+  assert.equal(metadataEdit.kind, 'edit');
+  assert.equal(metadataEdit.body.description, 'Aangepaste omschrijving');
+  assert.deepEqual(metadataEdit.body.added, []);
+  assert.deepEqual(metadataEdit.body.removed, []);
   await evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copiedFinalOverview = text; } } })");
   assert.equal(await evaluate("document.querySelector('.final-date-block .copy-button') === null"), true, 'Chosen-date banner has no share button');
   assert.equal(await evaluate("(() => { const banner = document.querySelector('.final-date-block').getBoundingClientRect(); const date = document.querySelector('.final-date').getBoundingClientRect(); return Math.abs(date.left + date.width / 2 - banner.left - banner.width / 2) < 1; })()"), true, 'Chosen date is centered');
@@ -506,6 +522,11 @@ try {
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=final]').textContent"), 'Einddatum kiezen', 'Reopened poll offers a fresh final-date choice');
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=reopen]') === null && document.querySelector('.vote-grid .chosen-column') === null"), true, 'Reopened poll removes final-date actions and highlights');
   const beforeReopenedVote = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue.length)');
+  await evaluate("document.querySelector('.unlock-form button[value=edit]').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel .calendar') !== null"));
+  assert.equal(await evaluate("document.querySelector('.organizer-panel .calendar-day-button').matches(':disabled')"), false, 'Reopening unlocks date editing again');
+  await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
+  await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
   await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]:not(:disabled)').click()");
   await until(() => evaluate(`pollData.readLocal(fixturePoll).then(row => row.queue.length === ${beforeReopenedVote + 1} && row.queue.at(-1).kind === 'ballot')`));
   await evaluate("pollData.enqueue(fixturePoll, 'close', { day: '2027-04-12' })");

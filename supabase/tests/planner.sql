@@ -429,4 +429,44 @@ begin
   assert not exists(select from amigo.members where poll_id=expired);
   assert not exists(select from amigo.login_receipts where poll_id=expired);
 end $$;
+do $$
+declare
+  p uuid := gen_random_uuid();
+  original_dates jsonb;
+begin
+  perform public.amigo_apply(p,gen_random_uuid(),'createPoll',jsonb_build_object('title','Vergrendelen',
+    'organizerName','Maker','proof',repeat('a',64),'dates','{"2027-01-01":{},"2027-01-02":{}}'::jsonb));
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-01"}');
+  original_dates := public.amigo_read(p)->'dates';
+  begin
+    perform public.amigo_apply(p,gen_random_uuid(),'addDate','{"day":"2027-01-03"}');
+    raise exception using errcode='XX000', message='Closed poll accepted an added date';
+  exception when raise_exception then assert sqlerrm='Heropen de poll om datums aan te passen.'; end;
+  begin
+    perform public.amigo_apply(p,gen_random_uuid(),'removeDate','{"day":"2027-01-02"}');
+    raise exception using errcode='XX000', message='Closed poll accepted removing another date';
+  exception when raise_exception then assert sqlerrm='Heropen de poll om datums aan te passen.'; end;
+  begin
+    perform public.amigo_edit(p,gen_random_uuid(),'{"title":"Verboden","added":["2027-01-03"],"removed":["2027-01-02"]}');
+    raise exception using errcode='XX000', message='Closed poll accepted a queued date edit';
+  exception when raise_exception then assert sqlerrm='Heropen de poll om datums aan te passen.'; end;
+  assert public.amigo_read(p)->>'title'='Vergrendelen';
+  begin
+    update amigo.dates set clock='12:00' where poll_id=p and day='2027-01-02';
+    raise exception using errcode='XX000', message='Closed poll accepted changing a proposed time';
+  exception when raise_exception then assert sqlerrm='Heropen de poll om datums aan te passen.'; end;
+  perform public.amigo_edit(p,gen_random_uuid(),'{"title":"Nieuwe titel","description":"Nieuwe omschrijving","added":[],"removed":[]}');
+  assert public.amigo_read(p)->>'title'='Nieuwe titel';
+  assert public.amigo_read(p)->>'description'='Nieuwe omschrijving';
+  assert public.amigo_read(p)->'dates'=original_dates;
+  assert public.amigo_read(p)->>'finalDateId'='2027-01-01';
+  perform public.amigo_apply(p,gen_random_uuid(),'reopen','{}');
+  perform public.amigo_edit(p,gen_random_uuid(),'{"added":["2027-01-03"],"removed":["2027-01-02"]}');
+  assert public.amigo_read(p)->'dates' ? '2027-01-03';
+  assert not (public.amigo_read(p)->'dates' ? '2027-01-02');
+  -- Closed polls must still support cascading deletion, including automatic expiry.
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-01"}');
+  delete from amigo.polls where id=p;
+  assert not exists(select from amigo.dates where poll_id=p);
+end $$;
 rollback;

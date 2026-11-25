@@ -91,8 +91,11 @@ export function project(row) {
         break;
       }
       case 'details': Object.assign(poll, body); break;
-      case 'addDate': poll.dates[body.day] ??= { date: body.day, time: '' }; break;
+      case 'addDate':
+        if (poll.status === 'open') poll.dates[body.day] ??= { date: body.day, time: '' };
+        break;
       case 'edit':
+        if (poll.status === 'closed' && (body.added.length || body.removed.length)) break;
         if (body.removed.includes(poll.finalDateId)) break;
         if ('title' in body) poll.title = body.title;
         if ('description' in body) poll.description = body.description;
@@ -112,7 +115,7 @@ export function project(row) {
         }
         break;
       case 'removeDate':
-        if (body.day !== poll.finalDateId) removeDay(poll, body.day);
+        if (poll.status === 'open' && body.day !== poll.finalDateId) removeDay(poll, body.day);
         break;
       case 'removeVoter':
         delete poll.votes[body.voter];
