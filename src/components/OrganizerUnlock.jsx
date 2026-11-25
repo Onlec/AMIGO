@@ -1,8 +1,8 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { hashPassword } from '../utils/password.js';
 import CollapsibleSegment from './CollapsibleSegment.jsx';
 
-export default function OrganizerUnlock({ pollId, onUnlock, onEdit, onChooseFinal, authorized = false, active = true, editing = false, children }) {
+export default function OrganizerUnlock({ pollId, onUnlock, onEdit, onChooseFinal, authorized = false, active = true, editing = false, resetVersion = 0, children }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -11,6 +11,20 @@ export default function OrganizerUnlock({ pollId, onUnlock, onEdit, onChooseFina
   const finalButton = useRef(null);
   const lastAction = useRef('edit');
   const wasEditing = useRef(false);
+  const attempt = useRef(0);
+
+  useLayoutEffect(() => {
+    attempt.current += 1;
+    setPassword('');
+    setError('');
+  }, [resetVersion]);
+
+  useEffect(() => {
+    if (!authorized) {
+      setPassword('');
+      setError('');
+    }
+  }, [authorized]);
 
   useLayoutEffect(() => {
     if (wasEditing.current && !editing) {
@@ -30,14 +44,18 @@ export default function OrganizerUnlock({ pollId, onUnlock, onEdit, onChooseFina
       return;
     }
     setChecking(true);
+    const attemptId = ++attempt.current;
     setPendingAction(action);
     setError('');
     try {
-      await onUnlock(await hashPassword(pollId, password));
+      const proof = await hashPassword(pollId, password);
+      if (attemptId !== attempt.current) return;
+      await onUnlock(proof);
+      if (attemptId !== attempt.current) return;
       setPassword('');
       proceed();
     } catch (err) {
-      setError(err.message);
+      if (attemptId === attempt.current) setError(err.message);
     } finally {
       setChecking(false);
     }

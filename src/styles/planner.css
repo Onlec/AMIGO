@@ -612,7 +612,8 @@ button.btn-secondary:focus-visible {
   padding: 0.2rem;
 }
 
-.calendar-day-button.is-selected {
+.calendar-day-button.is-selected,
+.organizer-panel .date-cards button[aria-pressed='true'] {
   background: var(--amigo-signal-red);
   border-color: var(--amigo-signal-red);
   color: #fff;

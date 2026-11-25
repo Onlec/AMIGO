@@ -144,4 +144,47 @@ begin
     raise exception using errcode='XX000', message='Closed poll accepted a ballot';
   exception when raise_exception then assert sqlerrm='De prikker is gesloten of verwijderd.'; end;
 end $$;
+do $$
+declare
+  p uuid := gen_random_uuid();
+  other_poll uuid := gen_random_uuid();
+  voter uuid := gen_random_uuid();
+  op uuid := gen_random_uuid();
+  owner_id text := auth.uid()::text;
+  visitor text := gen_random_uuid()::text;
+  body jsonb := jsonb_build_object('title','Afmelden','description','','organizerName','Maker','proof',repeat('a',64),
+    'dates','{"2027-01-01":{},"2027-01-02":{}}'::jsonb);
+begin
+  perform public.amigo_apply(p,gen_random_uuid(),'createPoll',body);
+  perform public.amigo_apply(other_poll,gen_random_uuid(),'createPoll',body);
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',voter,'name','Maker',
+    'proof',repeat('b',64),'register',true,'changes','{"2027-01-01":"yes"}'::jsonb));
+  perform public.amigo_lock_organizer(p,op);
+  perform public.amigo_lock_organizer(p,op);
+  assert public.amigo_read(p)->>'organizer'='false';
+  assert public.amigo_read(other_poll)->>'organizer'='true';
+  assert public.amigo_can_listen('amigo:'||p);
+  assert (public.amigo_read(p)#>>array['votes',voter::text,'votesJson'])::jsonb='{"2027-01-01":"yes"}'::jsonb;
+  begin
+    perform public.amigo_edit(p,gen_random_uuid(),'{"title":"Blocked","added":[],"removed":[]}');
+    raise exception using errcode='XX000', message='Signed-out organizer edited a poll';
+  exception when raise_exception then assert sqlerrm='Ontgrendel eerst de bewerkmodus.'; end;
+  begin
+    perform public.amigo_apply(p,gen_random_uuid(),'removeVoter',jsonb_build_object('voter',voter));
+    raise exception using errcode='XX000', message='Signed-out organizer removed a voter';
+  exception when raise_exception then assert sqlerrm='Ontgrendel eerst de bewerkmodus.'; end;
+  assert not public.amigo_unlock(p,'incorrect');
+  assert public.amigo_unlock(p,repeat('a',64));
+  -- A retried old logout cannot revoke a new successful password login.
+  perform public.amigo_lock_organizer(p,op);
+  assert public.amigo_read(p)->>'organizer'='true';
+  perform set_config('request.jwt.claim.sub',visitor,true);
+  perform public.amigo_lock_organizer(p,gen_random_uuid());
+  perform set_config('request.jwt.claim.sub',owner_id,true);
+  assert public.amigo_read(p)->>'organizer'='true';
+  -- Signing out also works after the final date has been confirmed.
+  perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-01"}');
+  perform public.amigo_lock_organizer(p,gen_random_uuid());
+  assert public.amigo_read(p)->>'organizer'='false';
+end $$;
 rollback;

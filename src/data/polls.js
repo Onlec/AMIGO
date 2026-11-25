@@ -58,6 +58,9 @@ export function project(row) {
     }
     if (!poll) continue;
     switch (kind) {
+      case 'lockOrganizer':
+        poll.organizer = false;
+        break;
       case 'ballot': {
         // Show durable automatic votes while waiting for server confirmation.
         // Registration stays hidden until the server confirms the credentials.

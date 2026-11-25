@@ -39,7 +39,7 @@ export function watchStatus(id, listener) {
 }
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { ballot: 'Stem opslaan', join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
+const labels = { lockOrganizer: 'Afmelden als organisator', ballot: 'Stem opslaan', join: 'Nieuwe stemmer', castVote: 'Stem', createPoll: 'Aanmaken', edit: 'Prikker bewerken', create: 'Aanmaken', vote: 'Stem', details: 'Titel of omschrijving', addDate: 'Datum toevoegen',
   removeDate: 'Datum verwijderen', close: 'Datum bevestigen', removeVoter: 'Deelnemer verwijderen' };
 
 async function synchronize(id) {
@@ -56,7 +56,9 @@ async function synchronize(id) {
     }
     let rejection;
     try {
-      if (command.kind === 'ballot') {
+      if (command.kind === 'lockOrganizer') {
+        await rpc('amigo_lock_organizer', { p: id, operation: command.operation });
+      } else if (command.kind === 'ballot') {
         await rpc('amigo_submit_ballot', { p: id, operation: command.operation, body: command.body });
       } else if (command.kind === 'edit') {
         await rpc('amigo_edit', { p: id, operation: command.operation, body: command.body });
@@ -110,6 +112,13 @@ export function sync(id) {
 export async function unlock(id, proof) {
   if (!navigator.onLine) throw new Error('Ga online om het organisatorwachtwoord te controleren.');
   await connect();
+  // An older offline logout must finish before granting a fresh session.
+  if ((await readLocal(id))?.queue.some(command => command.kind === 'lockOrganizer')) {
+    await sync(id);
+    if ((await readLocal(id))?.queue.some(command => command.kind === 'lockOrganizer')) {
+      throw new Error('Je vorige afmelding is nog niet gesynchroniseerd. Probeer opnieuw zodra de verbinding is hersteld.');
+    }
+  }
   if (!await rpc('amigo_unlock', { p: id, proof })) throw new Error('Wachtwoord klopt niet.');
   await sync(id);
 }

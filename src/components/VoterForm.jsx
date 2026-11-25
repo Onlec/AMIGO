@@ -143,7 +143,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
               </div>
               <div className="edit-actions access-actions">
                 {!signedIn && <button type="submit" disabled={locked}>{locked ? 'Aanmelden…' : 'Aanmelden'}</button>}
-                {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Van stemmer wisselen</button>}
+                {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Afmelden</button>}
               </div>
             </div>
             {!signedIn && <p className="description access-hint">{person && !person.needsPassword && !person.localOnly
@@ -157,7 +157,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
           <hr className="voter-divider" />
           <div className="voter-ballot" role="region" aria-label="Jouw beschikbaarheid" tabIndex={signedIn && active ? 0 : undefined}>
             <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly} />
-            <p className="description" role="status">{readOnly ? 'Je stemmen zijn alleen-lezen tijdens het kiezen van een einddatum.'
+            <p className="description" role="status">{readOnly ? 'Je stemmen zijn alleen-lezen tijdens het beheren van de prikker.'
               : saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
           </div>
         </div>

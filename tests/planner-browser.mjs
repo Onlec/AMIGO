@@ -292,7 +292,7 @@ try {
   await until(() => evaluate("document.querySelector('.date-cards [role=radio]').getAttribute('aria-checked') === 'false'"));
   queue = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)');
   assert.equal(queue[1].body.changes['2027-01-10'], 'none', 'Click again clears the last vote');
-  const resetMotion = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Van stemmer wisselen'); button.focus(); button.click(); })");
+  const resetMotion = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Afmelden'); button.focus(); button.click(); })");
   assert.ok(resetMotion.some(frame => frame.height < 1 && frame.signedIn === 'true'), 'Old voter remains until fully closed');
   await until(() => evaluate("ballotSegment().dataset.open === 'false'"));
   await until(() => evaluate("ballotSegment().querySelector('.voter-ballot').getBoundingClientRect().height === 0"));
@@ -338,7 +338,7 @@ try {
   const reducedView = await evaluate("recordMotion(() => document.querySelector('.date-view-actions [aria-label=Kalender]').click())");
   assert.ok(reducedView.every(frame => frame.phase === 'idle'), 'Reduced-motion view change has no cycle');
   assert.equal(await evaluate("document.querySelector('.date-view-actions [aria-label=Kalender]').getAttribute('aria-checked')"), 'true', 'Reduced-motion view selection is applied');
-  const reducedReset = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Van stemmer wisselen'); button.focus(); button.click(); })");
+  const reducedReset = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Afmelden'); button.focus(); button.click(); })");
   assert.ok(reducedReset.every(frame => frame.phase === 'idle'), 'Reduced-motion voter switch has no cycle');
   assert.equal(await evaluate("document.activeElement === document.querySelector('.voter-credentials input')"), true, 'Reduced-motion voter switch restores input focus');
   assert.equal(await evaluate("document.querySelector('.unlock-form button').type"), 'submit', 'Visitors still need the organizer password');
@@ -376,9 +376,20 @@ try {
   await evaluate("document.querySelector('.unlock-form button').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') !== null"));
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'true', 'Organizer editing preserves the active voter');
+  const queueBeforeEditVote = await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.length)");
+  assert.equal(await evaluate("document.querySelector('.voter-ballot .calendar-day-button--vote').disabled"), true, 'Own calendar votes are read-only while editing');
+  await evaluate("document.querySelector('.voter-ballot .calendar-day-button--vote').click()");
+  await evaluate("document.querySelector('.voter-ballot [aria-label=Kaarten]').click()");
+  await until(() => evaluate("document.querySelector('.voter-ballot .date-cards') !== null"));
+  assert.equal(await evaluate("[...document.querySelectorAll('.voter-ballot .date-cards [role=radio]')].every(button => button.disabled)"), true, 'Own card votes are also read-only while editing');
+  await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').click()");
+  assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.length)"), queueBeforeEditVote, 'Editing cannot queue an own vote change');
+  await evaluate("document.querySelector('.voter-ballot [aria-label=Kalender]').click()");
+  await until(() => evaluate("document.querySelector('.voter-ballot .calendar') !== null"));
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
   assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), voterSessionBeforeEdit, 'Cancel keeps the voter session');
+  assert.equal(await evaluate("document.querySelector('.voter-ballot .calendar-day-button--vote').disabled"), false, 'Leaving edit mode restores normal voting');
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'true', 'Cancel leaves availability open instead of showing voter login fields');
   assert.equal(await evaluate("document.querySelector('.voter-credentials input')"), null, 'Logged-in voter fields stay hidden');
   assert.equal(await evaluate("document.activeElement === document.querySelector('.unlock-form button')"), true, 'Cancel stays at the organizer segment while signed in');
@@ -419,7 +430,40 @@ try {
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.dates = {}; row.base.votes = {}; })");
   await until(() => evaluate("document.querySelectorAll('.collapsible-segment[data-open=false]').length === 2"));
   assert.equal(await evaluate("[...document.querySelectorAll('.collapsible-segment legend')].every(node => node.getBoundingClientRect().height > 0)"), true, 'All three headers remain visible without dates or voters');
-  console.log('PASS: natural content heights, page wheel scrolling, responsive layouts, segment motion and automatic saves');
+  for (const action of ['edit', 'final']) {
+    await evaluate(`(async () => {
+      const data = await import('/src/data/polls.js');
+      sessionStorage.setItem('amigo-voter:' + ${JSON.stringify(poll)}, ${JSON.stringify(voterSessionBeforeEdit)});
+      await data.updateLocal(${JSON.stringify(poll)}, row => {
+        row.base.status = 'open';
+        row.base.finalDateId = null;
+        row.base.organizer = true;
+        row.base.dates = { '2027-01-10': { date: '2027-01-10' }, '2027-04-12': { date: '2027-04-12' } };
+        row.base.votes = { [${JSON.stringify(JSON.parse(voterSessionBeforeEdit).voter)}]: { name: 'Anna', votesJson: '{}' } };
+        row.queue = row.queue.filter(command => command.kind !== 'lockOrganizer');
+      });
+    })()`);
+    await command('Page.reload');
+    await until(() => evaluate("document.querySelector('.voter-availability')?.dataset.open === 'true'"));
+    await evaluate(`(async () => { window.fixturePoll = ${JSON.stringify(poll)}; window.pollData = await import('/src/data/polls.js'); })()`);
+    const votesBeforeLogout = await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))');
+    await evaluate(`document.querySelector('.unlock-form button[value=${action}]').click()`);
+    await until(() => evaluate("document.querySelector('.organizer-panel') !== null"));
+    await evaluate("[...document.querySelectorAll('.voter-credentials button')].find(button => button.textContent === 'Afmelden').click()");
+    await until(() => evaluate("document.querySelector('.voter-availability').dataset.open === 'false' && document.querySelector('.organizer-panel') === null && document.querySelector('.unlock-form input[type=password]') !== null"));
+    assert.equal(await evaluate("sessionStorage.getItem('amigo-voter:' + fixturePoll)"), null, 'Switching voters clears the voter session');
+    assert.equal(await evaluate("document.querySelector('.unlock-form input[type=password]').value"), '', 'Organizer must enter a fresh password');
+    assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), true, 'Organizer controls are locked immediately');
+    assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.filter(command => command.kind === 'lockOrganizer').length)"), 1, `Switching from ${action} queues one persistent organizer logout`);
+    assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))'), votesBeforeLogout, 'Logout preserves all votes');
+    await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = true; })");
+    assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => pollData.project(row).organizer)"), false, 'Pending logout masks a stale server grant');
+    await command('Page.reload');
+    await until(() => evaluate("document.querySelector('.unlock-form input[type=password]') !== null"));
+    assert.equal(await evaluate("document.querySelector('.organizer-panel') === null"), true, 'Reload cannot reopen organizer screens');
+    assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), true, 'Organizer stays signed out after reloading with logout pending');
+  }
+  console.log('PASS: organizer logout from edit/final screens, persistent revocation, preserved votes, content heights and automatic saves');
 } finally {
   socket?.close();
   browser.kill();
