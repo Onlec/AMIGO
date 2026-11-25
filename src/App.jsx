@@ -3,6 +3,7 @@ import SiteHeader from './components/SiteHeader.jsx';
 import HomePage from './components/HomePage.jsx';
 import CreatePollPage from './components/CreatePollPage.jsx';
 import PollPage from './components/PollPage.jsx';
+import { PLANNER_ONLY } from './config.js';
 
 function getRoute() {
   const params = new URLSearchParams(window.location.search);
@@ -13,7 +14,7 @@ function getRoute() {
   if (params.get('page') === 'planner') {
     return { name: 'planner' };
   }
-  return { name: 'home' };
+  return { name: PLANNER_ONLY ? 'planner' : 'home' };
 }
 
 export default function App() {
