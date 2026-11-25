@@ -13,8 +13,23 @@
 }
 
 .segmented-control--status {
-  --segment-active-bg: var(--amigo-signal-red);
-  --segment-active-ink: #fff;
+  --segment-option-ink: var(--ink);
+  --segment-active-ink: var(--amigo-paper);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.segmented-control--status[data-status='yes'] {
+  --segment-active-bg: var(--vote-yes);
+}
+
+.segmented-control--status[data-status='maybe'] {
+  --segment-active-bg: var(--vote-maybe);
+  --segment-active-ink: var(--amigo-black);
+}
+
+.segmented-control--status[data-status='no'] {
+  --segment-active-bg: var(--vote-no);
 }
 
 .segmented-control__track {
@@ -45,7 +60,7 @@
   border: 0;
   border-radius: 1px;
   background: transparent;
-  color: var(--bg);
+  color: var(--segment-option-ink, var(--bg));
   font: 600 0.875rem/1.25 var(--font-display);
   cursor: pointer;
   overflow-wrap: anywhere;
@@ -56,8 +71,8 @@
 }
 
 .segmented-control__option:not(:disabled):not([aria-checked='true']):hover {
-  background: color-mix(in srgb, var(--bg) 15%, transparent);
-  color: var(--amigo-ivory);
+  background: color-mix(in srgb, var(--segment-option-ink, var(--bg)) 15%, transparent);
+  color: var(--segment-option-ink, var(--bg));
 }
 
 .segmented-control__option:focus-visible {
