@@ -51,9 +51,12 @@
 .planner-page .form select { min-height: 48px; width: 100%; min-width: 0; }
 
 .planner-page .access-row { align-items: center; gap: 16px; }
-.planner-page .access-row:has(.access-fields input) { align-items: end; }
+.planner-page .access-row--login { grid-template-columns: repeat(2, minmax(0, 1fr)) var(--planner-action-width); align-items: end; }
 .planner-page .access-fields { gap: var(--planner-field-gap); }
-.planner-page .access-fields:has(input) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.planner-page .access-row--login > .access-fields { display: contents; }
+.planner-page .access-row--login label { display: grid; grid-template-rows: auto 48px; gap: 8px; margin: 0; padding: 0; }
+.planner-page .access-row--login input { height: 48px; margin: 0; }
+.planner-page .access-row--login > .access-actions { align-self: end; margin: 0; padding: 0; }
 .planner-page .access-fields label { max-width: none; }
 .planner-page .access-fields p { overflow-wrap: anywhere; }
 .planner-page .edit-actions { align-items: center; gap: var(--planner-control-gap); }
@@ -127,7 +130,7 @@
   .planner-header nav a { font-size: 11px; letter-spacing: .06em; }
   .planner-page .poll-heading { gap: 12px; }
   .planner-page .access-row { grid-template-columns: minmax(0, 1fr); }
-  .planner-page .access-fields:has(input) { grid-template-columns: minmax(0, 1fr); }
+  .planner-page .access-row--login > .access-fields { display: grid; grid-template-columns: minmax(0, 1fr); }
   .planner-page .access-actions { justify-self: end; }
   .planner-page .organizer-actions { width: auto; justify-self: end; }
   .planner-page .calendar-day-button { gap: 1px; padding: 2px; font-size: 11px; }

@@ -54,7 +54,9 @@ De [desktopafbeelding](docs/planner-wireframe-desktop.png) en [mobiele afbeeldin
 
 `node tests/wireframe-browser.mjs` controleert verticale randen, horizontale rijmiddens en de tekstbasislijn van titel/status op 320, 390, 768 en 1440 px, in beide thema's en met verschillende rollen, beide datumweergaven en lange inhoud. Voeg `--screenshots` toe om de twee voorbeeldafbeeldingen opnieuw te maken. Chrome en de gebruikelijke `CHROME_PATH`-instelling werken zoals bij de andere browsertests.
 
-`node tests/planner-layout-browser.mjs` controleert dezelfde breedtes en thema's op de werkende React-schermen, met lange namen en tien datums. De controle meet onder meer vierkante kalendercellen en knoppen, volledige tijd-/steminhoud, uitlijning, overlap en de vaste naamkolom.
+`node tests/planner-layout-browser.mjs` controleert dezelfde breedtes plus 720 px en beide thema's op de werkende React-schermen, met lange namen en tien datums. De controle meet onder meer vierkante kalendercellen en knoppen, volledige tijd-/steminhoud, uitlijning, overlap en de vaste naamkolom.
+
+`node tests/planner-gecko-layout.mjs` controleert het echte React-aanmeldformulier in Firefox; met `--zen` in Zen. De test gebruikt een tijdelijk browserprofiel zonder databaseverbinding en meet de boven- en onderranden van velden en knop op 320, 390, 720 en 768 px, in beide thema's. Standaard worden de Windows-installaties onder `C:\Program Files` gebruikt; `GECKO_PATH` kan een ander browserpad instellen.
 
 De plannercomponenten lezen uit de lokale kopie. `src/data/polls.js` beheert de IndexedDB-transacties en past openstaande opdrachten toe op het laatst bevestigde resultaat. `src/data/sync.js` verzorgt de Supabase-sessie, bevestigingen, retries en Realtime. Alleen de publieke RPC-functies geven toegang tot de gegevens. Een privébericht meldt dat er iets is gewijzigd, waarna de browser de actuele prikker ophaalt.
 

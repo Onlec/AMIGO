@@ -106,7 +106,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
       <CollapsibleSegment ref={segment} title="01 — Jouw gegevens" open={active}>
         <form onSubmit={signIn} aria-busy={locked || undefined}>
           <fieldset className="voter-credentials" disabled={busy}>
-            <div className="access-row">
+            <div className={'access-row' + (!signedIn ? ' access-row--login' : '')}>
               <div className="access-fields">
                 {signedIn ? (
                   <p>Aangemeld als <strong>{activePerson?.name || session.name}</strong>{session.organizer ? ' (organisator)' : ''}.</p>

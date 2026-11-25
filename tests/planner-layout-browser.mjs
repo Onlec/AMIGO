@@ -144,6 +144,8 @@ try {
         near(inputs[0].width, inputs[1].width, 'equal login field widths');
         near(inputs[0].top, inputs[1].top, 'login input row');
         near(inputs[1].bottom, button.bottom, 'login button baseline');
+        near(inputs[0].top, button.top, 'login button top');
+        near(inputs[1].height, button.height, 'login input/button height');
       }
     }
     const actions = '.edit-actions > button,.edit-actions > .btn,.organizer-reopen > button,.share-hint > button,.date-jump-actions > button,.date-cards > li > button';
@@ -202,13 +204,17 @@ try {
     return [...new Set(errors)];
   }
   let checked = 0;
-  for (const width of [320, 390, 768, 1440]) {
+  for (const width of [320, 390, 720, 768, 1440]) {
     await command('Emulation.setDeviceMetricsOverride', { width, height: 950, deviceScaleFactor: 1, mobile: width < 600 });
     for (const theme of ['light', 'dark']) {
       for (const scenario of ['create', 'share', 'guest', 'voter', 'organizer', 'closed', 'edit', 'final']) {
         for (const view of ['voter', 'organizer', 'final'].includes(scenario) ? ['cards', 'calendar'] : ['cards']) {
           await prepare(scenario, view, theme);
           assert.deepEqual(await run(layoutMetrics), [], JSON.stringify({ width, theme, scenario, view }));
+          if (process.argv.includes('--screenshots') && width === 720 && theme === 'light' && scenario === 'guest') {
+            const screenshot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+            await writeFile('.tmp-planner-login.png', Buffer.from(screenshot.data, 'base64'));
+          }
           if (process.argv.includes('--screenshots') && theme === 'light' && scenario === 'organizer'
               && ((width === 390 && view === 'calendar') || (width === 1440 && view === 'cards'))) {
             const metrics = await command('Page.getLayoutMetrics');
