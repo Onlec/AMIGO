@@ -112,13 +112,13 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
                   <p>Aangemeld als <strong>{activePerson?.name || session.name}</strong>{session.organizer ? ' (organisator)' : ''}.</p>
                 ) : (
                   <>
-                    <label>Naam<input value={name} required disabled={locked} onChange={e => {
+                    <label><span className="access-field-caption">Naam</span><input value={name} required disabled={locked} onChange={e => {
                       setName(e.target.value);
                       setPassword('');
                       setError('');
                       clearSubmission();
                     }} /></label>
-                    <label>Wachtwoord
+                    <label><span className="access-field-caption">Wachtwoord</span>
                       <input type="password" value={password} required disabled={locked}
                         autoComplete="current-password"
                         onChange={e => { setPassword(e.target.value); setError(''); clearSubmission(); }} />

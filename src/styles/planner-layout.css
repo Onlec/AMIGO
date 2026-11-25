@@ -55,6 +55,9 @@
 .planner-page .access-fields { gap: var(--planner-field-gap); }
 .planner-page .access-row--login > .access-fields { display: contents; }
 .planner-page .access-row--login label { display: grid; grid-template-rows: auto 48px; gap: 8px; margin: 0; padding: 0; }
+/* Keep late password-manager hosts in the input track, without an extra row/gap. */
+.planner-page .access-row--login label > * { grid-column: 1; grid-row: 2; }
+.planner-page .access-row--login label > .access-field-caption { grid-row: 1; }
 .planner-page .access-row--login input { height: 48px; margin: 0; }
 .planner-page .access-row--login > .access-actions { align-self: end; margin: 0; padding: 0; }
 .planner-page .access-fields label { max-width: none; }
