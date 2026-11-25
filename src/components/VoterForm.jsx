@@ -3,10 +3,11 @@ import { enqueue } from '../data/polls.js';
 import { voterSession } from '../data/voterSession.js';
 import { parseVotes } from '../utils/votes.js';
 import VoteCalendar from './VoteCalendar.jsx';
+import CollapsibleSegment from './CollapsibleSegment.jsx';
 
 const normalize = name => name.trim().toLowerCase();
 
-export default function VoterForm({ pollId, dates, participants, legacyVoter, deferred, results, session, onSelect }) {
+export default function VoterForm({ pollId, dates, participants, legacyVoter, deferred, results, session, onSelect, active = true }) {
   const storageKey = 'amigo-ballot:' + pollId;
   const [submission, setSubmission] = useState(() => JSON.parse(sessionStorage.getItem(storageKey) || 'null'));
   const [name, setName] = useState(() => submission?.name || participants[session?.voter]?.name || '');
@@ -99,8 +100,7 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
   return (
     <div className="form">
       <form onSubmit={signIn}>
-        <fieldset disabled={busy}>
-          <legend>01 — Jouw gegevens</legend>
+        <CollapsibleSegment title="01 — Jouw gegevens" open={active} disabled={busy}>
           {signedIn ? (
             <p>Je stemt als <strong>{activePerson.name}</strong>.</p>
           ) : (
@@ -139,15 +139,12 @@ export default function VoterForm({ pollId, dates, participants, legacyVoter, de
           </div>
           {pending && <p role="status" className="description">Je aanmelding wordt gecontroleerd. Wacht op verbinding met de database.</p>}
           {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
-        </fieldset>
+        </CollapsibleSegment>
       </form>
-      {signedIn && (
-        <fieldset>
-          <legend>02 — Jouw beschikbaarheid</legend>
-          <VoteCalendar key={session.voter} dates={dates} myVotes={parseVotes(activePerson.votesJson)} onVote={castVote} />
-          <p className="description" role="status">{saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
-        </fieldset>
-      )}
+      <CollapsibleSegment title="02 — Jouw beschikbaarheid" open={active && signedIn} scrollable>
+        <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} />
+        <p className="description" role="status">{saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
+      </CollapsibleSegment>
       {error && <p role="alert" className="error">{error}</p>}
     </div>
   );

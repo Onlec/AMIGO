@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { hashPassword } from '../utils/password.js';
+import CollapsibleSegment from './CollapsibleSegment.jsx';
 
-export default function OrganizerUnlock({ pollId, onUnlock }) {
+export default function OrganizerUnlock({ pollId, onUnlock, active = true }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -22,8 +23,7 @@ export default function OrganizerUnlock({ pollId, onUnlock }) {
 
   return (
     <form onSubmit={handleSubmit} className="form unlock-form">
-      <fieldset disabled={checking}>
-        <legend>04 — Prikker beheren</legend>
+      <CollapsibleSegment title="04 — Prikker beheren" open={active} disabled={checking}>
         <label>
           Pollwachtwoord
           <input
@@ -38,7 +38,7 @@ export default function OrganizerUnlock({ pollId, onUnlock }) {
             {checking ? 'Controleren...' : 'Bewerken'}
           </button>
         </div>
-      </fieldset>
+      </CollapsibleSegment>
     </form>
   );
 }

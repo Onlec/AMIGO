@@ -10,6 +10,7 @@ import OrganizerPanel from './OrganizerPanel.jsx';
 import OrganizerUnlock from './OrganizerUnlock.jsx';
 import EditPollPanel from './EditPollPanel.jsx';
 import CopyButton from './CopyButton.jsx';
+import CollapsibleSegment from './CollapsibleSegment.jsx';
 
 export default function PollPage({ pollId, share }) {
   const [row, setRow] = useState(null);
@@ -104,13 +105,9 @@ export default function PollPage({ pollId, share }) {
         </div>
       )}
 
-      {hasDates && poll.status === 'open' && (
-        <div hidden={!showBallot}>
-          <VoterForm pollId={pollId} dates={dates} participants={{ ...localParticipants, ...votes }}
-            legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults}
-            session={session} onSelect={selectVoter} />
-        </div>
-      )}
+      <VoterForm pollId={pollId} dates={dates} participants={{ ...localParticipants, ...votes }}
+        legacyVoter={poll.ownVoter} deferred={deferred} results={row.ballotResults}
+        session={session} onSelect={selectVoter} active={showBallot} />
 
       {mode === 'edit' && (
         <EditPollPanel poll={poll} onSave={body => enqueue(pollId, 'edit', body)}
@@ -124,23 +121,20 @@ export default function PollPage({ pollId, share }) {
       {mode === 'final' && poll.status === 'closed' && (
         <button type="button" onClick={() => setMode('view')}>Klaar</button>
       )}
-      {hasDates && hasVoters && (
-        <div className="form poll-results">
-          <fieldset>
-            <legend>{showBallot ? '03 — Stemmenoverzicht' : 'Stemmenoverzicht'}</legend>
-            <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
-              <VoteGrid
-                dates={dates}
-                votes={votes}
-                finalDateId={poll.finalDateId}
-                currentVoterId={voterId}
-                canManage={editing}
-                onRemoveVoter={voter => save('removeVoter', { voter })}
-              />
-            </div>
-          </fieldset>
-        </div>
-      )}
+      <div className="form poll-results">
+        <CollapsibleSegment title="03 — Stemmenoverzicht" open={hasDates && hasVoters}>
+          <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
+            <VoteGrid
+              dates={dates}
+              votes={votes}
+              finalDateId={poll.finalDateId}
+              currentVoterId={voterId}
+              canManage={editing}
+              onRemoveVoter={voter => save('removeVoter', { voter })}
+            />
+          </div>
+        </CollapsibleSegment>
+      </div>
 
       {hasDates && (
         <div className="share-actions">
@@ -153,12 +147,10 @@ export default function PollPage({ pollId, share }) {
         <CopyButton text={window.location.href} label="Link kopiëren" />
       </p>
 
-      {mode === 'view' && (
-        <OrganizerUnlock pollId={pollId} onUnlock={async proof => {
-          await unlock(pollId, proof);
-          setMode('edit');
-        }} />
-      )}
+      <OrganizerUnlock pollId={pollId} active={mode === 'view'} onUnlock={async proof => {
+        await unlock(pollId, proof);
+        setMode('edit');
+      }} />
     </div>
   );
 }

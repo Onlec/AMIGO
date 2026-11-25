@@ -32,7 +32,7 @@ function readView() {
   return localStorage.getItem('amigo-date-view') === 'calendar' ? 'calendar' : 'cards';
 }
 
-export default function DateChoices({ dates, firstUnanswered, renderCard, renderDay }) {
+export default function DateChoices({ dates, firstUnanswered, renderCard, renderDay, legend }) {
   const days = Object.keys(dates).sort();
   const view = useSyncExternalStore(watchView, readView);
   const [jump, setJump] = useState(null);
@@ -43,14 +43,19 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
 
   function changeView(next) {
     setJump(null);
+    const scroller = root.current?.closest('.collapsible-segment--scrollable')?.querySelector('.collapsible-segment__body');
+    if (scroller) scroller.scrollTop = 0;
     localStorage.setItem('amigo-date-view', next);
     window.dispatchEvent(new Event('amigo-view-change'));
   }
 
   return (
     <div ref={root}>
-      <div className="date-view-actions">
-        <SegmentedControl label="Weergave" options={viewOptions} value={view} onChange={changeView} iconOnly />
+      <div className="date-choices__toolbar">
+        {legend}
+        <div className="date-view-actions">
+          <SegmentedControl label="Weergave" options={viewOptions} value={view} onChange={changeView} iconOnly size="small" />
+        </div>
       </div>
       {view === 'cards' ? (
         <ul className="date-cards">

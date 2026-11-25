@@ -10,16 +10,17 @@ const answerOptions = ['yes', 'maybe', 'no'].map(value => ({
 
 export default function VoteCalendar({ dates, myVotes, onVote }) {
   const unanswered = Object.keys(dates).sort().find(day => !myVotes[day] || myVotes[day] === 'none');
-  return (
-    <>
-      <ul className="vote-legend" aria-label="Legenda beschikbaarheid">
+  const legend = (
+    <ul className="vote-legend" aria-label="Legenda beschikbaarheid">
         {answerOptions.map(option => <li key={option.value}>
           <span className={'vote-legend__swatch vote-legend__swatch--' + option.value} aria-hidden="true" />
           {option.label}
         </li>)}
         <li><span className="vote-legend__swatch vote-legend__swatch--none" aria-hidden="true" />Onbeantwoord</li>
-      </ul>
-      <DateChoices dates={dates} firstUnanswered={unanswered} renderCard={day => (
+    </ul>
+  );
+  return (
+      <DateChoices dates={dates} firstUnanswered={unanswered} legend={legend} renderCard={day => (
         <SegmentedControl label={'Beschikbaarheid op ' + formatDay(day)} variant="status" allowDeselect iconOnly
           options={answerOptions} value={myVotes[day] || 'none'} onChange={value => onVote(day, value || 'none')} />
       )} renderDay={(day, number) => {
@@ -34,6 +35,5 @@ export default function VoteCalendar({ dates, myVotes, onVote }) {
           </button>
         );
       }} />
-    </>
   );
 }
