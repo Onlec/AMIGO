@@ -1,6 +1,7 @@
 .segmented-control {
-  --segment-active-bg: var(--bg);
-  --segment-active-ink: var(--ink);
+  --segment-active-bg: var(--ink);
+  --segment-active-ink: var(--bg);
+  --segment-option-ink: var(--ink);
   position: relative;
   isolation: isolate;
   display: inline-grid;
@@ -8,7 +9,8 @@
   max-width: 100%;
   padding: 4px;
   border-radius: 3px;
-  background: var(--ink);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
   vertical-align: middle;
 }
 
