@@ -112,12 +112,18 @@ declare
 begin
   perform public.amigo_apply(p,gen_random_uuid(),'createPoll',jsonb_build_object('title','Kaarten','description','',
     'organizerName','Maker','proof',repeat('a',64),'dates','{"2027-01-10":{},"2027-04-12":{}}'::jsonb));
+  -- Sign in/register first, without answering a date. Retries stay idempotent.
+  perform public.amigo_submit_ballot(p,op,b || '{"changes":{}}');
+  perform public.amigo_submit_ballot(p,op,b || '{"changes":{}}');
+  assert (public.amigo_read(p)#>>array['votes',v::text,'votesJson'])::jsonb='{}'::jsonb;
+  b := b || '{"register":false,"changes":{}}';
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),b);
   begin
-    perform public.amigo_submit_ballot(p,op,b || '{"changes":{}}');
-    raise exception using errcode='XX000', message='Empty ballot accepted';
-  exception when raise_exception then assert sqlerrm='Beantwoord minstens één datum.'; end;
-  assert public.amigo_read(p)->'votes'='{}'::jsonb;
+    perform public.amigo_submit_ballot(p,gen_random_uuid(),b || jsonb_build_object('proof',repeat('d',64)));
+    raise exception using errcode='XX000', message='Incorrect login password accepted';
+  exception when raise_exception then assert sqlerrm='Wachtwoord klopt niet.'; end;
   b := b || '{"changes":{"2027-01-10":"yes"}}';
+  op := gen_random_uuid();
   perform public.amigo_submit_ballot(p,op,b);
   perform public.amigo_submit_ballot(p,op,b);
   b := b || '{"register":false,"changes":{"2027-04-12":"maybe"}}';
@@ -129,6 +135,9 @@ begin
     raise exception using errcode='XX000', message='Removed date accepted';
   exception when raise_exception then assert sqlerrm like 'De datum % is verwijderd.%'; end;
   assert public.amigo_read(p)=snapshot;
+  -- Automatic saves can clear every answer without removing the voter.
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),b || '{"changes":{"2027-01-10":"none","2027-04-12":"none"}}');
+  assert (public.amigo_read(p)#>>array['votes',v::text,'votesJson'])::jsonb='{}'::jsonb;
   perform public.amigo_apply(p,gen_random_uuid(),'close','{"day":"2027-01-10"}');
   begin
     perform public.amigo_submit_ballot(p,gen_random_uuid(),b);

@@ -14,6 +14,12 @@
   vertical-align: middle;
 }
 
+.segmented-control--small .segmented-control__option {
+  min-width: 32px;
+  min-height: 28px;
+  padding: 0.25rem 0.4rem;
+}
+
 .segmented-control--status {
   --segment-option-ink: var(--ink);
   --segment-active-ink: var(--amigo-paper);

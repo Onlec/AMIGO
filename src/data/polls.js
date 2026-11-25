@@ -58,6 +58,20 @@ export function project(row) {
     }
     if (!poll) continue;
     switch (kind) {
+      case 'ballot': {
+        // Show durable automatic votes while waiting for server confirmation.
+        // Registration stays hidden until the server confirms the credentials.
+        const participant = poll.votes[body.voter];
+        if (poll.status !== 'open' || !participant) break;
+        const choices = JSON.parse(participant.votesJson || '{}');
+        for (const [day, value] of Object.entries(body.changes || {})) {
+          if (!poll.dates[day]) continue;
+          if (value === 'none') delete choices[day];
+          else choices[day] = value;
+        }
+        participant.votesJson = JSON.stringify(choices);
+        break;
+      }
       case 'join':
         if (poll.status === 'open') poll.votes[body.voter] = { name: body.name, votesJson: '{}' };
         break;

@@ -35,6 +35,6 @@ export default function ThemeToggle() {
   }
 
   return (
-    <SegmentedControl label="Thema" options={themeOptions} value={theme} onChange={changeTheme} iconOnly />
+    <SegmentedControl label="Thema" options={themeOptions} value={theme} onChange={changeTheme} iconOnly size="small" />
   );
 }
