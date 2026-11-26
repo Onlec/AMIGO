@@ -113,6 +113,8 @@ try {
   assert.equal(await evaluate('counterAnimations.every(duration=>duration<=1200)'), true);
   assert.equal(await evaluate("document.querySelectorAll('.office-flap,.office-seal').length"), 0, 'No redundant measured tags or decorative seals');
   assert.equal(await evaluate("document.querySelectorAll('.statistics-sections > fieldset > legend').length"), 4, 'Statistics use the planner segment structure');
+  assert.equal(await evaluate("document.querySelectorAll('.statistic-card svg[data-statistic-icon]').length"), 10, 'Every statistic has a line icon');
+  assert.equal(await evaluate("document.querySelector('.office-record-number') === null"), true, 'Numbered tiles have been removed');
   assert.equal(await evaluate("document.querySelector('[data-statistic=goats]').dataset.state"), 'notApplicable');
   await pause(1250);
   assert.equal(await evaluate("document.querySelector('.office-counter').getAnimations({subtree:true}).length"), 0, 'Counter animation finishes without looping');
@@ -220,7 +222,7 @@ try {
   await until(() => evaluate("document.querySelector('[data-statistic=answers] dd').textContent === '0'"));
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt]').dataset.state"), 'collecting');
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] .office-collection__label').textContent"), 'Nog even verzamelen');
-  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] [role=progressbar]').getAttribute('aria-valuenow')"), '0');
+  assert.equal(await evaluate("document.querySelector('.office-progress,.office-observations,[role=progressbar]') === null"), true, 'No required observation counts or progress targets are shown');
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent.includes('%')"), false);
   assert.equal(await evaluate("[...document.querySelectorAll('.office-counter__roll > span:last-child')].map(node=>node.textContent).join('')"), '000000');
   assert.equal(await evaluate("document.querySelector('.statistics-error') === null"), true);
@@ -228,8 +230,8 @@ try {
   const reload = () => evaluate("import('/src/data/statistics.js').then(module=>module.loadStatistics(true))");
   state.data = { ...state.data, answers: 9, maybeAnswers: 4 };
   await reload();
-  await until(() => evaluate("document.querySelector('[data-statistic=doubt] [role=progressbar]')?.getAttribute('aria-valuenow') === '9'"));
-  assert.equal(await evaluate("document.querySelectorAll('[data-statistic=doubt] .office-progress .is-filled').length"), 9);
+  await until(() => evaluate("document.querySelector('[data-statistic=answers] dd').textContent === '9'"));
+  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt]').dataset.state"), 'collecting');
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent.includes('%')"), false);
   state.data = { ...state.data, answers: 10, maybeAnswers: 0 };
   await reload();
@@ -242,7 +244,7 @@ try {
   await command('Emulation.setDeviceMetricsOverride', { width: 375, height: 1000, deviceScaleFactor: 1, mobile: false });
   assert.equal(await evaluate("document.documentElement.scrollWidth<=innerWidth+1"), true, 'Large counters stay within mobile bounds');
   assert.equal(await evaluate('counterAnimations.length'), 0, 'Retry and new readings do not replay a counter already shown');
-  console.log('PASS: planner-consistent segment frames, shared theme colors, compact statistic rows without measured tags, real collection progress, unchanged counter/values/footer, EN/NL, responsive layouts, navigation and error recovery.');
+  console.log('PASS: planner-consistent segments and colors, SVG icons instead of numbered tiles, no observation targets, unchanged statistical thresholds/counter/footer, EN/NL, responsive layouts, navigation and error recovery.');
 } finally {
   state.releases.splice(0).forEach(resolve => resolve());
   socket?.close(); browser.kill(); await server.close();

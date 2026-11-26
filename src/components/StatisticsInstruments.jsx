@@ -48,20 +48,12 @@ export function MasterCounter({ value, status }) {
 }
 
 export function MeasurementStatus({ measurement }) {
-  const { state, observations, threshold } = measurement;
+  const { state } = measurement;
   if (state === 'measured' || state === 'notApplicable') return null;
   return <div className="office-measurement" data-state={state}>
     {state !== 'collecting' && <span>{t('statistics.state.' + state)}</span>}
     {state === 'collecting' && <div className="office-collection">
       <span className="office-collection__label">{t('statistics.collecting')}</span>
-      <div className="office-progress" role="progressbar" aria-label={t('statistics.observationProgress')}
-        aria-valuemin={0} aria-valuemax={threshold} aria-valuenow={observations}
-        aria-valuetext={t('statistics.observations', { count: formatNumber(observations, { minimumIntegerDigits: 2 }), threshold })}>
-        {Array.from({ length: threshold }, (_, index) => <span key={index} className={index < observations ? 'is-filled' : ''} />)}
-      </div>
-      <span className="office-observations">{t('statistics.observations', {
-        count: formatNumber(observations, { minimumIntegerDigits: 2 }), threshold,
-      })}</span>
     </div>}
   </div>;
 }

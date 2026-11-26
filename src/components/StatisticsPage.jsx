@@ -3,18 +3,19 @@ import { getLocale, t } from '../i18n/index.js';
 import { loadStatistics, useStatistics } from '../data/statistics.js';
 import { STATISTIC_TOTALS, STATISTIC_RATIOS, STATISTIC_JOKES, statisticMeasurement } from '../utils/statistics.js';
 import { MasterCounter, MeasurementStatus } from './StatisticsInstruments.jsx';
+import StatisticIcon from './StatisticIcon.jsx';
 
 function StatisticGroup({ title, number, items, data, status }) {
   return (
     <fieldset className="statistics-section">
       <legend>{number} — {title}</legend>
       <dl className="statistics-grid">
-        {items.map((id, index) => {
+        {items.map(id => {
           const measurement = statisticMeasurement(id, data, status);
           const collecting = measurement.state === 'collecting';
           const showStatus = !['measured', 'notApplicable'].includes(measurement.state);
           return <div className="statistic-card" key={id} data-statistic={id} data-state={measurement.state}>
-            <dt><span className="office-record-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>{t('statistics.' + id + '.label')}</dt>
+            <dt><StatisticIcon id={id} />{t('statistics.' + id + '.label')}</dt>
             <dd className={'statistic-card__value' + (collecting ? ' statistic-card__value--collecting' : '')}>
               {collecting ? <span aria-hidden="true">—</span> : measurement.value}
             </dd>

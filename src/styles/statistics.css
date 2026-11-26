@@ -7,17 +7,15 @@
 .counting-office .statistic-card:first-child { padding-top: 0; }
 .counting-office .statistic-card:last-child { padding-bottom: 0; border-bottom: 0; }
 .counting-office .statistic-card dt { grid-column: 2; grid-row: 1; align-self: end; font: 600 15px/1.5 var(--font-display); overflow-wrap: anywhere; }
-.counting-office .office-record-number { position: absolute; inset-inline-start: 0; top: 16px; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: 600 12px var(--font-display); }
-.counting-office .statistic-card:first-child .office-record-number { top: 0; }
+.counting-office .office-statistic-icon { position: absolute; inset-inline-start: 0; top: 16px; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: var(--muted); }
+.counting-office .office-statistic-icon svg { width: 24px; height: 24px; }
+.counting-office .statistic-card:first-child .office-statistic-icon { top: 0; }
 .counting-office .statistic-card__value { grid-column: 3; grid-row: 1 / span 2; align-self: center; min-width: 0; max-width: 180px; margin: 0; font: 600 clamp(20px, 4vw, 28px)/1.2 var(--font-display); text-align: end; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .counting-office .statistic-card__description { grid-column: 2; grid-row: 2; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .counting-office .office-card-instrument { grid-column: 2 / -1; margin: 8px 0 0; }
 .counting-office .office-measurement { color: var(--muted); font-size: 12px; }
 .counting-office .office-collection { max-width: 320px; }
-.counting-office .office-collection__label { display: block; margin-bottom: 6px; }
-.counting-office .office-progress { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; margin-bottom: 4px; }
-.counting-office .office-progress span { height: 6px; border: 1px solid var(--border); }
-.counting-office .office-progress .is-filled { background: var(--ink); border-color: var(--ink); }
+.counting-office .office-collection__label { display: block; }
 .counting-office .office-nameplate dl { margin: 0; }
 .counting-office .office-nameplate dl > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; padding-block: 12px; border-bottom: 1px solid var(--border); }
 .counting-office .office-nameplate dl > div:first-child { padding-top: 0; }
@@ -30,7 +28,7 @@
 @media (max-width: 600px) {
   .counting-office .office-nameplate dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .counting-office .statistic-card { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 4px 8px; }
-  .counting-office .office-record-number { width: 28px; height: 28px; }
+  .counting-office .office-statistic-icon { width: 28px; height: 28px; }
   .counting-office .statistic-card__value { max-width: 90px; }
 }
 .counting-office .office-master { margin-top: 32px; padding: 20px 16px 16px; border: 1px solid var(--ink); background: var(--surface); }
