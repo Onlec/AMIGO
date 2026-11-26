@@ -143,7 +143,6 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
         <CollapsibleSegment title={t('vote.section')} open={availabilityOpen}>
           <div className="voter-ballot" role="region" aria-label={t('vote.availability')} tabIndex={availabilityOpen ? 0 : undefined}>
             <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly} />
-            <p className="description" role="status">{saving > 0 ? t('vote.saving') : t('vote.autoSave')}</p>
           </div>
           {signedIn && error && <p role="alert" className="error">{translateMessage(error)}</p>}
         </CollapsibleSegment>

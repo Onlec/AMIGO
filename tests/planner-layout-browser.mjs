@@ -125,6 +125,16 @@ try {
       if (node.scrollWidth > node.clientWidth + 1) errors.push('segment content overflow');
     }
     const visible = node => node.getBoundingClientRect().height > 0 && !node.closest('.collapsible-segment[data-open=false]');
+    const share = page.querySelector('.poll-heading > .copy-button');
+    if (share) {
+      near(share.getBoundingClientRect().right, frame.getBoundingClientRect().right, 'share/title right edge');
+      near(share.getBoundingClientRect().top, title.getBoundingClientRect().top + 2, 'share/title top');
+      const status = page.querySelector('.poll-results__status');
+      const table = page.querySelector('.vote-grid-scroll');
+      if (!status || status.closest('.poll-results') !== table.closest('.poll-results')) errors.push('status belongs below results');
+      if (status && visible(status) && status.getBoundingClientRect().top < table.getBoundingClientRect().bottom + 11) errors.push('status below table spacing');
+      if (page.querySelectorAll('.copy-button--icon').length !== 1) errors.push('duplicate share button');
+    }
     for (const legend of page.querySelectorAll('fieldset > legend')) {
       const fieldset = legend.parentElement;
       const range = document.createRange();
@@ -148,7 +158,7 @@ try {
         near(inputs[1].height, button.height, 'login input/button height');
       }
     }
-    const actions = '.edit-actions > button,.edit-actions > .btn,.organizer-reopen > button,.share-hint > button,.date-jump-actions > button,.date-cards > li > button';
+    const actions = '.edit-actions > button,.edit-actions > .btn,.organizer-reopen > button,.date-jump-actions > button,.date-cards > li > button';
     for (const button of page.querySelectorAll(actions)) {
       if (!visible(button)) continue;
       const rect = button.getBoundingClientRect();
@@ -158,7 +168,7 @@ try {
     }
     if (frame) {
       const rail = frame.getBoundingClientRect().right - 1.5 - parseFloat(getComputedStyle(page).getPropertyValue('--planner-inset'));
-      for (const row of page.querySelectorAll('.edit-actions,.share-hint,.organizer-reopen')) {
+      for (const row of page.querySelectorAll('.edit-actions,.organizer-reopen')) {
         if (!visible(row)) continue;
         const last = [...row.querySelectorAll(':scope > button,:scope > .btn')].filter(visible).at(-1);
         if (last) near(last.getBoundingClientRect().right, rail, 'page action right edge');

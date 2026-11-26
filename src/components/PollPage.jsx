@@ -195,12 +195,7 @@ export default function PollPage({ pollId, share }) {
       <div className="lab eyebrow">{t('poll.eyebrow')}</div>
       <div className="poll-heading">
         <h1>{poll.title}</h1>
-        <p role="status" className="description poll-heading__status">
-          {row.queue.some(item => ['create', 'createPoll'].includes(item.kind))
-            ? t('sync.createPending')
-            : row.queue.length ? t('sync.changesPending') : ''}
-          {' '}{row.queue.length && status?.key === 'sync.synced' ? '' : translateMessage(status)}
-        </p>
+        <SharePollButton poll={poll} dates={dates} votes={votes} />
       </div>
       {storageError && <p role="alert" className="error">{translateMessage(storageError)}</p>}
       {notices.map((notice, index) => <p className="error" key={index}>{t('poll.rejected', { detail: translateMessage(notice) })}</p>)}
@@ -220,9 +215,6 @@ export default function PollPage({ pollId, share }) {
 
       <div className="form poll-results">
         <CollapsibleSegment title={t('results.section')} open={hasDates && hasVoters}>
-          <div className="poll-results-actions">
-            <SharePollButton poll={poll} dates={dates} votes={votes} />
-          </div>
           <div className="vote-grid-scroll" role="region" aria-label={t('results.heading')} tabIndex={0}>
             <VoteGrid
               dates={dates}
@@ -233,6 +225,12 @@ export default function PollPage({ pollId, share }) {
               onRemoveVoter={voter => { if (mode === 'edit' && organizerAuthorized) save('removeVoter', { voter }); }}
             />
           </div>
+          <p role="status" className="description poll-results__status">
+            {row.queue.some(item => ['create', 'createPoll'].includes(item.kind))
+              ? t('sync.createPending')
+              : row.queue.length ? t('sync.changesPending') : ''}
+            {' '}{row.queue.length && status?.key === 'sync.synced' ? '' : translateMessage(status)}
+          </p>
         </CollapsibleSegment>
       </div>
 
@@ -250,10 +248,6 @@ export default function PollPage({ pollId, share }) {
         )}
       </OrganizerUnlock>
 
-      <div className="share-hint">
-        <p><code>{window.location.href}</code></p>
-        <CopyButton text={window.location.href} label={t('common.copyLink')} secondary />
-      </div>
     </div>
   );
 }

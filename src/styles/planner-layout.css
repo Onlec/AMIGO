@@ -28,13 +28,14 @@
 
 .planner-page .poll-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) fit-content(45%);
-  align-items: baseline;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 16px;
   margin-block: 8px 16px;
 }
 .planner-page .poll-heading > h1 { margin: 0; }
-.planner-page .poll-heading__status { max-width: none; margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.planner-page .poll-heading > .copy-button--icon { margin-top: 2px; }
+.planner-page .poll-results__status { margin: 12px 0 0; font-size: 12px; text-align: right; overflow-wrap: anywhere; }
 
 .planner-page > .form { gap: var(--planner-section-gap); margin-top: var(--planner-section-gap); }
 .planner-page .form fieldset { margin-inline: 0; padding: var(--planner-inset); }
@@ -63,7 +64,7 @@
 .planner-page .access-fields label { max-width: none; }
 .planner-page .access-fields p { overflow-wrap: anywhere; }
 .planner-page .edit-actions { align-items: center; gap: var(--planner-control-gap); }
-.planner-page :is(.edit-actions, .organizer-reopen, .share-hint, .date-jump-actions) > :is(button, .btn),
+.planner-page :is(.edit-actions, .organizer-reopen, .date-jump-actions) > :is(button, .btn),
 .planner-page .date-cards > li > button {
   width: var(--planner-action-width);
   min-width: var(--planner-action-width);
@@ -75,8 +76,7 @@
   font-size: 15px;
   line-height: 1.2;
 }
-.planner-page .planner-page-actions,
-.planner-page .share-hint { padding-inline: calc(var(--planner-inset) + 1.5px); }
+.planner-page .planner-page-actions { padding-inline: calc(var(--planner-inset) + 1.5px); }
 .planner-page button[type]:not(:where(.calendar button, .date-row button, .vote-grid button, .segmented-control__option, .copy-button--icon)) { font-size: 15px; }
 .planner-page .organizer-actions { flex-wrap: wrap; }
 .planner-page .organizer-reopen { margin-top: 24px; gap: 12px 16px; }
@@ -109,12 +109,9 @@
 .planner-page .date-cards > li > strong { grid-column: 1; grid-row: 1; min-width: 0; }
 .planner-page .date-cards > li > :is(button, .segmented-control) { grid-column: 2; grid-row: 1; margin: 0; }
 .planner-page .date-card-meta { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--muted); font-size: 12px; }
-.planner-page .poll-results .vote-grid-scroll { margin-top: 16px; }
+.planner-page .poll-results .vote-grid-scroll { margin-top: 0; }
 .planner-page .final-date-block { margin-block: 24px; }
 .planner-page .final-date { margin: 0; }
-.planner-page .share-hint { margin-top: 24px; padding-top: 16px; gap: 12px 16px; }
-.planner-page .share-hint > p { flex: 1 1 240px; min-width: 0; margin: 0; }
-.planner-page .share-hint code { min-width: 0; overflow-wrap: anywhere; }
 
 /* Cell geometry is driven by the seven equal columns, never by text height. */
 .planner-page .calendar { margin-top: 0; }

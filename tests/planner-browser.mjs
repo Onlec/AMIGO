@@ -509,13 +509,13 @@ try {
   await evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copiedFinalOverview = text; } } })");
   assert.equal(await evaluate("document.querySelector('.final-date-block .copy-button') === null"), true, 'Chosen-date banner has no share button');
   assert.equal(await evaluate("(() => { const banner = document.querySelector('.final-date-block').getBoundingClientRect(); const date = document.querySelector('.final-date').getBoundingClientRect(); return Math.abs(date.left + date.width / 2 - banner.left - banner.width / 2) < 1; })()"), true, 'Chosen date is centered');
-  await evaluate("document.querySelector('.poll-results-actions .copy-button').click()");
-  await until(() => evaluate("document.querySelector('.poll-results-actions .copy-button').getAttribute('aria-label') === 'Gekopieerd ✓'"));
+  await evaluate("document.querySelector('.poll-heading .copy-button').click()");
+  await until(() => evaluate("document.querySelector('.poll-heading .copy-button').getAttribute('aria-label') === 'Gekopieerd ✓'"));
   const finalOverview = await evaluate('window.copiedFinalOverview');
   assert.ok(finalOverview.startsWith('📅 Browser test ('), 'Final share includes the poll title and voting progress');
   assert.ok(finalOverview.includes('✅ gekozen') && finalOverview.includes('👥') && finalOverview.includes('Anna'), 'Final share includes the chosen date and participants');
   assert.ok(finalOverview.includes('👉 Bekijk de einddatum: ') && !finalOverview.includes('👉 Stem mee:'), 'Closed poll invites readers to view the result');
-  await until(() => evaluate("document.querySelector('.poll-results-actions .copy-button').getAttribute('aria-label') === 'Stemmenoverzicht delen'"));
+  await until(() => evaluate("document.querySelector('.poll-heading .copy-button').getAttribute('aria-label') === 'Stemmenoverzicht delen'"));
   const votesBeforeDateChange = await evaluate('pollData.readLocal(fixturePoll).then(row => JSON.stringify(pollData.project(row).votes))');
   await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   for (const confirm of [false, true]) {

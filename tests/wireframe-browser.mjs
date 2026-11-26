@@ -105,16 +105,12 @@ try {
                 const children = [...row.children];
                 children.forEach((child, index) => children.slice(index + 1).forEach(other => compareCenters(child, other, 'action buttons')));
               }
-              function baseline(node) {
-                const probe = doc.createElement('span');
-                probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
-                node.prepend(probe);
-                const top = probe.getBoundingClientRect().top;
-                probe.remove();
-                return top;
-              }
-              if (status && Math.abs(baseline(doc.querySelector('h1')) - baseline(status)) > 1) horizontal.push({ name: 'title/status baseline' });
               const table = doc.querySelector('.table-scroll');
+              const share = doc.querySelector('.poll-heading>.icon-button');
+              if (share && (Math.abs(share.getBoundingClientRect().right - segment.right) > 1
+                  || Math.abs(share.getBoundingClientRect().top - title.top - 2) > 1)) horizontal.push({name:'share/title position'});
+              if (status && (!table || status.getBoundingClientRect().top < table.getBoundingClientRect().bottom + 11
+                  || status.closest('.segment') !== table.closest('.segment'))) horizontal.push({name:'status below table'});
               const squareDays = [...doc.querySelectorAll('.calendar-day')].every(node => {
                 const rect = node.getBoundingClientRect();
                 return Math.abs(rect.width - rect.height) <= 1;

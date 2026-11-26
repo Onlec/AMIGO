@@ -67,8 +67,6 @@ export default {
   'vote.maybe': '? Misschien',
   'vote.no': '✗ Nee',
   'vote.forDate': 'Beschikbaarheid op {date}',
-  'vote.saving': 'Stem bewaren…',
-  'vote.autoSave': 'Je keuzes worden automatisch opgeslagen.',
   'view.label': 'Weergave',
   'view.cards': 'Kaarten',
   'view.calendar': 'Kalender',

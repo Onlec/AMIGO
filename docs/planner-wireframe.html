@@ -343,7 +343,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <div class="stage"><iframe id="preview" title="Wireframe van de datumprikker"></iframe></div>
     <div class="notes">
       <section class="note"><h2>A · Buitenlijn</h2><p>Logo, titel en segmentkaders beginnen op dezelfde lijn. Header en pagina delen een breedte van maximaal 760 px.</p></section>
-      <section class="note"><h2>B · Horizontale lijnen</h2><p>Segmenttitels volgen de linkerrand van de inhoud. Op brede schermen staan naam, wachtwoord en aanmelden op één rij. Op mobiel staan de velden onder elkaar over de volle breedte, met de knop eronder rechts. Titel en status delen hun eerste tekstbasislijn.</p></section>
+      <section class="note"><h2>B · Horizontale lijnen</h2><p>Segmenttitels volgen de linkerrand van de inhoud. Op brede schermen staan naam, wachtwoord en aanmelden op één rij. Op mobiel staan de velden onder elkaar over de volle breedte, met de knop eronder rechts. De deelknop staat rechts naast de polltitel; de synchronisatiestatus staat onder de stemtabel.</p></section>
       <section class="note"><h2>Ritme</h2><p>24 px tussen segmenten, 16 px tussen velden, 8 px tussen label en veld en 12 px tussen kaarten en knoppen. De pagina groeit mee; alleen de tabel scrolt horizontaal.</p></section>
     </div>
   </main>
@@ -408,12 +408,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     }
     function table() {
       const names = [person() + ' (jij)', state.stress ? 'Jean-Christophe De Smet-Van den Broeck' : 'Mark', 'Samira'];
-      return actionRow(shareButton()) + `<div class="table-scroll" role="region" aria-label="Stemmenoverzicht" tabindex="0"><table>
+      return `<div class="table-scroll" role="region" aria-label="Stemmenoverzicht" tabindex="0"><table>
         <thead><tr><th scope="col">Naam</th>${dates().map(date => `<th scope="col" ${state.scenario === 'closed' && date.day === 6 ? 'class="chosen"' : ''}>${date.day} dec.<br>${date.time}${state.scenario === 'closed' && date.day === 6 ? '<br>Einddatum' : ''}</th>`).join('')}</tr></thead>
         <tbody>${names.map((name, index) => `<tr><th scope="row">${escape(name)}</th>${dates().map((date, i) => `<td ${state.scenario === 'closed' && date.day === 6 ? 'class="chosen"' : ''}>${['✓', '?', '×'][(i + index) % 3]}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table></div>`;
+      </table></div><p class="status" role="status">Gesynchroniseerd</p>`;
     }
-    const shareFooter = () => `<div class="share-footer"><p>Deel deze link met je groep:<br><span class="link-text">https://amigo.example/?poll=voorbeeld</span></p>${button('Link kopiëren', 'copy', true)}</div>`;
     function create() {
       return `<div class="eyebrow">AMIGO / planner</div><h1>Nieuwe datumprikker</h1><form class="segments" data-form="create">
         ${segment('01 — Prikker instellen', `<div class="fields">${label('Titel', title())}${description()}</div>`)}
@@ -450,15 +449,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     function poll() {
       const authorized = ['organizer', 'closed'].includes(state.scenario);
       const editing = ['edit', 'final'].includes(state.screen);
-      return `<div class="eyebrow">AMIGO / stemmen</div><div class="poll-heading"><h1>${title()}</h1><p class="status">Gesynchroniseerd</p></div>
+      return `<div class="eyebrow">AMIGO / stemmen</div><div class="poll-heading"><h1>${title()}</h1>${shareButton()}</div>
         <p class="description">Samen eten, bijpraten en het nieuwe jaar plannen.</p>
         ${state.scenario === 'closed' ? '<div class="final-date-block"><p class="final-date">Gekozen datum: zo 6 dec. 2026, 18:30</p></div>' : ''}
         <div class="segments">
           ${segment('01 — Jouw gegevens', credentials())}
-          ${segment('02 — Jouw beschikbaarheid', `${choices()}<p class="description hint">Je keuzes worden automatisch opgeslagen.</p>`, !editing && state.scenario !== 'guest' && state.scenario !== 'closed')}
+          ${segment('02 — Jouw beschikbaarheid', choices(), !editing && state.scenario !== 'guest' && state.scenario !== 'closed')}
           ${segment('03 — Stemmenoverzicht', table())}
           ${segment('04 — Prikker beheren', management(), authorized)}
-        </div>${shareFooter()}`;
+        </div>`;
     }
     const styles = `
       :root { --bg:#eeebdd; --surface:#f5f4ed; --ink:#171a19; --border:#c7c7b9; --muted:#576f77; --gutter:24px; --inset:16px; }
@@ -477,8 +476,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       h1 { font:700 34px/1.15 'Space Grotesk',sans-serif; letter-spacing:-.01em; overflow-wrap:anywhere; margin:8px 0 16px; }
       h2 { font:600 14px/1.4 'Space Grotesk',sans-serif; text-transform:uppercase; letter-spacing:.06em; margin:0 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
       p { margin:0; } .description,.status { color:var(--muted); font-size:14px; } .description { margin-bottom:16px; }
-      .poll-heading { display:grid; grid-template-columns:minmax(0,1fr) fit-content(45%); align-items:baseline; gap:16px; margin:8px 0 16px; }
-      .poll-heading h1 { margin:0; } .status { text-align:right; font-size:12px; }
+      .poll-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:16px; margin:8px 0 16px; }
+      .poll-heading h1 { margin:0; } .poll-heading>.icon-button { margin-top:2px; } .status { text-align:right; font-size:12px; margin-top:12px; }
       .segments { display:grid; gap:24px; margin-top:24px; } .segment { min-width:0; margin:0; padding:0; border:1.5px solid var(--ink); }
       .segment>legend { margin-inline-start:calc(var(--inset) - 4px); padding:0 4px; font:600 12px/1.6 'Space Grotesk',sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
       .segment-content { padding:var(--inset); min-width:0; } .closed { border-inline-color:transparent; border-bottom-color:transparent; }
@@ -496,8 +495,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .access-row--login input { height:48px; margin:0; }
       .access-row--login>.actions { align-self:end; margin:0; padding:0; }
       .access-row p { overflow-wrap:anywhere; } .actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; }
-      .actions>button,.reopen>button,.share-footer>button,.final-card>button { width:128px; min-width:128px; max-width:128px; height:48px; min-height:48px; flex:0 0 128px; padding:4px 8px; line-height:1.2; }
-      .page-actions,.share-footer { padding-inline:calc(var(--inset) + 1.5px); }
+      .actions>button,.reopen>button,.final-card>button { width:128px; min-width:128px; max-width:128px; height:48px; min-height:48px; flex:0 0 128px; padding:4px 8px; line-height:1.2; }
+      .page-actions { padding-inline:calc(var(--inset) + 1.5px); }
       .hint { margin:12px 0 0; } .choices { min-width:0; }
       .toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
       .toolbar .toggle { margin-left:auto; } .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--muted); }
@@ -521,12 +520,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .calendar-day small { font-size:10px; line-height:1; } .calendar>.legend { margin-block:12px; }
       .selected-dates { margin-top:16px; } .selected-dates>p { margin-bottom:12px; color:var(--muted); font-size:12px; }
       .date-row { display:grid; grid-template-columns:minmax(0,1fr) 8rem 40px; align-items:center; gap:12px; margin-top:12px; font-size:14px; }
-      .date-row input { padding-inline:8px; } .table-scroll { max-width:100%; overflow-x:auto; margin-top:16px; }
+      .date-row input { padding-inline:8px; } .table-scroll { max-width:100%; overflow-x:auto; }
       table { border-collapse:collapse; width:100%; font-size:14px; } th,td { border:1px solid var(--border); padding:8px 10px; text-align:center; }
       thead th { color:var(--muted); font-weight:600; font-size:11px; white-space:nowrap; } th:first-child { position:sticky; left:0; z-index:1; min-width:12rem; width:12rem; max-width:12rem; white-space:normal; overflow-wrap:anywhere; text-align:left; background:var(--surface); }
       tbody th { font-weight:400; } .chosen { background:color-mix(in srgb,#d21f26 12%,var(--surface)); }
-      .icon-button { width:36px; min-height:36px; padding:6px; } .reopen,.share-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px 16px; margin-top:24px; }
-      .reopen p,.share-footer p { flex:1 1 240px; margin:0; } .share-footer { border-top:1px solid var(--border); padding-top:16px; font-size:12px; } .link-text { overflow-wrap:anywhere; color:var(--muted); }
+      .icon-button { width:36px; min-height:36px; padding:6px; } .reopen { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px 16px; margin-top:24px; }
+      .reopen p { flex:1 1 240px; margin:0; }
       .final-date-block { display:flex; justify-content:center; margin-block:24px; text-align:center; } .final-date { padding:12px 16px; background:#a83232; color:#f5f4ed; border-radius:3px; font-weight:600; font-size:14px; }
       .guides { position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); width:calc(min(760px,100%) - var(--gutter)*2); border-inline:1px dashed #247db580; pointer-events:none; z-index:4; }
       .guides:before,.guides:after { content:''; position:absolute; top:60px; bottom:0; border-left:1px dashed #247db54d; } .guides:before { left:var(--inset); } .guides:after { right:var(--inset); }

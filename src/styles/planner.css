@@ -517,18 +517,6 @@ button.btn-secondary:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.poll-heading > .poll-heading__status {
-  flex: 0 1 auto;
-  max-width: 45%;
-  margin: 0;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-
-.poll-heading__status:empty {
-  display: none;
-}
-
 .final-date {
   background: var(--amigo-red);
   color: var(--amigo-paper);
@@ -567,11 +555,6 @@ button.btn-secondary:focus-visible {
   height: 100%;
   pointer-events: none;
   z-index: 100;
-}
-
-.poll-results-actions {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .copy-button.copy-button--icon {
@@ -764,25 +747,9 @@ button.btn-secondary:focus-visible {
   gap: 0.6rem;
 }
 
-.form > button, .share-hint .copy-button {
+.form > button {
   align-self: flex-end;
   margin-inline-start: auto;
-}
-
-.share-hint {
-  margin-top: 2.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.share-hint code {
-  word-break: break-all;
 }
 
 .organizer-panel > button {
