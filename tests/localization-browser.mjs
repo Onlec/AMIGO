@@ -1,6 +1,7 @@
 // node tests/localization-browser.mjs (Chrome required).
 // Enables the hidden tools only in the test server; no database or config edits.
 import assert from 'node:assert/strict';
+import { t, setLocale, formatNumber } from '../src/i18n/index.js';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -68,51 +69,94 @@ try {
   }
   await command('Page.enable');
   await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await command('Emulation.setLocaleOverride', {locale:'en-US'});
+  await command('Emulation.setLocaleOverride', {locale:'nl-BE'});
   await command('Page.navigate', { url: origin });
   await until(() => evaluate("document.querySelectorAll('#grid a').length === 13"));
-  assert.equal(await evaluate('document.documentElement.lang'), 'nl-BE');
-  assert.equal(await evaluate("document.querySelector('.language-select').value"), 'nl-BE');
+  assert.equal(await evaluate('document.documentElement.lang'), 'en-GB');
+  assert.equal(await evaluate("document.querySelector('.language-select').value"), 'en-GB');
+  assert.equal(await evaluate("document.querySelectorAll('.language-select option').length"), 2);
+  async function selectLocale(locale) {
+    await evaluate('(() => {const select=document.querySelector(".language-select");select.value='+JSON.stringify(locale)+';select.dispatchEvent(new Event("change",{bubbles:true}));})()');
+    await until(() => evaluate('document.documentElement.lang === '+JSON.stringify(locale)));
+    setLocale(locale);
+    await pause(30);
+  }
+  for (const locale of ['en-GB','nl-BE']) {
+  await selectLocale(locale);
   for (const width of [320,390,768,1440]) {
     await command('Emulation.setDeviceMetricsOverride', {width,height:950,deviceScaleFactor:1,mobile:width<600});
     await pause(100);
     assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true, 'Home fits '+width);
     assert.equal(await evaluate("document.querySelector('.language-select').getBoundingClientRect().height"),36);
   }
+  }
   await command('Emulation.setDeviceMetricsOverride', {width:1000,height:950,deviceScaleFactor:1,mobile:false});
   const normalized = expression => evaluate('('+expression+').replace(/[\u00a0\u202f]/g," ")');
   const tools=['btw','datum','eenheden','factuur','kilometers','lening','marge','procent','tijd','uurtarief'];
-  const headings=['Btw-calculator','Datumrekenaar','Eenhedenomrekenaar','Factuurnummers','Kilometervergoeding','Leningcalculator','Margecalculator','Procentrekenaar','Tijdschrijver','Uurtariefberekening'];
+  const headingKeys=['tools.vat.name','tools.dates.name','tools.units.name','tools.invoice.name','tools.mileage.name','tools.loan.name','tools.margin.name','tools.percent.name','tools.time.name','tools.rate.name'];
+  for (const locale of ['en-GB','nl-BE']) {
+  await selectLocale(locale);
   for (const tool of tools) {
     await evaluate('location.hash='+JSON.stringify(tool));
-    await until(() => evaluate("document.querySelector('#th')?.textContent === "+JSON.stringify(headings[tools.indexOf(tool)])+" && document.querySelector('#ts')?.textContent === 'Berekend'"));
+    await until(() => evaluate("document.querySelector('#th')?.textContent === "+JSON.stringify(t(headingKeys[tools.indexOf(tool)]))+" && document.querySelector('#ts')?.textContent === "+JSON.stringify(t('home.calculated'))));
     assert.ok(await evaluate("document.querySelectorAll('#tr .res').length > 0"),tool+' results');
     assert.equal(await evaluate("document.querySelector('#tr').textContent.includes('NaN')"),false,tool+' valid numbers');
-    if(tool==='btw') assert.ok((await normalized("document.querySelector('#tr').textContent")).includes('1.512,50'));
-    if(tool==='kilometers') assert.ok((await normalized("document.querySelector('#tr').textContent")).includes('51,60'));
-    if(tool==='tijd') assert.ok((await normalized("document.querySelector('#tr').textContent")).includes('8 u 00 min'));
+    if(tool==='btw') assert.ok((await normalized("document.querySelector('#tr').textContent")).includes(formatNumber(1512.5,{minimumFractionDigits:2})));
+    if(tool==='kilometers') assert.ok((await normalized("document.querySelector('#tr').textContent")).includes(formatNumber(51.6,{minimumFractionDigits:2})));
+    if(tool==='tijd') assert.ok((await normalized("document.querySelector('#tr').textContent")).includes(t('tools.time.duration',{hours:8,minutes:'00'})));
   }
   for (const [hash,storage] of [['agenda','amigo-agenda'],['notities','amigo-notities']]) {
     await evaluate('location.hash='+JSON.stringify(hash));
-    await until(() => evaluate("document.querySelector('#th')?.textContent === "+JSON.stringify(hash==='agenda'?'Agenda':'Notities')+" && document.querySelector('#li') !== null"));
+    await until(() => evaluate("document.querySelector('#th')?.textContent === "+JSON.stringify(t(hash==='agenda'?'tools.agenda.name':'tools.notes.name'))+" && document.querySelector('#li') !== null"));
     await evaluate("document.querySelector('#li').value='Mijn eigen inhoud <test>'; document.querySelector('#la').click()");
     assert.ok(await evaluate('localStorage.getItem('+JSON.stringify(storage)+').includes("Mijn eigen inhoud <test>")'));
     assert.equal(await evaluate("document.querySelector('#ll span').textContent"),'Mijn eigen inhoud <test>');
     await evaluate("document.querySelector('#ll button').click()");
     assert.equal(await evaluate('JSON.parse(localStorage.getItem('+JSON.stringify(storage)+')).length'),0);
   }
+  }
+  await evaluate("location.hash='btw'");
+  await until(() => evaluate("document.querySelector('#f_a') !== null"));
+  await evaluate("document.querySelector('#f_a').value='2.500,75';document.querySelector('#f_a').dispatchEvent(new Event('input',{bubbles:true}))");
+  await selectLocale('en-GB');
+  assert.equal(await evaluate("document.querySelector('#f_a').value"),'2,500.75');
+  assert.ok((await normalized("document.querySelector('#tr').textContent")).includes('3,025.91'));
+  await selectLocale('nl-BE');
+  assert.equal(await evaluate("document.querySelector('#f_a').value"),'2.500,75');
   await evaluate("localStorage.setItem('amigo-locale','invalid'); location.reload()");
-  await until(() => evaluate("document.querySelector('.language-select') !== null"));
-  assert.equal(await evaluate('document.documentElement.lang'),'nl-BE');
+  await until(() => evaluate("document.querySelector('.language-select')?.value === 'en-GB'"));
+  assert.equal(await evaluate('document.documentElement.lang'),'en-GB');
   await command('Page.navigate',{url:origin+'?page=planner'});
   await until(() => evaluate("document.querySelector('.planner-page input') !== null"));
   await evaluate("(() => { const field=document.querySelector('.planner-page input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'Onvoltooide prikker'); field.dispatchEvent(new Event('input',{bubbles:true})); const select=document.querySelector('.language-select'); select.value='nl-BE'; select.dispatchEvent(new Event('change',{bubbles:true})); })()");
   assert.equal(await evaluate("document.querySelector('.planner-page input').value"),'Onvoltooide prikker');
   assert.equal(await evaluate("localStorage.getItem('amigo-locale')"),'nl-BE');
   await evaluate('location.reload()');
-  await until(() => evaluate("document.querySelector('.language-select') !== null"));
+  await until(() => evaluate("document.querySelector('.planner-page input')?.value === '' && document.querySelector('.language-select')?.value === 'nl-BE'"));
   assert.equal(await evaluate("document.querySelector('.language-select').value"),'nl-BE');
-  console.log('PASS: locale selection/persistence, nl-BE in an en-US browser, responsive headers, 10 calculators and both list tools.');
+  await evaluate(`(async () => {
+    const data=await import('/src/data/polls.js');
+    const sessions=await import('/src/data/voterSession.js');
+    const id='cccccccc-1111-4111-8111-111111111111',voter='dddddddd-1111-4111-8111-111111111111';
+    await data.updateLocal(id,row=>{
+      row.base={title:'My own title',description:'My own description',status:'open',organizer:true,organizerVoter:voter,
+        dates:{'2026-12-04':{date:'2026-12-04',time:'18:30'}},votes:{[voter]:{name:'My own name',votesJson:'{"2026-12-04":"yes"}'}}};
+      row.queue=[{operation:'eeeeeeee-1111-4111-8111-111111111111',kind:'ballot',body:{voter,proof:'b'.repeat(64),changes:{'2026-12-04':'yes'}}}];
+      row.notices=[];
+    });
+    sessions.rememberVoterSession(id,{voter,proof:'b'.repeat(64),name:'My own name',organizer:true});
+    localStorage.setItem('amigo-date-view','cards');
+  })()`);
+  await command('Page.navigate',{url:origin+'?poll=cccccccc-1111-4111-8111-111111111111'});
+  await until(()=>evaluate("document.querySelector('.voter-ballot .date-cards [aria-checked=true]') !== null"));
+  const snapshot=await evaluate("import('/src/data/polls.js').then(data=>data.readLocal('cccccccc-1111-4111-8111-111111111111')).then(row=>JSON.stringify({queue:row.queue,base:row.base,session:sessionStorage.getItem('amigo-planner-live-v1:voter:cccccccc-1111-4111-8111-111111111111')}))");
+  await selectLocale('en-GB');
+  assert.equal(await evaluate("document.querySelector('h1').textContent"),'My own title');
+  assert.equal(await evaluate("document.querySelector('.voter-ballot .date-cards [aria-checked=true]').getAttribute('aria-label')"),'✓ Yes');
+  assert.equal(await evaluate("import('/src/data/polls.js').then(data=>data.readLocal('cccccccc-1111-4111-8111-111111111111')).then(row=>JSON.stringify({queue:row.queue,base:row.base,session:sessionStorage.getItem('amigo-planner-live-v1:voter:cccccccc-1111-4111-8111-111111111111')}))"),snapshot);
+  await selectLocale('nl-BE');
+  assert.equal(await evaluate("document.querySelector('.voter-ballot .date-cards [aria-checked=true]').getAttribute('aria-label')"),'✓ Ja');
+  console.log('PASS: English default, EN/NL switching and persistence, both responsive headers, 10 calculators and list tools in both languages, preserved numeric input, votes, sessions and offline queue.');
 } finally {
   socket?.close();
   browser.kill();

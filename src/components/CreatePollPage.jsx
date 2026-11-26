@@ -86,10 +86,10 @@ export default function CreatePollPage({ onCreated }) {
         <fieldset>
           <legend>{t('create.settings')}</legend>
           <div className="planner-fields">
-            <label>{t('common.title')}<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('create.exampleTitle')} />
+            <label className="planner-field"><span className="field-caption">{t('common.title')}</span><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('create.exampleTitle')} />
             </label>
 
-            <label>{t('create.descriptionOptional')}<textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            <label className="planner-field"><span className="field-caption">{t('create.descriptionOptional')}</span><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
             </label>
           </div>
         </fieldset>
@@ -97,8 +97,8 @@ export default function CreatePollPage({ onCreated }) {
         <fieldset>
           <legend>{t('create.organizer')}</legend>
           <div className="planner-fields">
-            <label>{t('create.organizerName')}<input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
-            <label>{t('common.password')}<input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <label className="planner-field"><span className="field-caption">{t('create.organizerName')}</span><input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
+            <label className="planner-field"><span className="field-caption">{t('common.password')}</span><input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </label>
             <label className="participation-choice">
               <input type="checkbox" checked={participating} onChange={e => setParticipating(e.target.checked)} />{t('create.participate')}</label>

@@ -368,8 +368,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     const themeToggle = () => toggle('theme', [['light', 'Licht thema', 'sun'], ['dark', 'Donker thema', 'moon']], state.theme, true);
     const viewToggle = () => toggle('view', [['cards', 'Kaarten', 'cards'], ['calendar', 'Kalender', 'calendar']], state.view, true);
     const shareButton = () => button(icon('share'), 'copy', true, 'aria-label="Overzicht delen"', 'icon-button');
-    const label = (title, value = '', type = 'text', extra = '') => `<label><span class="access-field-caption">${title}</span><input type="${type}" value="${escape(value)}" ${extra}></label>`;
-    const description = () => '<label>Omschrijving<textarea rows="3">Samen eten, bijpraten en het nieuwe jaar plannen.</textarea></label>';
+    const label = (title, value = '', type = 'text', extra = '') => `<label class="planner-field"><span class="access-field-caption field-caption">${title}</span><input type="${type}" value="${escape(value)}" ${extra}></label>`;
+    const description = () => '<label class="planner-field"><span class="field-caption">Omschrijving</span><textarea rows="3">Samen eten, bijpraten en het nieuwe jaar plannen.</textarea></label>';
     const participation = () => '<label class="participation"><input type="checkbox" checked>Zelf meestemmen</label>';
     function segment(title, content, open = true, extra = '') {
       return `<fieldset class="segment ${open ? '' : 'closed'}" ${extra}><legend>${title}</legend>${open ? `<div class="segment-content">${content}</div>` : ''}</fieldset>`;
@@ -483,7 +483,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .segment-content { padding:var(--inset); min-width:0; } .closed { border-inline-color:transparent; border-bottom-color:transparent; }
       .fields { display:grid; gap:16px; min-width:0; } label { display:flex; flex-direction:column; gap:8px; color:var(--muted); font-size:12px; letter-spacing:.05em; text-transform:uppercase; }
       input,textarea { width:100%; min-width:0; min-height:48px; padding:10px 12px; border:1.5px solid var(--ink); border-radius:0; background:var(--surface); color:var(--ink); font-size:16px; line-height:1.4; letter-spacing:normal; text-transform:none; }
-      textarea { resize:none; } .fields>.description { margin:0; } .participation { flex-direction:row; align-items:center; letter-spacing:normal; text-transform:none; color:var(--ink); font-size:14px; }
+      textarea { resize:none; line-height:1.5; } .fields>.description { margin:0; } .participation { flex-direction:row; align-items:center; letter-spacing:normal; text-transform:none; color:var(--ink); font-size:14px; }
+      .planner-field { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto; gap:8px; margin:0; }
+      .planner-field>* { grid-column:1; grid-row:2; } .planner-field>.field-caption { grid-row:1; }
       input[type=checkbox] { appearance:none; width:20px; height:20px; min-height:0; padding:0; flex:none; display:grid; place-items:center; background:#d21f26; border-color:#d21f26; }
       input[type=checkbox]:checked:after { content:'✓'; color:white; font-size:14px; line-height:1; }
       .access-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:16px; }

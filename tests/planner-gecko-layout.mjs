@@ -10,6 +10,7 @@ process.env.VITE_SUPABASE_URL = '';
 process.env.VITE_SUPABASE_PUBLISHABLE_KEY = '';
 const zen = process.argv.includes('--zen');
 const production = process.argv.includes('--production');
+const fieldLocale = process.argv.includes('--english') ? 'en-GB' : 'nl-BE';
 let builtFiles = new Map(), productionForm;
 const executable = process.env.GECKO_PATH || (zen
   ? 'C:\\Program Files\\Zen Browser\\zen.exe'
@@ -32,17 +33,25 @@ const form = `<!doctype html><html><head><script>
 const reportError = event => fetch('/gecko-report', {method:'POST', body:JSON.stringify({errors:[String(event.message || event.reason)]})});
 addEventListener('error', reportError); addEventListener('unhandledrejection', reportError);
 </script><style>* { scroll-behavior:auto!important; }</style></head><body>
-<div id="header"></div><div id="root" class="planner-page"><div id="form"></div></div><script type="module">
+<div id="header"></div><div id="root" class="planner-page"><div id="form"></div></div><div id="create"></div><div class="planner-page form" id="edit"></div><script type="module">
 import React from '/node_modules/.vite/deps/react.js';
 import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';
 import VoterForm from '/src/components/VoterForm.jsx';
 import SiteHeader from '/src/components/SiteHeader.jsx';
+import CreatePollPage from '/src/components/CreatePollPage.jsx';
+import EditPollPanel from '/src/components/EditPollPanel.jsx';
 import '/src/styles.css';
+import { setLocale } from '/src/i18n/index.js';
 const params = new URLSearchParams(location.search);
+setLocale('${fieldLocale}');
 document.documentElement.dataset.theme = params.get('theme');
 ReactDOM.createRoot(document.querySelector('#header')).render(React.createElement(SiteHeader));
 ReactDOM.createRoot(document.querySelector('#form')).render(React.createElement(VoterForm, {
   pollId:'gecko-layout-fixture', dates:{}, participants:{}, loginResults:{}, session:null, onSelect:() => {}
+}));
+ReactDOM.createRoot(document.querySelector('#create')).render(React.createElement(CreatePollPage, {onCreated:()=>{}}));
+ReactDOM.createRoot(document.querySelector('#edit')).render(React.createElement(EditPollPanel, {
+  poll:{title:'Planner',description:'Omschrijving',status:'open',dates:{'2026-11-26':{date:'2026-11-26',time:''}}}, onSave:()=>{}, onCancel:()=>{}
 }));
 await new Promise(resolve => setTimeout(resolve, 1000));
 await document.fonts.ready;
@@ -65,7 +74,7 @@ if (innerWidth > 600) {
 }
 near(button.right, row.getBoundingClientRect().right, 'right edge');
 near(document.querySelector('.language-select').getBoundingClientRect().height, 36, 'language control height');
-if (document.documentElement.lang !== 'nl-BE') errors.push('document language');
+if (document.documentElement.lang !== '${fieldLocale}') errors.push('document language');
 if (document.documentElement.scrollWidth > innerWidth) errors.push('horizontal overflow');
 }
 check('loaded');
@@ -98,6 +107,18 @@ for (const label of row.querySelectorAll('label')) {
 }
 await new Promise(resolve => requestAnimationFrame(resolve));
 check('password-manager host');
+for (const label of document.querySelectorAll('.planner-field')) {
+  const before = label.getBoundingClientRect();
+  const host = document.createElement('span'); host.style.cssText = 'display:block;width:0;height:0';
+  label.append(host);
+  near(label.getBoundingClientRect().height, before.height, 'extension host field height');
+  const textarea = label.querySelector('textarea');
+  if (textarea) {
+    const height = textarea.getBoundingClientRect().height;
+    textarea.style.fontFamily = 'Arial';
+    near(textarea.getBoundingClientRect().height, height, 'textarea font height');
+  }
+}
 await fetch('/gecko-report', {method:'POST', body:JSON.stringify({width:innerWidth, theme:params.get('theme'), errors})});
 </script></body></html>`;
 const reports = [];

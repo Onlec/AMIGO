@@ -141,7 +141,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
       </CollapsibleSegment>
       <div ref={availability} className="voter-availability" data-open={availabilityOpen}>
         <CollapsibleSegment title={t('vote.section')} open={availabilityOpen}>
-          <div className="voter-ballot" role="region" aria-label={t('vote.availability')} tabIndex={availabilityOpen ? 0 : undefined}>
+          <div className="voter-ballot" role="region" aria-label={t('vote.availability')} tabIndex={-1}>
             <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly} />
           </div>
           {signedIn && error && <p role="alert" className="error">{translateMessage(error)}</p>}

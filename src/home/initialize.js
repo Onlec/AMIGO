@@ -1,4 +1,4 @@
-import { t as translate, watchLocale, formatNumber, formatCurrency, parseNumber } from '../i18n/index.js';
+import { t as translate, watchLocale, getLocale, formatNumber, formatCurrency, parseNumber } from '../i18n/index.js';
 import { formatDay } from '../utils/dates.js';
 
 export function initializeHome(root) {
@@ -177,8 +177,13 @@ function route(){var h=location.hash.slice(1),i=-1,k;for(k=0;k<n;k++)if(T[k][3]=
 window.addEventListener('hashchange',route);
 
 render();route();
+let previousLocale = getLocale();
 const stopLocale = watchLocale(() => {
-  const drafts = [...tool.querySelectorAll('input,select,textarea')].map(node => [node.id,node.value]);
+  const drafts = [...tool.querySelectorAll('input,select,textarea')].map(node => {
+    const numeric = node.inputMode === 'decimal' ? parseNumber(node.value, previousLocale) : NaN;
+    return [node.id, Number.isFinite(numeric) ? formatNumber(numeric, {maximumFractionDigits:20}) : node.value];
+  });
+  previousLocale = getLocale();
   T=getTools(); CFG=getConfig(); cur=-1; render(); renderGrid();
   if(lastTool>=0){
     build(lastTool);

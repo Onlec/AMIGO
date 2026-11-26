@@ -49,8 +49,8 @@ export default function EditPollPanel({ poll, initiallyParticipating = false, on
     <section className="organizer-panel">
       <h2>{t('organizer.edit')}</h2>
       <form className="form" onSubmit={submit}>
-        <label>{t('common.title')}<input required value={title} onChange={e => setTitle(e.target.value)} /></label>
-        <label>{t('common.description')}<textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
+        <label className="planner-field"><span className="field-caption">{t('common.title')}</span><input required value={title} onChange={e => setTitle(e.target.value)} /></label>
+        <label className="planner-field"><span className="field-caption">{t('common.description')}</span><textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
         <label className="participation-choice">
           <input type="checkbox" checked={participating} disabled={saving} onChange={e => setParticipating(e.target.checked)} />{t('create.participate')}</label>
         {originalParticipation && !participating && <p className="description">{t('organizer.removeOwnVotes')}</p>}

@@ -46,6 +46,17 @@
 .planner-page .collapsible-segment__content { padding: var(--planner-inset); }
 .planner-page .planner-fields { display: grid; gap: var(--planner-field-gap); min-width: 0; }
 .planner-page .planner-fields > .description { margin: 0; }
+.planner-page .form .planner-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 8px;
+  margin: 0;
+}
+/* Extension hosts share the control track instead of adding another gap. */
+.planner-page .planner-field > * { grid-column: 1; grid-row: 2; }
+.planner-page .planner-field > .field-caption { grid-row: 1; }
+.planner-page .planner-field > :is(input, textarea) { margin: 0; line-height: 1.5; }
 .planner-page .organizer-panel .form { gap: var(--planner-field-gap); margin-top: 0; }
 .planner-page .form .participation-choice { margin-top: 0; }
 .planner-page .form input:not([type='checkbox']),

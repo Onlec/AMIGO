@@ -249,6 +249,8 @@ h2 {
   display: flow-root;
 }
 
+.voter-ballot:focus { outline: none; }
+
 .date-choices__calendar {
   display: flow-root;
 }
@@ -304,6 +306,7 @@ h2 {
 
 .form textarea {
   resize: none;
+  line-height: 1.5;
 }
 
 .form + .poll-results {

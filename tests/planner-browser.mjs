@@ -1,6 +1,8 @@
 // Run with Node.js and Chrome installed: node tests/planner-browser.mjs
 // Uses a local fixture, without connecting to a Supabase database.
 import assert from 'node:assert/strict';
+import { t, setLocale } from '../src/i18n/index.js';
+setLocale('nl-BE');
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -66,6 +68,8 @@ try {
   const poll = 'aaaaaaaa-1111-4111-8111-111111111111';
   await command('Runtime.enable');
   await command('Page.navigate', { url: `${origin}?poll=${poll}` });
+  await until(() => evaluate("document.querySelector('.language-select') !== null"));
+  await evaluate("(() => { const select=document.querySelector('.language-select'); select.value='nl-BE'; select.dispatchEvent(new Event('change',{bubbles:true})); })()");
   await until(() => evaluate("document.body.textContent.includes('Supabase is nog niet ingesteld.')"));
   await evaluate(`(async () => {
     window.fixturePoll = ${JSON.stringify(poll)};
@@ -116,7 +120,7 @@ try {
     action();
   })`);
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.collapsible-segment > legend')].map(node => node.textContent)"),
-    ['01 — Jouw gegevens', '02 — Jouw beschikbaarheid', '03 — Stemmenoverzicht', '04 — Prikker beheren'], 'Login, voting, results and organizer controls have separate numbered segments');
+    ['login.section', 'vote.section', 'results.section', 'organizer.section'].map(key => t(key)), 'Login, voting, results and organizer controls have separate numbered segments');
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Ballot closed before login');
   assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'false', 'Organizer segment is closed before login');
   assert.equal(await evaluate("document.querySelector('.unlock-form legend').getBoundingClientRect().height > 0 && document.querySelector('.unlock-form .collapsible-segment__body').inert"), true, 'Closed organizer segment keeps its title visible and controls inaccessible');
@@ -172,6 +176,8 @@ try {
   assert.ok(loginMotion.some(frame => frame.phase === 'opening' && frame.signedIn === 'true'), 'Availability opens after the swap');
   assert.equal(loginMotion.filter((frame, index) => frame.phase === 'closing' && (index === 0 || loginMotion[index - 1].phase !== 'closing')).length, 1, 'Login result is handled once');
   assert.equal(await evaluate("document.activeElement.classList.contains('voter-ballot')"), true, 'Login restores focus to availability');
+  assert.equal(await evaluate("getComputedStyle(document.activeElement).outlineStyle"), 'none', 'Programmatic availability focus has no surrounding outline');
+  assert.equal(await evaluate("document.activeElement.tabIndex"), -1, 'Availability container is not an extra keyboard tab stop');
   await evaluate("pollData.updateLocal(fixturePoll, row => { row.base.organizer = true; })");
   assert.equal(await evaluate("document.querySelector('.unlock-form button[value=edit]').disabled"), true, 'Normal voter login cannot inherit stale organizer rights');
   assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'false', 'Organizer segment stays closed for a normal voter, including stale server rights');
@@ -404,7 +410,7 @@ try {
   assert.equal(await evaluate("document.querySelector('.unlock-form button').disabled"), false, 'Authorized organizer can edit without reentering a password');
   assert.equal(await evaluate("document.querySelector('.unlock-form .collapsible-segment').dataset.open"), 'true', 'Verified organizer login opens segment four');
   await evaluate("document.querySelector('.unlock-form button').click()");
-  await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === 'Prikker bewerken'"));
+  await until(() => evaluate("document.querySelector('.organizer-panel h2')?.textContent === " + JSON.stringify(t('organizer.edit'))));
   assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Editing stays inside the organizer segment');
   assert.equal(await evaluate("document.querySelector('.organizer-panel fieldset')"), null, 'Editing dates does not nest a second segment inside organizer management');
   assert.equal(await evaluate("document.querySelector('.organizer-panel [role=group][aria-label=\"Mogelijke datums\"] .calendar') !== null"), true, 'Date calendar remains directly available in the organizer editor');
@@ -730,7 +736,7 @@ try {
       row.base = null; row.missing = true; row.queue = [];
     });
   })()`);
-  await until(() => evaluate("document.body.textContent.includes('Deze prikker bestaat niet meer.')"));
+  await until(() => evaluate("document.body.textContent.includes(" + JSON.stringify(t('poll.deleted')) + ")"));
   assert.equal(await evaluate("document.querySelector('.voter-credentials') === null"), true, 'Deleted polls show a clear message and no stale voting form');
   await command('Page.navigate', { url: `${origin}?page=planner` });
   await until(() => evaluate("document.querySelector('.participation-choice input') !== null"));

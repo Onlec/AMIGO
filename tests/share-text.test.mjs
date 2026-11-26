@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildShareText } from '../src/utils/votes.js';
 import { formatProposal } from '../src/utils/dates.js';
+import { setLocale } from '../src/i18n/index.js';
+setLocale('nl-BE');
 
 const url = 'https://example.test/?poll=test';
 const dates = { '2026-11-25': { time: '' }, '2026-11-26': { time: '' } };
@@ -31,4 +33,15 @@ test('final overview remains shareable when nobody has voted', () => {
   assert.ok(text.includes('(0) ✅ gekozen'));
   assert.ok(text.includes('👥 nog niemand'));
   assert.ok(text.endsWith(`👉 Bekijk de einddatum: ${url}`));
+});
+
+test('English sharing translates the summary while preserving user content', () => {
+  setLocale('en-GB');
+  try {
+    const text = buildShareText({ title: 'Mijn eigen titel', status: 'closed', finalDateId: '2026-11-25' }, dates, votes, url);
+    assert.ok(text.startsWith('📅 Mijn eigen titel (1/1 voted)'));
+    assert.ok(text.includes('✅ chosen'));
+    assert.ok(text.includes('👥 mark'));
+    assert.ok(text.endsWith('👉 View the final date: ' + url));
+  } finally { setLocale('nl-BE'); }
 });

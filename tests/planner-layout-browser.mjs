@@ -125,6 +125,29 @@ try {
       if (node.scrollWidth > node.clientWidth + 1) errors.push('segment content overflow');
     }
     const visible = node => node.getBoundingClientRect().height > 0 && !node.closest('.collapsible-segment[data-open=false]');
+    const fieldLabels = [...page.querySelectorAll('.planner-fields > label,.organizer-panel .form > label')]
+      .filter(label => !label.querySelector('input[type=checkbox]') && visible(label));
+    const fieldRects = fieldLabels.map(label => label.getBoundingClientRect());
+    const hosts = fieldLabels.map(label => {
+      const host = document.createElement('span');
+      host.style.cssText = 'display:block;width:0;height:0';
+      label.append(host);
+      return host;
+    });
+    fieldLabels.forEach((label, index) => {
+      near(label.getBoundingClientRect().height, fieldRects[index].height, 'password manager changed field height');
+      near(label.getBoundingClientRect().top, fieldRects[index].top, 'password manager moved following field');
+    });
+    hosts.forEach(host => host.remove());
+    for (const textarea of page.querySelectorAll('textarea')) {
+      if (visible(textarea) && getComputedStyle(textarea).lineHeight === 'normal') errors.push('textarea height depends on font metrics');
+      if (!visible(textarea)) continue;
+      const height = textarea.getBoundingClientRect().height;
+      const family = textarea.style.fontFamily;
+      textarea.style.fontFamily = 'Arial';
+      near(textarea.getBoundingClientRect().height, height, 'textarea height changed with font family');
+      textarea.style.fontFamily = family;
+    }
     const share = page.querySelector('.poll-heading > .copy-button');
     if (share) {
       near(share.getBoundingClientRect().right, frame.getBoundingClientRect().right, 'share/title right edge');
@@ -214,13 +237,16 @@ try {
     return [...new Set(errors)];
   }
   let checked = 0;
+  for (const locale of ['en-GB', 'nl-BE']) {
+  await command('Page.addScriptToEvaluateOnNewDocument', {source: 'localStorage.setItem("amigo-locale",'+JSON.stringify(locale)+')'});
   for (const width of [320, 390, 720, 768, 1440]) {
     await command('Emulation.setDeviceMetricsOverride', { width, height: 950, deviceScaleFactor: 1, mobile: width < 600 });
     for (const theme of ['light', 'dark']) {
       for (const scenario of ['create', 'share', 'guest', 'voter', 'organizer', 'closed', 'edit', 'final']) {
         for (const view of ['voter', 'organizer', 'final'].includes(scenario) ? ['cards', 'calendar'] : ['cards']) {
           await prepare(scenario, view, theme);
-          assert.deepEqual(await run(layoutMetrics), [], JSON.stringify({ width, theme, scenario, view }));
+          assert.equal(await evaluate('document.documentElement.lang'), locale);
+          assert.deepEqual(await run(layoutMetrics), [], JSON.stringify({ locale, width, theme, scenario, view }));
           if (process.argv.includes('--screenshots') && width === 720 && theme === 'light' && scenario === 'guest') {
             const screenshot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
             await writeFile('.tmp-planner-login.png', Buffer.from(screenshot.data, 'base64'));
@@ -237,7 +263,8 @@ try {
       }
     }
   }
-  console.log('PASS: ' + checked + ' real planner layouts, square calendar cells/buttons, complete time/vote content and aligned controls.');
+  }
+  console.log('PASS: ' + checked + ' English/Dutch planner layouts, square calendar cells/buttons, complete time/vote content and aligned controls.');
 } finally {
   socket?.close();
   browser.kill();

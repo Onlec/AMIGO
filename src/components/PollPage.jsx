@@ -172,7 +172,7 @@ export default function PollPage({ pollId, share }) {
           <fieldset>
             <legend>{t('share.link')}</legend>
             <div className="planner-fields">
-              <label>{t('share.link')}<input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
+              <label className="planner-field"><span className="field-caption">{t('share.link')}</span><input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
               <p role="status" className="description">{row.base ? t('share.ready') : t('share.pending')}</p>
               <div className="edit-actions">
                 <CopyButton text={link} label={t('common.copyLink')} secondary />
