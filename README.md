@@ -46,6 +46,18 @@ De eerste migraties blijven als geschiedenis en voor reproduceerbare installatie
 
 `node tests/planner-sql-local.mjs` valideert de volledige migratiereeks en SQL-regressietest in tijdelijke PostgreSQL via PGlite 0.6.0. Deze optionele controle downloadt het vastgelegde pakket uit npm, controleert de integriteit en verwijdert het na afloop; de app krijgt geen extra dependency. Alleen Supabase Auth-context, Realtime-transport en Cron-planning zijn lokaal nagebootst. Voer de SQL-regressie daarnaast met `psql` uit op een gemigreerde Supabase-testdatabase voor controle in de echte omgeving.
 
+### Lokalisatie
+
+De volledige app, inclusief de verborgen tools, gebruikt voorlopig alleen Nederlands (België). De zichtbare **NL**-kiezer staat naast de thematoggle. De taalkeuze volgt een ondersteunde opgeslagen voorkeur, daarna de browsertaal, en anders `nl-BE`. De voorkeur staat apart onder `amigo-locale`; pollgegevens, aanmeldingen en offline opdrachten worden niet gewist of omgezet.
+
+Gebruikersteksten staan in `src/i18n/nl-BE.js`. Gebruik `t('common.save')` voor vaste tekst en benoemde parameters, bijvoorbeeld `t('create.timeForDate', { date })`. Meervouden gebruiken een object met `one` en `other`, gekozen via `Intl.PluralRules`. Ontbrekende teksten vallen terug op Nederlands; een geheel onbekende sleutel of ontbrekende parameter geeft een ontwikkelfout. Namen, beschrijvingen en andere gebruikersinhoud worden niet vertaald.
+
+Om een taal toe te voegen: maak een tekstbestand met dezelfde sleutels, importeer dat in `src/i18n/index.js` en voeg één registratie toe aan `availableLocales` met `code`, `language`, `shortLabel`, `labelKey` en `messages`. Voeg de taalnaam voor `labelKey` ook aan de bestaande tekstbestanden toe. De detectie en beide taalkiezers gebruiken dit register. React volgt wijzigingen via `useLocale`; de bestaande DOM-toolindex ververst zijn teksten en behoudt invoer via dezelfde taalmodule.
+
+Gebruik de gedeelde datumfuncties en `formatNumber`, `formatCurrency` en `parseNumber` voor regionale weergave en invoer. Datums en tijden blijven technisch als `YYYY-MM-DD` en `HH:mm` opgeslagen. Synchronisatiestatussen en nieuwe meldingen gebruiken sleutels en parameters; vertaal ze bij weergave met `translateMessage`. Bestaande opgeslagen tekstmeldingen blijven leesbaar. Bekende RPC-foutteksten worden aan vertaalcodes gekoppeld, zonder databasewijziging; onbekende technische fouten krijgen een algemene gebruikersmelding.
+
+`node --test tests/localization.test.mjs tests/share-text.test.mjs` controleert sleutels, parameters, meervouden, foutmeldingen, Belgische notatie en deelteksten. `node tests/localization-browser.mjs` controleert detectie en voorkeuren, beide headers, tien rekentools en twee lijsttools. De verborgen tools worden alleen in die testserver ingeschakeld; de productieconfiguratie blijft ongewijzigd.
+
 ### Wireframe en toegepaste layout
 
 Open [het losse wireframe](docs/planner-wireframe.html) rechtstreeks in de browser. Het bevat aanmaken, delen, stemmen, bewerken en einddatum kiezen, met instelbare breedte, licht/donker thema, gebruikerssituatie, kaarten/kalender en lange voorbeeldinhoud. Blauwe verticale hulplijnen tonen de randen; afzonderlijk schakelbare oranje horizontale lijnen tonen de rijmiddens en de basislijn van titel/status. Naam en afmeldknop staan gecentreerd naast elkaar, de aanmeldknop sluit aan op het wachtwoordveld en datum en bediening delen een rij. De lettertypen zijn ingesloten; een server of Supabase-verbinding is niet nodig. De bediening gebruikt fictieve gegevens.

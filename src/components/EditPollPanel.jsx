@@ -1,3 +1,5 @@
+import { t, message, translateMessage } from '../i18n/index.js';
+import { errorMessage } from '../i18n/errors.js';
 import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
@@ -30,42 +32,40 @@ export default function EditPollPanel({ poll, initiallyParticipating = false, on
 
   async function submit(event) {
     event.preventDefault();
-    if (!title.trim()) return setError('Geef de prikker een titel.');
-    if (datesLocked && (added.length || removed.length)) return setError('Heropen de poll om datums aan te passen.');
-    if (removed.includes(poll.finalDateId)) return setError('De gekozen einddatum blijft behouden.');
+    if (!title.trim()) return setError(message('validation.titleRequired'));
+    if (datesLocked && (added.length || removed.length)) return setError(message('organizer.reopenForDates'));
+    if (removed.includes(poll.finalDateId)) return setError(message('organizer.keepFinalDate'));
     setSaving(true);
     try {
       if (dirty) await onSave(changes);
       onCancel();
     } catch (err) {
-      setError('Lokaal opslaan mislukt. ' + err.message);
+      setError(message('error.localSave', { detail: errorMessage(err) }));
       setSaving(false);
     }
   }
 
   return (
     <section className="organizer-panel">
-      <h2>Prikker bewerken</h2>
+      <h2>{t('organizer.edit')}</h2>
       <form className="form" onSubmit={submit}>
-        <label>Titel<input required value={title} onChange={e => setTitle(e.target.value)} /></label>
-        <label>Omschrijving<textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
+        <label>{t('common.title')}<input required value={title} onChange={e => setTitle(e.target.value)} /></label>
+        <label>{t('common.description')}<textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
         <label className="participation-choice">
-          <input type="checkbox" checked={participating} disabled={saving} onChange={e => setParticipating(e.target.checked)} />
-          Zelf meestemmen
-        </label>
-        {originalParticipation && !participating && <p className="description">Bij opslaan worden je eigen deelname en stemmen verwijderd.</p>}
-        {datesLocked && <p className="description">De datums zijn vergrendeld omdat er een einddatum gekozen is. Heropen de poll om datums aan te passen.</p>}
-        <div role="group" aria-label="Mogelijke datums">
+          <input type="checkbox" checked={participating} disabled={saving} onChange={e => setParticipating(e.target.checked)} />{t('create.participate')}</label>
+        {originalParticipation && !participating && <p className="description">{t('organizer.removeOwnVotes')}</p>}
+        {datesLocked && <p className="description">{t('organizer.datesLocked')}</p>}
+        <div role="group" aria-label={t('organizer.possibleDates')}>
           <MonthCalendar disabled={saving || datesLocked} initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (
             <button type="button" className={`calendar-day-button ${days.has(day) ? 'is-selected' : ''}`}
               aria-label={formatDay(day)} aria-pressed={days.has(day)} disabled={saving || datesLocked || day === poll.finalDateId}
               onClick={() => toggle(day)}>{number}</button>
           )} />
         </div>
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && <p className="error" role="alert">{translateMessage(error)}</p>}
         <div className="edit-actions">
-          <button type="submit" disabled={saving}>Opslaan</button>
-          <button type="button" className="btn-secondary" disabled={saving} onClick={onCancel}>Annuleren</button>
+          <button type="submit" disabled={saving}>{t('common.save')}</button>
+          <button type="button" className="btn-secondary" disabled={saving} onClick={onCancel}>{t('common.cancel')}</button>
         </div>
       </form>
     </section>

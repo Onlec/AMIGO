@@ -1,8 +1,9 @@
+import { t } from '../i18n/index.js';
 import React from 'react';
 import CopyButton from './CopyButton.jsx';
 import { buildShareText } from '../utils/votes.js';
 
-export default function SharePollButton({ poll, dates, votes, label = 'Stemmenoverzicht delen' }) {
+export default function SharePollButton({ poll, dates, votes, label = t('results.share') }) {
   return (
     <CopyButton text={buildShareText(poll, dates, votes, window.location.href)} label={label} iconOnly
       icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

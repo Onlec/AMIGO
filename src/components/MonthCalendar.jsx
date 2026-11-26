@@ -1,6 +1,7 @@
+import { t } from '../i18n/index.js';
 import React, { useMemo, useState } from 'react';
 
-import { monthHeading, weekdays } from '../utils/dates.js';
+import { formatMonth, getWeekdays } from '../utils/dates.js';
 
 function pad(n) {
   return String(n).padStart(2, '0');
@@ -50,23 +51,23 @@ export default function MonthCalendar({ renderDay, initialMonthFrom, proposedDay
   return (
     <div className="calendar">
       <div className="calendar-header">
-        {arrows && <button type="button" disabled={disabled || monthKey === first} onClick={() => changeMonth(-1)} aria-label="Vorige maand">
+        {arrows && <button type="button" disabled={disabled || monthKey === first} onClick={() => changeMonth(-1)} aria-label={t('calendar.previousMonth')}>
           ‹
         </button>}
         <span className="calendar-title">
-          {monthHeading.format(new Date(year, month, 1, 12))}
+          {formatMonth(new Date(year, month, 1, 12))}
         </span>
-        {arrows && <button type="button" disabled={disabled || monthKey === last} onClick={() => changeMonth(1)} aria-label="Volgende maand">
+        {arrows && <button type="button" disabled={disabled || monthKey === last} onClick={() => changeMonth(1)} aria-label={t('calendar.nextMonth')}>
           ›
         </button>}
       </div>
 
       {proposedDays && <p className="month-status" role="status">
-        {proposedDays.some(day => day.startsWith(monthKey)) ? '' : 'Deze maand zijn er geen voorgestelde datums.'}
+        {proposedDays.some(day => day.startsWith(monthKey)) ? '' : t('calendar.emptyMonth')}
       </p>}
       <div className="calendar-page">
         <div className="calendar-weekdays">
-          {weekdays.map((day) => (
+          {getWeekdays().map((day) => (
             <span key={day}>{day}</span>
           ))}
         </div>

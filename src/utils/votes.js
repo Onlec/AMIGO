@@ -1,14 +1,10 @@
 import { formatProposal } from './dates.js';
+import { t } from '../i18n/index.js';
 
 export const VOTE_ICONS = { yes: '✓', maybe: '?', no: '✗', none: '–' };
 export const VOTE_CYCLE = ['none', 'yes', 'maybe', 'no'];
 
-export const VOTE_LABELS = {
-  none: '–',
-  yes: '✓ Ja',
-  maybe: '? Misschien',
-  no: '✗ Nee',
-};
+export const voteLabel = value => value === 'none' ? '–' : t('vote.' + value);
 
 export function nextVoteValue(current) {
   const idx = VOTE_CYCLE.indexOf(current || 'none');
@@ -49,7 +45,7 @@ export function buildShareText(poll, dates, votes, pollUrl) {
     }
   });
 
-  const headerLine = `📅 ${poll.title} (${votedNames.length}/${voterEntries.length} gestemd)`;
+  const headerLine = t('share.progress', { title: poll.title, voted: votedNames.length, total: voterEntries.length });
 
   const gridLines = dateEntries.map(([dateId, info]) => {
     const valuesForDate = voterEntries.map(([, voter]) => parseVotes(voter.votesJson)[dateId] || 'none');
@@ -57,18 +53,18 @@ export function buildShareText(poll, dates, votes, pollUrl) {
     const yesCount = valuesForDate.filter((value) => value === 'yes').length;
     const isChosen = poll.status === 'closed' && poll.finalDateId === dateId;
     return `${formatProposal(dateId, info.time)}  ${squares} (${yesCount})${
-      isChosen ? ' ✅ gekozen' : ''
+      isChosen ? t('share.chosen') : ''
     }`;
   });
 
   const peopleLine = [
-    `👥 ${votedNames.length > 0 ? votedNames.join(', ') : 'nog niemand'}`,
+    `👥 ${votedNames.length > 0 ? votedNames.join(', ') : t('share.nobody')}`,
     pendingNames.length > 0 ? `(⏳ ${pendingNames.join(', ')})` : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  const linkLine = `👉 ${poll.status === 'closed' ? 'Bekijk de einddatum' : 'Stem mee'}: ${pollUrl}`;
+  const linkLine = `👉 ${t(poll.status === 'closed' ? 'share.final' : 'share.vote')}: ${pollUrl}`;
 
   return [headerLine, '', ...gridLines, '', peopleLine, linkLine].join('\n');
 }

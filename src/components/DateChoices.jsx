@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import MonthCalendar from './MonthCalendar.jsx';
 import SegmentedControl from './SegmentedControl.jsx';
@@ -5,15 +6,15 @@ import { useSegmentTransition } from './CollapsibleSegment.jsx';
 
 import { formatDay, formatTime } from '../utils/dates.js';
 
-const viewOptions = [
+const viewOptions = () => [
   {
-    value: 'cards', label: 'Kaarten',
+    value: 'cards', label: t('view.cards'),
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
     </svg>,
   },
   {
-    value: 'calendar', label: 'Kalender',
+    value: 'calendar', label: t('view.calendar'),
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="5" width="18" height="16" rx="1" /><path d="M3 11h18M8 3v5M16 3v5" />
     </svg>,
@@ -51,7 +52,7 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
       localStorage.setItem('amigo-date-view', next);
       window.dispatchEvent(new Event('amigo-view-change'));
     };
-    if (transitionContent) transitionContent(commit, '[aria-label="Weergave"] [aria-checked="true"]');
+    if (transitionContent) transitionContent(commit, '.date-view-actions [aria-checked="true"]');
     else commit();
   }
 
@@ -60,7 +61,7 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
       <div className="date-choices__toolbar">
         {legend}
         <div className="date-view-actions">
-          <SegmentedControl label="Weergave" options={viewOptions} value={view} onChange={changeView} iconOnly size="small" />
+          <SegmentedControl label={t('view.label')} options={viewOptions()} value={view} onChange={changeView} iconOnly size="small" />
         </div>
       </div>
       {view === 'cards' && cardToolbar}
@@ -72,9 +73,9 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
               renderDay={(day, number) => dates[day] ? renderDay(day, number) : <span className="calendar-day-plain">{number}</span>} />
             {showUnansweredJump && firstUnanswered && (
               <div className="date-view-actions date-jump-actions">
-                <button type="button" className="btn-secondary" aria-label="Ga naar de eerste onbeantwoorde datum" onClick={() =>
+                <button type="button" className="btn-secondary" aria-label={t('view.firstUnanswered')} onClick={() =>
                   setJump({ day: firstUnanswered, count: (jump?.count || 0) + 1 })
-                }>Nog invullen</button>
+                }>{t('view.jump')}</button>
               </div>
             )}
           </div>

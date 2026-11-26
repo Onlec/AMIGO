@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { pendingPolls, readLocal, updateLocal } from './polls.js';
+import { message } from '../i18n/index.js';
+import { errorMessage } from '../i18n/errors.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -7,7 +9,7 @@ const client = url && key ? createClient(url, key) : null;
 let signingIn;
 
 async function connect() {
-  if (!client) throw new Error('Supabase is nog niet ingesteld.');
+  if (!client) throw Object.assign(new Error('Supabase is not configured'), { localizationKey: 'sync.notConfigured' });
   async function ensureSession() {
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
@@ -29,8 +31,8 @@ async function rpc(name, params) {
 const statuses = new Map();
 const events = new EventTarget();
 export function syncStatus(id) { return statuses.get(id) || ''; }
-function status(id, message) {
-  statuses.set(id, message);
+function status(id, key, params = {}) {
+  statuses.set(id, message(key, params));
   events.dispatchEvent(new Event(id));
 }
 export function watchStatus(id, listener) {
@@ -39,13 +41,13 @@ export function watchStatus(id, listener) {
 }
 
 const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { signIn: 'Aanmelden', lockOrganizer: 'Afmelden als organisator', ballot: 'Stem opslaan',
-  createPoll: 'Aanmaken', edit: 'Prikker bewerken', close: 'Datum bevestigen', reopen: 'Poll heropenen',
-  removeVoter: 'Deelnemer verwijderen' };
+const labels = { signIn: 'login.signIn', lockOrganizer: 'operation.logout', ballot: 'operation.ballot',
+  createPoll: 'common.create', edit: 'organizer.edit', close: 'operation.close', reopen: 'operation.reopen',
+  removeVoter: 'operation.removeVoter' };
 
 async function synchronize(id) {
-  if (!supportedId.test(id)) return status(id, 'Prikker niet gevonden.');
-  if (!navigator.onLine) return status(id, 'Offline');
+  if (!supportedId.test(id)) return status(id, 'sync.missing');
+  if (!navigator.onLine) return status(id, 'sync.offline');
   await connect();
   let row = await readLocal(id);
   while (row?.queue.length) {
@@ -66,7 +68,8 @@ async function synchronize(id) {
       }
     } catch (error) {
       if (!['P0001','23503','23505','23514','23502','22007','22P02'].includes(error.code)) throw error;
-      rejection = (labels[command.kind] || 'Wijziging') + (command.body.day ? ' (' + command.body.day + ')' : '') + ': ' + error.message;
+      rejection = message('sync.rejection', { operation: message(labels[command.kind] || 'common.change'),
+        date: command.body.day ? ' (' + command.body.day + ')' : '', detail: errorMessage(error) });
     }
     // Keep the command until both its receipt and the new snapshot can be read.
     const base = await rpc('amigo_read', { p: id });
@@ -83,7 +86,7 @@ async function synchronize(id) {
   }
   const base = await rpc('amigo_read', { p: id });
   await updateLocal(id, current => { current.base = base; current.missing = base === null; });
-  status(id, base ? 'Gesynchroniseerd' : 'Prikker niet gevonden.');
+  status(id, base ? 'sync.synced' : 'sync.missing');
 }
 
 const running = new Map();
@@ -100,7 +103,7 @@ export function sync(id) {
   };
   job.promise = Promise.resolve().then(() => navigator.locks
     ? navigator.locks.request('amigo-sync-' + id, work) : work())
-    .catch(error => status(id, client ? 'Synchronisatie uitgesteld. ' + error.message : error.message))
+    .catch(error => status(id, client ? 'sync.deferred' : 'sync.notConfigured', { detail: errorMessage(error) }))
     .finally(() => running.delete(id));
   return job.promise;
 }
@@ -111,7 +114,7 @@ export function follow(id) {
   let joining = false;
   async function refresh() {
     await sync(id);
-    if (stopped || joining || subscription || !client || syncStatus(id) !== 'Gesynchroniseerd') return;
+    if (stopped || joining || subscription || !client || syncStatus(id)?.key !== 'sync.synced') return;
     joining = true;
     try {
       await client.realtime.setAuth();
@@ -119,7 +122,7 @@ export function follow(id) {
       subscription = client.channel('amigo:' + id, { config: { private: true } })
         .on('broadcast', { event: 'changed' }, () => sync(id))
         .subscribe(state => { if (state === 'SUBSCRIBED') sync(id); });
-    } catch (error) { status(id, 'Liveverbinding uitgesteld. ' + error.message); }
+    } catch (error) { status(id, 'sync.liveDeferred', { detail: errorMessage(error) }); }
     finally { joining = false; }
   }
   refresh();

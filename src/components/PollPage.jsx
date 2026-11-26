@@ -1,3 +1,5 @@
+import { t, message, translateMessage } from '../i18n/index.js';
+import { errorMessage } from '../i18n/errors.js';
 import { formatProposal } from '../utils/dates.js';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
@@ -27,7 +29,7 @@ export default function PollPage({ pollId, share }) {
         const next = await readLocal(pollId);
         if (live) setRow(next);
       } catch (err) {
-        if (live) setStorageError('Lokale opslag is niet beschikbaar. ' + err.message);
+        if (live) setStorageError(message('error.localStorage', { detail: errorMessage(err) }));
       }
     }
     const stopLocal = watchPoll(pollId, refresh);
@@ -110,7 +112,7 @@ export default function PollPage({ pollId, share }) {
       setMode('view');
       if (organizerAuthorized || editing) {
         setOrganizerSignedOut(true);
-        enqueue(pollId, 'lockOrganizer', {}).catch(err => setStorageError('Afmelden kon niet worden bewaard. ' + err.message));
+        enqueue(pollId, 'lockOrganizer', {}).catch(err => setStorageError(message('error.logout', { detail: errorMessage(err) })));
       }
     }
   }, [pollId, organizerAuthorized, editing]);
@@ -150,31 +152,31 @@ export default function PollPage({ pollId, share }) {
   }
 
   function save(kind, body) {
-    enqueue(pollId, kind, body).catch(err => setStorageError('Lokaal opslaan mislukt. ' + err.message));
+    enqueue(pollId, kind, body).catch(err => setStorageError(message('error.localSave', { detail: errorMessage(err) })));
   }
 
   const notices = row?.notices || [];
   if (!poll) {
-    const message = row?.missing ? 'Deze prikker bestaat niet meer. Inactieve prikkers worden na 14 dagen verwijderd.'
-      : status === 'Offline' ? 'Deze prikker is nog niet op dit toestel bewaard. Open de link eerst online.' : status;
-    return <div className="page" role="status">{storageError || notices.at(-1) || message || 'Prikker laden…'}</div>;
+    const statusText = row?.missing ? t('poll.deleted')
+      : status?.key === 'sync.offline' ? t('poll.notCached') : translateMessage(status);
+    return <div className="page" role="status">{translateMessage(storageError || notices.at(-1)) || statusText || t('poll.loading')}</div>;
   }
 
   if (share) {
     const link = new URL('?poll=' + pollId, window.location.href).href;
     return (
       <main className="page planner-page">
-        <h1>Deel je datumprikker</h1>
+        <h1>{t('share.heading')}</h1>
         <p>{poll.title}</p>
         <div className="form">
           <fieldset>
-            <legend>Stemlink</legend>
+            <legend>{t('share.link')}</legend>
             <div className="planner-fields">
-              <label>Stemlink<input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
-              <p role="status" className="description">{row.base ? 'Klaar om te delen.' : 'Lokaal bewaard. Anderen kunnen de link openen na synchronisatie.'}</p>
+              <label>{t('share.link')}<input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
+              <p role="status" className="description">{row.base ? t('share.ready') : t('share.pending')}</p>
               <div className="edit-actions">
-                <CopyButton text={link} label="Link kopiëren" secondary />
-                <a className="btn" href={link}>Open prikker</a>
+                <CopyButton text={link} label={t('common.copyLink')} secondary />
+                <a className="btn" href={link}>{t('share.openPoll')}</a>
               </div>
             </div>
           </fieldset>
@@ -190,25 +192,25 @@ export default function PollPage({ pollId, share }) {
 
   return (
     <div ref={pageRef} className="page planner-page">
-      <div className="lab eyebrow">AMIGO / STEMMEN</div>
+      <div className="lab eyebrow">{t('poll.eyebrow')}</div>
       <div className="poll-heading">
         <h1>{poll.title}</h1>
         <p role="status" className="description poll-heading__status">
           {row.queue.some(item => ['create', 'createPoll'].includes(item.kind))
-            ? 'Lokaal bewaard. Anderen kunnen de link openen na de eerste synchronisatie.'
-            : row.queue.length ? 'Wijzigingen lokaal bewaard.' : ''}
-          {' '}{row.queue.length && status === 'Gesynchroniseerd' ? '' : status}
+            ? t('sync.createPending')
+            : row.queue.length ? t('sync.changesPending') : ''}
+          {' '}{row.queue.length && status?.key === 'sync.synced' ? '' : translateMessage(status)}
         </p>
       </div>
-      {storageError && <p role="alert" className="error">{storageError}</p>}
-      {notices.map((notice, index) => <p className="error" key={index}>Wijziging afgewezen — {notice}</p>)}
+      {storageError && <p role="alert" className="error">{translateMessage(storageError)}</p>}
+      {notices.map((notice, index) => <p className="error" key={index}>{t('poll.rejected', { detail: translateMessage(notice) })}</p>)}
       {poll.description && <p className="description">{poll.description}</p>}
 
       {poll.status === 'closed' && finalDate && !['saving', 'waiting'].includes(celebration?.phase) && (
         <div className="final-date-block">
           {celebration?.phase === 'revealed' && <Confetti key={celebration.operation} originRef={finalDateRef} />}
           <p ref={finalDateRef} tabIndex={-1} className={'final-date' + (celebration?.phase === 'revealed' ? ' final-date--reveal' : '')}>
-            Gekozen datum: {formatProposal(finalDate.date, finalDate.time, true)}
+            {t('poll.finalDate', { date: formatProposal(finalDate.date, finalDate.time, true) })}
           </p>
         </div>
       )}
@@ -217,11 +219,11 @@ export default function PollPage({ pollId, share }) {
         session={session} onSelect={selectVoter} votingOpen={showBallot} readOnly={editing} />
 
       <div className="form poll-results">
-        <CollapsibleSegment title="03 — Stemmenoverzicht" open={hasDates && hasVoters}>
+        <CollapsibleSegment title={t('results.section')} open={hasDates && hasVoters}>
           <div className="poll-results-actions">
             <SharePollButton poll={poll} dates={dates} votes={votes} />
           </div>
-          <div className="vote-grid-scroll" role="region" aria-label="Stemmenoverzicht" tabIndex={0}>
+          <div className="vote-grid-scroll" role="region" aria-label={t('results.heading')} tabIndex={0}>
             <VoteGrid
               dates={dates}
               votes={votes}
@@ -250,7 +252,7 @@ export default function PollPage({ pollId, share }) {
 
       <div className="share-hint">
         <p><code>{window.location.href}</code></p>
-        <CopyButton text={window.location.href} label="Link kopiëren" secondary />
+        <CopyButton text={window.location.href} label={t('common.copyLink')} secondary />
       </div>
     </div>
   );

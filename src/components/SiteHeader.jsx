@@ -1,5 +1,7 @@
+import { t } from '../i18n/index.js';
 import React from 'react';
 import ThemeToggle from './ThemeToggle.jsx';
+import LanguageSelect from './LanguageSelect.jsx';
 import { PLANNER_ONLY } from '../config.js';
 
 // Enkel gebruikt op de planner-/stempagina's: de homepage (HomePage.jsx)
@@ -11,9 +13,10 @@ export default function SiteHeader() {
         <a className="logo" href="?">
           AMIGO
         </a>
-        <nav aria-label="Hoofdmenu">
-          {!PLANNER_ONLY && <a href="?">Index</a>}
-          <a href="?page=planner">Nieuwe prikker</a>
+        <nav aria-label={t('nav.main')}>
+          {!PLANNER_ONLY && <a href="?">{t('nav.index')}</a>}
+          <a href="?page=planner">{t('nav.newPoll')}</a>
+          <LanguageSelect />
           <ThemeToggle />
         </nav>
       </div>

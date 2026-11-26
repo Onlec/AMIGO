@@ -1,3 +1,5 @@
+import { t, message, translateMessage } from '../i18n/index.js';
+import { errorMessage } from '../i18n/errors.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { enqueue } from '../data/polls.js';
 import { ballotStorageKey, voterSession } from '../data/voterSession.js';
@@ -66,9 +68,9 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
     event.preventDefault();
     if (locked) return;
     setError('');
-    if (!navigator.onLine) return setError('Ga online om je aan te melden.');
-    if (!name.trim()) return setError('Vul je naam in.');
-    if (!password) return setError('Vul je wachtwoord in.');
+    if (!navigator.onLine) return setError(message('login.onlineRequired'));
+    if (!name.trim()) return setError(message('validation.nameRequired'));
+    if (!password) return setError(message('validation.passwordRequired'));
     setBusy(true);
     try {
       const credentials = await voterSession(pollId, id || crypto.randomUUID(), password);
@@ -80,7 +82,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
       sessionStorage.setItem(storageKey, JSON.stringify(receipt));
       setSubmission(receipt);
     } catch (err) {
-      setError('Aanmelden mislukt. ' + err.message);
+      setError(message('error.login', { detail: errorMessage(err) }));
     } finally {
       setBusy(false);
     }
@@ -96,7 +98,7 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
         changes: { [day]: value },
       });
     } catch (err) {
-      setError('Stem bewaren mislukt. Probeer opnieuw. ' + err.message);
+      setError(message('error.vote', { detail: errorMessage(err) }));
     } finally {
       setSaving(count => count - 1);
     }
@@ -104,22 +106,22 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
 
   return (
     <div className="form">
-      <CollapsibleSegment ref={segment} title="01 — Jouw gegevens" open={active}>
+      <CollapsibleSegment ref={segment} title={t('login.section')} open={active}>
         <form onSubmit={signIn} aria-busy={locked || undefined}>
           <fieldset className="voter-credentials" disabled={busy}>
             <div className={'access-row' + (!signedIn ? ' access-row--login' : '')}>
               <div className="access-fields">
                 {signedIn ? (
-                  <p>Aangemeld als <strong>{activePerson?.name || session.name}</strong>{session.organizer ? ' (organisator)' : ''}.</p>
+                  <p>{t('login.signedIn')}{' '}<strong>{activePerson?.name || session.name}</strong>{session.organizer ? t('login.organizerSuffix') : ''}.</p>
                 ) : (
                   <>
-                    <label><span className="access-field-caption">Naam</span><input value={name} required disabled={locked} onChange={e => {
+                    <label><span className="access-field-caption">{t('common.name')}</span><input value={name} required disabled={locked} onChange={e => {
                       setName(e.target.value);
                       setPassword('');
                       setError('');
                       clearSubmission();
                     }} /></label>
-                    <label><span className="access-field-caption">Wachtwoord</span>
+                    <label><span className="access-field-caption">{t('common.password')}</span>
                       <input type="password" value={password} required disabled={locked}
                         autoComplete="current-password"
                         onChange={e => { setPassword(e.target.value); setError(''); clearSubmission(); }} />
@@ -128,22 +130,22 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
                 )}
               </div>
               <div className="edit-actions access-actions">
-                {!signedIn && <button type="submit" disabled={locked}>{locked ? 'Aanmelden…' : 'Aanmelden'}</button>}
-                {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>Afmelden</button>}
+                {!signedIn && <button type="submit" disabled={locked}>{locked ? t('login.signingIn') : t('login.signIn')}</button>}
+                {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>{t('login.signOut')}</button>}
               </div>
             </div>
-            {outcome?.rejection && <p role="alert" className="error">{outcome.rejection}</p>}
+            {outcome?.rejection && <p role="alert" className="error">{translateMessage(outcome.rejection)}</p>}
           </fieldset>
         </form>
-        {!signedIn && error && <p role="alert" className="error">{error}</p>}
+        {!signedIn && error && <p role="alert" className="error">{translateMessage(error)}</p>}
       </CollapsibleSegment>
       <div ref={availability} className="voter-availability" data-open={availabilityOpen}>
-        <CollapsibleSegment title="02 — Jouw beschikbaarheid" open={availabilityOpen}>
-          <div className="voter-ballot" role="region" aria-label="Jouw beschikbaarheid" tabIndex={availabilityOpen ? 0 : undefined}>
+        <CollapsibleSegment title={t('vote.section')} open={availabilityOpen}>
+          <div className="voter-ballot" role="region" aria-label={t('vote.availability')} tabIndex={availabilityOpen ? 0 : undefined}>
             <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly} />
-            <p className="description" role="status">{saving > 0 ? 'Stem bewaren…' : 'Je keuzes worden automatisch opgeslagen.'}</p>
+            <p className="description" role="status">{saving > 0 ? t('vote.saving') : t('vote.autoSave')}</p>
           </div>
-          {signedIn && error && <p role="alert" className="error">{error}</p>}
+          {signedIn && error && <p role="alert" className="error">{translateMessage(error)}</p>}
         </CollapsibleSegment>
       </div>
     </div>

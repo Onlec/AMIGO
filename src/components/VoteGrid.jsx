@@ -1,6 +1,7 @@
+import { t } from '../i18n/index.js';
 import { formatProposal } from '../utils/dates.js';
 import React from 'react';
-import { VOTE_LABELS, VOTE_ICONS, parseVotes } from '../utils/votes.js';
+import { voteLabel, VOTE_ICONS, parseVotes } from '../utils/votes.js';
 
 function sortDateEntries(dates) {
   return Object.entries(dates).sort(([a], [b]) => a.localeCompare(b));
@@ -17,11 +18,11 @@ export default function VoteGrid({ dates, votes, currentVoterId, finalDateId, ca
     <table className="vote-grid">
       <thead>
         <tr>
-          <th>Naam</th>
+          <th>{t('common.name')}</th>
           {dateEntries.map(([dateId, info]) => (
             <th key={dateId} scope="col" className={dateId === finalDateId ? 'chosen-column' : undefined}>
               {formatProposal(info.date, info.time)}
-              {dateId === finalDateId && <strong className="chosen-label">Einddatum</strong>}
+              {dateId === finalDateId && <strong className="chosen-label">{t('results.finalDate')}</strong>}
             </th>
           ))}
           {canManage && <th />}
@@ -35,11 +36,11 @@ export default function VoteGrid({ dates, votes, currentVoterId, finalDateId, ca
             <tr key={voterId} className={isMe ? 'my-row' : ''}>
               <td>
                 {voter.name}
-                {isMe ? ' (jij)' : ''}
+                {isMe ? t('results.you') : ''}
               </td>
               {dateEntries.map(([dateId]) => {
                 const value = myVotes[dateId] || 'none';
-                const label = value === 'none' ? 'Onbeantwoord' : VOTE_LABELS[value];
+                const label = value === 'none' ? t('vote.unanswered') : voteLabel(value);
                 return <td key={dateId} className={dateId === finalDateId ? 'chosen-column' : undefined}>
                   <span role="img" aria-label={label} title={label}>{VOTE_ICONS[value]}</span>
                 </td>;
@@ -50,7 +51,7 @@ export default function VoteGrid({ dates, votes, currentVoterId, finalDateId, ca
                     type="button"
                     className="btn-danger"
                     onClick={() => onRemoveVoter(voterId)}
-                    aria-label={`Verwijder ${voter.name}`}
+                    aria-label={t('results.removeVoter', { name: voter.name })}
                   >
                     ✕
                   </button>

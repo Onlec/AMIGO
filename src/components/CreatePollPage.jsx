@@ -1,3 +1,5 @@
+import { t, message, translateMessage } from '../i18n/index.js';
+import { errorMessage } from '../i18n/errors.js';
 import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
 import { enqueue } from '../data/polls.js';
@@ -39,10 +41,10 @@ export default function CreatePollPage({ onCreated }) {
   }
 
   function validate() {
-    if (!title.trim()) return 'Geef de prikker een titel.';
-    if (!organizerName.trim()) return 'Vul je naam als organisator in.';
-    if (!password) return 'Kies een wachtwoord voor jezelf als organisator.';
-    if (Object.keys(selectedDates).length < 2) return 'Selecteer minstens 2 datums in de kalender.';
+    if (!title.trim()) return message('validation.titleRequired');
+    if (!organizerName.trim()) return message('validation.organizerRequired');
+    if (!password) return message('validation.organizerPassword');
+    if (Object.keys(selectedDates).length < 2) return message('validation.twoDates');
     return '';
   }
 
@@ -69,7 +71,7 @@ export default function CreatePollPage({ onCreated }) {
       const link = new URL('?poll=' + pollId, window.location.href).href;
       onCreated(pollId, link);
     } catch (err) {
-      setError('Lokaal opslaan mislukt. ' + err.message);
+      setError(message('error.localSave', { detail: errorMessage(err) }));
       setSubmitting(false);
     }
   }
@@ -78,41 +80,33 @@ export default function CreatePollPage({ onCreated }) {
 
   return (
     <div className="page planner-page">
-      <div className="lab eyebrow">AMIGO / PLANNER</div>
-      <h1>Nieuwe datumprikker</h1>
+      <div className="lab eyebrow">{t('create.eyebrow')}</div>
+      <h1>{t('create.heading')}</h1>
       <form onSubmit={handleSubmit} className="form">
         <fieldset>
-          <legend>01 — Prikker instellen</legend>
+          <legend>{t('create.settings')}</legend>
           <div className="planner-fields">
-            <label>
-              Titel
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Teamuitje december" />
+            <label>{t('common.title')}<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('create.exampleTitle')} />
             </label>
 
-            <label>
-              Omschrijving (optioneel)
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            <label>{t('create.descriptionOptional')}<textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
             </label>
           </div>
         </fieldset>
 
         <fieldset>
-          <legend>02 — Organisator</legend>
+          <legend>{t('create.organizer')}</legend>
           <div className="planner-fields">
-            <label>Naam organisator<input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
-            <label>
-              Wachtwoord
-              <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <label>{t('create.organizerName')}<input value={organizerName} onChange={e => setOrganizerName(e.target.value)} /></label>
+            <label>{t('common.password')}<input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </label>
             <label className="participation-choice">
-              <input type="checkbox" checked={participating} onChange={e => setParticipating(e.target.checked)} />
-              Zelf meestemmen
-            </label>
+              <input type="checkbox" checked={participating} onChange={e => setParticipating(e.target.checked)} />{t('create.participate')}</label>
           </div>
         </fieldset>
 
         <fieldset>
-          <legend>03 — Mogelijke datums</legend>
+          <legend>{t('create.dates')}</legend>
 
           <MonthCalendar
             renderDay={(dateKey, dayNum) => (
@@ -130,18 +124,18 @@ export default function CreatePollPage({ onCreated }) {
           {sortedSelectedDates.length > 0 && (
             <>
               <p className="selected-dates-label">
-                Geselecteerd ({sortedSelectedDates.length}) — optioneel een tijdstip per datum:
+                {t('create.selectedDates', { count: sortedSelectedDates.length })}
               </p>
               {sortedSelectedDates.map(([dateKey, info]) => (
                 <div key={dateKey} className="date-row">
                   <span>{formatDay(dateKey)}</span>
                   <input
                     type="time"
-                    aria-label={`Tijdstip voor ${formatDay(dateKey)}`}
+                    aria-label={t('create.timeForDate', { date: formatDay(dateKey) })}
                     value={info.time}
                     onChange={(e) => updateTime(dateKey, e.target.value)}
                   />
-                  <button type="button" className="btn-danger" onClick={() => removeDate(dateKey)} aria-label="Verwijder datum">
+                  <button type="button" className="btn-danger" onClick={() => removeDate(dateKey)} aria-label={t('create.removeDate')}>
                     ✕
                   </button>
                 </div>
@@ -150,11 +144,11 @@ export default function CreatePollPage({ onCreated }) {
           )}
         </fieldset>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error">{translateMessage(error)}</p>}
 
         <div className="edit-actions planner-page-actions">
           <button type="submit" disabled={submitting}>
-            {submitting ? 'Bezig...' : 'Aanmaken'}
+            {submitting ? t('common.creating') : t('common.create')}
           </button>
         </div>
       </form>

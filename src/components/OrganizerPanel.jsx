@@ -1,3 +1,5 @@
+import { t, message, translateMessage } from '../i18n/index.js';
+import { errorMessage } from '../i18n/errors.js';
 import { formatDay, formatTime, formatProposal } from '../utils/dates.js';
 import React, { useMemo, useState } from 'react';
 import DateChoices from './DateChoices.jsx';
@@ -38,36 +40,36 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
       await onConfirm(selectedDateId);
       onCancel();
     } catch (err) {
-      setError('Lokaal opslaan mislukt. ' + err.message);
+      setError(message('error.localSave', { detail: errorMessage(err) }));
       setSaving(false);
     }
   }
 
   return (
     <section className="organizer-panel organizer-panel--final">
-      <h2>{finalDateId ? 'Einddatum wijzigen' : 'Einddatum kiezen'}</h2>
+      <h2>{finalDateId ? t('organizer.changeFinal') : t('organizer.chooseFinal')}</h2>
       <DateChoices dates={dates} cardOrder={cardOrder} cardToolbar={
         <div className="organizer-card-sort">
-          <span>Sorteer kaarten</span>
-          <SegmentedControl label="Sorteer kaarten" size="small" value={sort} onChange={setSort}
-            options={[{ value: 'date', label: 'Datum' }, { value: 'attendance', label: 'Meeste ja' }]} />
+          <span>{t('organizer.sort')}</span>
+          <SegmentedControl label={t('organizer.sort')} size="small" value={sort} onChange={setSort}
+            options={[{ value: 'date', label: t('common.date') }, { value: 'attendance', label: t('organizer.mostYes') }]} />
         </div>
       } renderCard={day => (
           <button type="button" aria-pressed={day === selectedDateId} onClick={() => setSelectedDateId(day)}>
-            {day === selectedDateId ? 'Gekozen' : 'Selecteren'}
+            {day === selectedDateId ? t('common.selected') : t('common.select')}
           </button>
-      )} renderCardMeta={day => <span>{tally[day].yes} ja, {tally[day].maybe} misschien, {tally[day].no} nee</span>} renderDay={(day, number) => (
+      )} renderCardMeta={day => <span>{t('organizer.tally', tally[day])}</span>} renderDay={(day, number) => (
         <button type="button" aria-label={formatDay(day)} aria-pressed={day === selectedDateId}
           className={'calendar-day-button ' + (day === selectedDateId ? 'is-selected' : '')}
           onClick={() => setSelectedDateId(day)}>
           {number}<small>{formatTime(dates[day].time)}</small>
         </button>
       )} />
-      {selected && <p role="status">{formatProposal(selected.date, selected.time)} — {counts.yes} ja, {counts.maybe} misschien, {counts.no} nee</p>}
-      {error && <p className="error" role="alert">{error}</p>}
+      {selected && <p role="status">{formatProposal(selected.date, selected.time)} — {t('organizer.tally', counts)}</p>}
+      {error && <p className="error" role="alert">{translateMessage(error)}</p>}
       <div className="edit-actions">
-        <button type="button" onClick={handleConfirm} disabled={!selected || selectedDateId === finalDateId || saving}>Bevestigen</button>
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>Annuleren</button>
+        <button type="button" onClick={handleConfirm} disabled={!selected || selectedDateId === finalDateId || saving}>{t('common.confirm')}</button>
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>{t('common.cancel')}</button>
       </div>
     </section>
   );
