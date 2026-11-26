@@ -343,7 +343,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <div class="stage"><iframe id="preview" title="Wireframe van de datumprikker"></iframe></div>
     <div class="notes">
       <section class="note"><h2>A · Buitenlijn</h2><p>Logo, titel en segmentkaders beginnen op dezelfde lijn. Header en pagina delen een breedte van maximaal 760 px.</p></section>
-      <section class="note"><h2>B · Horizontale lijnen</h2><p>Segmenttitels volgen de linkerrand van de inhoud. Op brede schermen staan naam, wachtwoord en aanmelden op één rij. Op mobiel staan de velden onder elkaar over de volle breedte, met de knop eronder rechts. De deelknop staat rechts naast de polltitel; de synchronisatiestatus staat onder de stemtabel.</p></section>
+      <section class="note"><h2>B · Uitlijning</h2><p>Header, eyebrow, titel, beschrijving en deelknop volgen dezelfde binnenranden als de segmentinhoud. De kaders staan iets verder naar buiten. Op brede schermen staan naam, wachtwoord en aanmelden op één rij. Op mobiel krijgen de velden de volle breedte, met de knop eronder rechts. De synchronisatiestatus staat onder de stemtabel.</p></section>
       <section class="note"><h2>Ritme</h2><p>24 px tussen segmenten, 16 px tussen velden, 8 px tussen label en veld en 12 px tussen kaarten en knoppen. De pagina groeit mee; alleen de tabel scrolt horizontaal.</p></section>
     </div>
   </main>
@@ -469,13 +469,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,.table-scroll:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
       svg { width:18px; height:18px; flex:none; } a { color:inherit; }
       .top { border-bottom:2px solid var(--ink); } .wrap,.page { width:100%; max-width:760px; padding-inline:var(--gutter); margin-inline:auto; }
-      .top .wrap { min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+      .top .wrap { min-height:60px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding-block:8px; padding-inline:calc(var(--gutter) + var(--inset) + 1.5px); }
       .logo { font:600 20px Sora,sans-serif; letter-spacing:.12em; text-decoration:none; }
-      nav { display:flex; align-items:center; gap:12px; } nav>a { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; text-decoration:none; }
+      nav { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; margin-inline-start:auto; } nav>a { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; text-decoration:none; }
       .page { padding-block:32px 48px; } .eyebrow { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
       h1 { font:700 34px/1.15 'Space Grotesk',sans-serif; letter-spacing:-.01em; overflow-wrap:anywhere; margin:8px 0 16px; }
       h2 { font:600 14px/1.4 'Space Grotesk',sans-serif; text-transform:uppercase; letter-spacing:.06em; margin:0 0 16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
       p { margin:0; } .description,.status { color:var(--muted); font-size:14px; } .description { margin-bottom:16px; }
+      .page>:is(.eyebrow,h1,.poll-heading,p) { margin-inline:calc(var(--inset) + 1.5px); }
       .poll-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:16px; margin:8px 0 16px; }
       .poll-heading h1 { margin:0; } .poll-heading>.icon-button { margin-top:2px; } .status { text-align:right; font-size:12px; margin-top:12px; }
       .segments { display:grid; gap:24px; margin-top:24px; } .segment { min-width:0; margin:0; padding:0; border:1.5px solid var(--ink); }

@@ -82,6 +82,7 @@ try {
               const logo = doc.querySelector('.logo').getBoundingClientRect();
               const nav = doc.querySelector('nav').getBoundingClientRect();
               const segment = doc.querySelector('.segments > .segment').getBoundingClientRect();
+              const inset = parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--inset')) + 1.5;
               const content = [...doc.querySelectorAll('.segment-content')];
               const status = doc.querySelector('.status');
               const buttons = [...doc.querySelectorAll('.actions')].map(row => [...row.children].map(button => button.getBoundingClientRect()));
@@ -107,7 +108,7 @@ try {
               }
               const table = doc.querySelector('.table-scroll');
               const share = doc.querySelector('.poll-heading>.icon-button');
-              if (share && (Math.abs(share.getBoundingClientRect().right - segment.right) > 1
+              if (share && (Math.abs(share.getBoundingClientRect().right - segment.right + inset) > 1
                   || Math.abs(share.getBoundingClientRect().top - title.top - 2) > 1)) horizontal.push({name:'share/title position'});
               if (status && (!table || status.getBoundingClientRect().top < table.getBoundingClientRect().bottom + 11
                   || status.closest('.segment') !== table.closest('.segment'))) horizontal.push({name:'status below table'});
@@ -124,7 +125,7 @@ try {
               }
               return {
                 overflow: doc.documentElement.scrollWidth > doc.documentElement.clientWidth + 1,
-                aligned: Math.abs(title.left-logo.left) < 1 && Math.abs(title.left-segment.left) < 1 && Math.abs(nav.right-segment.right) < 1,
+                aligned: Math.abs(title.left-logo.left) < 1 && Math.abs(title.left-segment.left-inset) < 1 && Math.abs(nav.right-segment.right+inset) < 1,
                 clipped: content.some(node => node.scrollWidth > node.clientWidth + 1),
                 overlap: buttons.some(row => row.some((a, index) => row.slice(index + 1).some(b => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top))),
                 internalScroll: [...doc.querySelectorAll('.calendar,.cards')].some(node => node.scrollHeight > node.clientHeight + 1),

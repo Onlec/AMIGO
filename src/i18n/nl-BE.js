@@ -53,7 +53,7 @@ export default {
   'error.login': 'Aanmelden mislukt. {detail}',
   'error.vote': 'Stem bewaren mislukt. Probeer opnieuw. {detail}',
   'error.generic': 'Er ging iets mis. Probeer opnieuw.',
-  'login.section': '01 — Jouw gegevens',
+  'login.section': '01 — Gegevens',
   'login.signedIn': 'Aangemeld als',
   'login.organizerSuffix': ' (organisator)',
   'login.signIn': 'Aanmelden',

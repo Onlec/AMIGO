@@ -117,8 +117,13 @@ try {
     }
     near(title.getBoundingClientRect().left, logo.getBoundingClientRect().left, 'title/logo left');
     if (frame) {
-      near(frame.getBoundingClientRect().left, title.getBoundingClientRect().left, 'segment/title left');
-      near(frame.getBoundingClientRect().right, nav.getBoundingClientRect().right, 'segment/header right');
+      const inset = parseFloat(getComputedStyle(page).getPropertyValue('--planner-inset')) + 1.5;
+      near(frame.getBoundingClientRect().left + inset, title.getBoundingClientRect().left, 'title/segment content left');
+      near(frame.getBoundingClientRect().right - inset, nav.getBoundingClientRect().right, 'header/segment content right');
+      for (const node of page.querySelectorAll(':scope > .eyebrow,:scope > p,:scope > .poll-heading')) {
+        near(node.getBoundingClientRect().left, frame.getBoundingClientRect().left + inset, 'intro content left');
+        near(node.getBoundingClientRect().right, frame.getBoundingClientRect().right - inset, 'intro content right');
+      }
     }
     if (document.documentElement.scrollWidth > innerWidth + 1) errors.push('page overflow');
     for (const node of page.querySelectorAll('.collapsible-segment[data-open=true] .collapsible-segment__content,.planner-fields')) {
@@ -150,7 +155,7 @@ try {
     }
     const share = page.querySelector('.poll-heading > .copy-button');
     if (share) {
-      near(share.getBoundingClientRect().right, frame.getBoundingClientRect().right, 'share/title right edge');
+      near(share.getBoundingClientRect().right, nav.getBoundingClientRect().right, 'share/header right edge');
       near(share.getBoundingClientRect().top, title.getBoundingClientRect().top + 2, 'share/title top');
       const status = page.querySelector('.poll-results__status');
       const table = page.querySelector('.vote-grid-scroll');
