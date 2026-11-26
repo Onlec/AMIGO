@@ -108,12 +108,11 @@ try {
   assert.equal(await evaluate('document.title'), 'AMIGO · FIG. 03 — The Counting Office');
   assert.equal(await evaluate("document.querySelectorAll('.statistics-page .statistic-card').length"), 10);
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent"), '25%');
-  assert.equal(await evaluate("document.querySelector('.office-gauge__needle').getAttribute('transform')"), 'rotate(-45 120 125)');
   assert.equal(await evaluate("document.querySelector('.office-counter .office-sr-only').textContent"), 'Answers recorded: 1,000');
   assert.equal(await evaluate('counterAnimations.length'), 6);
   assert.equal(await evaluate('counterAnimations.every(duration=>duration<=1200)'), true);
-  assert.equal(await evaluate("document.querySelectorAll('.office-weekend__days > span').length"), 7);
-  assert.equal(await evaluate("document.querySelectorAll('.office-weekend .is-weekend').length"), 2);
+  assert.equal(await evaluate("document.querySelectorAll('.office-flap,.office-seal').length"), 0, 'No redundant measured tags or decorative seals');
+  assert.equal(await evaluate("document.querySelectorAll('.statistics-sections > fieldset > legend').length"), 4, 'Statistics use the planner segment structure');
   assert.equal(await evaluate("document.querySelector('[data-statistic=goats]').dataset.state"), 'notApplicable');
   await pause(1250);
   assert.equal(await evaluate("document.querySelector('.office-counter').getAnimations({subtree:true}).length"), 0, 'Counter animation finishes without looping');
@@ -154,6 +153,13 @@ try {
           const issues=[];
           if(document.documentElement.scrollWidth>innerWidth+1)issues.push('page overflow');
           if(document.querySelector('.site-footer').getBoundingClientRect().height>40)issues.push('footer is not compact');
+          if(getComputedStyle(document.querySelector('.counting-office')).backgroundColor!=='rgba(0, 0, 0, 0)')issues.push('extra page background');
+          const ink=getComputedStyle(document.body).color;
+          const muted=getComputedStyle(document.querySelector('.footer-statistic__prefix')).color;
+          for(const frame of document.querySelectorAll('.statistics-sections > fieldset')){
+            if(getComputedStyle(frame).borderTopColor!==ink)issues.push('segment border differs from planner ink');
+            if(getComputedStyle(frame.querySelector('legend')).color!==muted)issues.push('segment title differs from planner muted color');
+          }
           for(const node of document.querySelectorAll('.statistic-card,.site-footer__inner,.office-master,.office-nameplate,.office-header,.office-register-heading')){
             if(node.scrollWidth>node.clientWidth+1)issues.push(node.className+' overflow');
           }
@@ -215,7 +221,7 @@ try {
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt]').dataset.state"), 'collecting');
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] .office-collection__label').textContent"), 'Nog even verzamelen');
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] [role=progressbar]').getAttribute('aria-valuenow')"), '0');
-  assert.equal(await evaluate("document.querySelector('.office-gauge__needle') === null"), true);
+  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent.includes('%')"), false);
   assert.equal(await evaluate("[...document.querySelectorAll('.office-counter__roll > span:last-child')].map(node=>node.textContent).join('')"), '000000');
   assert.equal(await evaluate("document.querySelector('.statistics-error') === null"), true);
   assert.equal(state.auth, 0);
@@ -224,19 +230,19 @@ try {
   await reload();
   await until(() => evaluate("document.querySelector('[data-statistic=doubt] [role=progressbar]')?.getAttribute('aria-valuenow') === '9'"));
   assert.equal(await evaluate("document.querySelectorAll('[data-statistic=doubt] .office-progress .is-filled').length"), 9);
-  assert.equal(await evaluate("document.querySelector('.office-gauge__needle') === null"), true);
+  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent.includes('%')"), false);
   state.data = { ...state.data, answers: 10, maybeAnswers: 0 };
   await reload();
   await until(() => evaluate("document.querySelector('[data-statistic=doubt]').dataset.state === 'measured'"));
   assert.ok(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent.includes('0')"));
-  assert.equal(await evaluate("document.querySelector('.office-gauge__needle').getAttribute('transform')"), 'rotate(-90 120 125)');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] .office-measurement') === null"), true, 'A ready value does not need a measured tag');
   state.data = { ...state.data, answers: Number.MAX_SAFE_INTEGER };
   await reload();
   await until(() => evaluate("document.querySelectorAll('.office-counter__window').length === 16"));
   await command('Emulation.setDeviceMetricsOverride', { width: 375, height: 1000, deviceScaleFactor: 1, mobile: false });
   assert.equal(await evaluate("document.documentElement.scrollWidth<=innerWidth+1"), true, 'Large counters stay within mobile bounds');
   assert.equal(await evaluate('counterAnimations.length'), 0, 'Retry and new readings do not replay a counter already shown');
-  console.log('PASS: Counting Office values, statuses, gauge, honest weekend strip, one-time/reduced-motion counter, large digits, EN/NL, responsive themes, unchanged compact footer, navigation, errors and retry.');
+  console.log('PASS: planner-consistent segment frames, shared theme colors, compact statistic rows without measured tags, real collection progress, unchanged counter/values/footer, EN/NL, responsive layouts, navigation and error recovery.');
 } finally {
   state.releases.splice(0).forEach(resolve => resolve());
   socket?.close(); browser.kill(); await server.close();

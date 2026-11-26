@@ -2,37 +2,28 @@ import React from 'react';
 import { getLocale, t } from '../i18n/index.js';
 import { loadStatistics, useStatistics } from '../data/statistics.js';
 import { STATISTIC_TOTALS, STATISTIC_RATIOS, STATISTIC_JOKES, statisticMeasurement } from '../utils/statistics.js';
-import { MasterCounter, MeasurementStatus, IndecisionGauge, WeekendStrip } from './StatisticsInstruments.jsx';
+import { MasterCounter, MeasurementStatus } from './StatisticsInstruments.jsx';
 
 function StatisticGroup({ title, number, items, data, status }) {
   return (
-    <section className="statistics-section" aria-labelledby={'office-register-' + number}>
-      <div className="office-register-heading">
-        <span className="office-register-number" aria-hidden="true">{number}</span>
-        <h2 id={'office-register-' + number}>{title}</h2>
-        <span className="office-register-rule" aria-hidden="true" />
-      </div>
+    <fieldset className="statistics-section">
+      <legend>{number} — {title}</legend>
       <dl className="statistics-grid">
         {items.map((id, index) => {
           const measurement = statisticMeasurement(id, data, status);
           const collecting = measurement.state === 'collecting';
-          const joke = STATISTIC_JOKES.includes(id);
+          const showStatus = !['measured', 'notApplicable'].includes(measurement.state);
           return <div className="statistic-card" key={id} data-statistic={id} data-state={measurement.state}>
-            <dt><span className="office-record-number" aria-hidden="true">{number}.{String(index + 1).padStart(2, '0')}</span>{t('statistics.' + id + '.label')}</dt>
+            <dt><span className="office-record-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>{t('statistics.' + id + '.label')}</dt>
             <dd className={'statistic-card__value' + (collecting ? ' statistic-card__value--collecting' : '')}>
               {collecting ? <span aria-hidden="true">—</span> : measurement.value}
-              {joke && <span className="office-seal">{t(id === 'goats' ? 'statistics.sealed' : 'statistics.locked')}</span>}
             </dd>
-            <dd className="office-card-instrument">
-              {id === 'doubt' && <IndecisionGauge ratio={measurement.ratio} />}
-              {id === 'weekend' && <WeekendStrip />}
-              <MeasurementStatus measurement={measurement} />
-            </dd>
+            {showStatus && <dd className="office-card-instrument"><MeasurementStatus measurement={measurement} /></dd>}
             <dd className="statistic-card__description">{t('statistics.' + id + '.description')}</dd>
           </div>;
         })}
       </dl>
-    </section>
+    </fieldset>
   );
 }
 
@@ -41,7 +32,7 @@ export default function StatisticsPage() {
   return (
     <main className="planner-page statistics-page counting-office">
       <header className="office-header">
-        <div className="office-header__top"><span className="eyebrow">{t('statistics.eyebrow')}</span><span className="office-edition">{t('statistics.officeEdition')}</span></div>
+        <div className="eyebrow">{t('statistics.eyebrow')}</div>
         <h1>{t('statistics.title')}</h1>
         <p className="description">{t('statistics.intro')}</p>
       </header>
@@ -50,25 +41,24 @@ export default function StatisticsPage() {
         <button type="button" className="btn-secondary" onClick={() => loadStatistics(true)}>{t('statistics.retry')}</button>
       </div>}
       <MasterCounter value={data?.answers ?? null} status={status} />
-      <div className="statistics-sections" aria-busy={status === 'loading' || status === 'idle'}>
+      <div className="form statistics-sections" aria-busy={status === 'loading' || status === 'idle'}>
         <StatisticGroup title={t('statistics.totals')} number="01" items={STATISTIC_TOTALS} data={data} status={status} />
         <StatisticGroup title={t('statistics.human')} number="02" items={STATISTIC_RATIOS} data={data} status={status} />
         <StatisticGroup title={t('statistics.nonsense')} number="03" items={STATISTIC_JOKES} data={data} status={status} />
+        <fieldset className="office-nameplate">
+          <legend>04 — {t('statistics.nameplate')}</legend>
+          <dl>
+            <div><dt>{t('statistics.notePrivacy')}</dt><dd>{t('statistics.privacy')}</dd></div>
+            <div><dt>{t('statistics.noteHumour')}</dt><dd>{t('statistics.jokeNote')}</dd></div>
+            <div><dt>{t('statistics.noteBaseline')}</dt><dd>{data ? t('statistics.baseline', {
+              date: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeZone: 'Europe/Amsterdam' }).format(new Date(data.startedAt)),
+            }) : '—'}</dd></div>
+            <div><dt>{t('statistics.noteFetched')}</dt><dd>{fetchedAt ? t('statistics.fetchedAt', {
+              time: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short', hour12: false }).format(fetchedAt),
+            }) : '—'}</dd></div>
+          </dl>
+        </fieldset>
       </div>
-      <section className="office-nameplate" aria-labelledby="office-nameplate-title">
-        <div className="office-nameplate__heading"><h2 id="office-nameplate-title">{t('statistics.nameplate')}</h2><span aria-hidden="true">FIG. 03 / AMIGO</span></div>
-        <dl>
-          <div><dt>{t('statistics.notePrivacy')}</dt><dd>{t('statistics.privacy')}</dd></div>
-          <div><dt>{t('statistics.noteHumour')}</dt><dd>{t('statistics.jokeNote')}</dd></div>
-          <div><dt>{t('statistics.noteBaseline')}</dt><dd>{data ? t('statistics.baseline', {
-            date: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeZone: 'Europe/Amsterdam' }).format(new Date(data.startedAt)),
-          }) : '—'}</dd></div>
-          <div><dt>{t('statistics.noteFetched')}</dt><dd>{fetchedAt ? t('statistics.fetchedAt', {
-            time: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short', hour12: false }).format(fetchedAt),
-          }) : '—'}</dd></div>
-        </dl>
-        <p className="office-principle">{t('statistics.principle')}</p>
-      </section>
     </main>
   );
 }
