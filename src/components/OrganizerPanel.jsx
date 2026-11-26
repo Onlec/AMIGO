@@ -4,7 +4,7 @@ import { formatDay, formatTime, formatProposal } from '../utils/dates.js';
 import React, { useMemo, useState } from 'react';
 import DateChoices from './DateChoices.jsx';
 import SegmentedControl from './SegmentedControl.jsx';
-import { parseVotes } from '../utils/votes.js';
+import { parseVotes, VOTE_ICONS, voteLabel } from '../utils/votes.js';
 
 function computeTally(dates, votes) {
   const counts = {};
@@ -58,16 +58,27 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
           <button type="button" aria-pressed={day === selectedDateId} onClick={() => setSelectedDateId(day)}>
             {day === selectedDateId ? t('common.selected') : t('common.select')}
           </button>
-      )} renderCardMeta={day => <span>{t('organizer.tally', tally[day])}</span>} renderDay={(day, number) => (
+      )} renderCardSummary={day => (
+        <span className="date-card-tally" role="img" aria-label={t('organizer.tally', tally[day])}>
+          {['yes', 'maybe', 'no'].map(value => (
+            <span key={value} title={voteLabel(value)} aria-hidden="true">
+              {tally[day][value]} {VOTE_ICONS[value]}
+            </span>
+          ))}
+        </span>
+      )} renderDay={(day, number) => (
         <button type="button" aria-label={formatDay(day)} aria-pressed={day === selectedDateId}
           className={'calendar-day-button ' + (day === selectedDateId ? 'is-selected' : '')}
           onClick={() => setSelectedDateId(day)}>
           {number}<small>{formatTime(dates[day].time)}</small>
         </button>
       )} />
-      {selected && <p role="status">{formatProposal(selected.date, selected.time)} — {t('organizer.tally', counts)}</p>}
       {error && <p className="error" role="alert">{translateMessage(error)}</p>}
       <div className="edit-actions">
+        {selected && <p className="organizer-selection-summary" role="status">
+          <span className="date-selection-badge">{formatProposal(selected.date, selected.time)}</span>
+          <span className="organizer-selection-tally">{t('organizer.tally', counts)}</span>
+        </p>}
         <button type="button" onClick={handleConfirm} disabled={!selected || selectedDateId === finalDateId || saving}>{t('common.confirm')}</button>
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>{t('common.cancel')}</button>
       </div>

@@ -34,7 +34,7 @@ function readView() {
   return localStorage.getItem('amigo-date-view') === 'calendar' ? 'calendar' : 'cards';
 }
 
-export default function DateChoices({ dates, firstUnanswered, renderCard, renderCardMeta, renderDay, legend, showUnansweredJump = false, cardOrder, cardToolbar }) {
+export default function DateChoices({ dates, firstUnanswered, renderCard, renderCardMeta, renderCardSummary, renderDay, legend, showUnansweredJump = false, cardOrder, cardToolbar }) {
   const days = Object.keys(dates).sort();
   const cardDays = cardOrder || days;
   const view = useSyncExternalStore(watchView, readView);
@@ -60,11 +60,11 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
     <div className="date-choices" data-view={view}>
       <div className="date-choices__toolbar">
         {legend}
+        {view === 'cards' && cardToolbar}
         <div className="date-view-actions">
           <SegmentedControl label={t('view.label')} options={viewOptions()} value={view} onChange={changeView} iconOnly size="small" />
         </div>
       </div>
-      {view === 'cards' && cardToolbar}
       <div className="date-choices__panels">
         {view === 'calendar' ? (
           <div ref={calendar} className="date-choices__calendar">
@@ -84,7 +84,10 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
             <ul className="date-cards">
               {cardDays.map(day => (
                 <li key={day} data-day={day}>
-                  <strong>{formatDay(day, true)}</strong>
+                  <strong className={renderCardSummary ? 'date-card-heading' : undefined}>
+                    <span>{formatDay(day, true)}</span>
+                    {renderCardSummary?.(day)}
+                  </strong>
                   {renderCard(day)}
                   {(dates[day].time || renderCardMeta) && <div className="date-card-meta">
                     {dates[day].time && <span>{formatTime(dates[day].time)}</span>}

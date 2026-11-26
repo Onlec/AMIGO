@@ -102,7 +102,7 @@ export default {
   'organizer.keepFinalDate': 'The chosen final date must be kept.',
   'organizer.reopen': 'Reopen',
   'organizer.reopenExplanation': 'Remove the chosen date and let everyone vote again. Existing votes will be kept.',
-  'organizer.sort': 'Sort cards',
+  'organizer.sort': 'Sort cards by:',
   'organizer.mostYes': 'Most yes votes',
   'organizer.tally': '{yes} yes, {maybe} maybe, {no} no',
   'poll.eyebrow': 'AMIGO / PLANNER',

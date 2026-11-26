@@ -102,7 +102,7 @@ export default {
   'organizer.keepFinalDate': 'De gekozen einddatum blijft behouden.',
   'organizer.reopen': 'Heropenen',
   'organizer.reopenExplanation': 'Verwijder de gekozen datum en laat iedereen opnieuw stemmen. Bestaande stemmen blijven behouden.',
-  'organizer.sort': 'Sorteer kaarten',
+  'organizer.sort': 'Sorteer kaarten op:',
   'organizer.mostYes': 'Meeste ja',
   'organizer.tally': '{yes} ja, {maybe} misschien, {no} nee',
   'poll.eyebrow': 'AMIGO / STEMMEN',

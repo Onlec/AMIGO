@@ -468,10 +468,10 @@ button.btn-secondary:focus-visible {
 .organizer-card-sort {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: .5rem;
-  margin-bottom: .75rem;
+  margin: 0;
 }
 
 .organizer-panel--final .date-cards > li {
@@ -520,13 +520,19 @@ button.btn-secondary:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.final-date {
+.final-date,
+.date-selection-badge {
   background: var(--amigo-red);
   color: var(--amigo-paper);
   padding: 0.7rem 1rem;
   border-radius: 3px;
   display: inline-block;
   font-weight: 600;
+}
+
+.date-selection-badge {
+  padding: 6px 10px;
+  font-size: 14px;
 }
 
 .final-date-block {
