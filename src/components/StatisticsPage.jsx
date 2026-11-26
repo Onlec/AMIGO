@@ -32,14 +32,14 @@ export default function StatisticsPage() {
   const { data, status, fetchedAt } = useStatistics();
   return (
     <main className="planner-page statistics-page counting-office">
-      <header className="office-header">
-        <div className="eyebrow">{t('statistics.eyebrow')}</div>
-        <h1>{t('statistics.title')}</h1>
-        <p className="description">{t('statistics.intro')}</p>
-      </header>
+      <div className="lab eyebrow">{t('statistics.eyebrow')}</div>
+      <h1>{t('statistics.title')}</h1>
+      <p className="description">{t('statistics.intro')}</p>
       {status === 'error' && <div className="statistics-error" role="alert">
         <p>{t('statistics.error')}</p>
-        <button type="button" className="btn-secondary" onClick={() => loadStatistics(true)}>{t('statistics.retry')}</button>
+        <div className="edit-actions">
+          <button type="button" className="btn-secondary" onClick={() => loadStatistics(true)}>{t('statistics.retry')}</button>
+        </div>
       </div>}
       <MasterCounter value={data?.answers ?? null} status={status} />
       <div className="form statistics-sections" aria-busy={status === 'loading' || status === 'idle'}>

@@ -162,7 +162,7 @@ try {
             if(getComputedStyle(frame).borderTopColor!==ink)issues.push('segment border differs from planner ink');
             if(getComputedStyle(frame.querySelector('legend')).color!==muted)issues.push('segment title differs from planner muted color');
           }
-          for(const node of document.querySelectorAll('.statistic-card,.site-footer__inner,.office-master,.office-nameplate,.office-header,.office-register-heading')){
+          for(const node of document.querySelectorAll('.statistic-card,.site-footer__inner,.office-master,.office-nameplate')){
             if(node.scrollWidth>node.clientWidth+1)issues.push(node.className+' overflow');
           }
           for(const digit of document.querySelectorAll('.office-counter__window')){
@@ -194,11 +194,16 @@ try {
   await pause(500);
   assert.equal(await evaluate("Math.abs(document.querySelector('.site-footer').getBoundingClientRect().bottom-innerHeight)<2"), true, 'The footer is reachable at the end of long content');
 
-  await evaluate("document.querySelector('.site-header')?.blur()");
+  const headingStyles = () => evaluate(`['.planner-page .eyebrow','.planner-page h1'].map(selector=>{
+    const style=getComputedStyle(document.querySelector(selector));
+    return Object.fromEntries(['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','textTransform','marginTop','marginBottom'].map(key=>[key,style[key]]));
+  })`);
+  const statisticsHeadings = await headingStyles();
   await command('Page.navigate', { url: origin });
   await until(() => evaluate("document.querySelector('.planner-page:not(.statistics-page)') !== null && document.querySelector('.footer-statistic__slide') !== null"));
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 2400, deviceScaleFactor: 1, mobile: false });
   await pause(100);
+  assert.deepEqual(await headingStyles(), statisticsHeadings, 'Eyebrow and title use the exact planner typography and vertical margins');
   assert.equal(await evaluate("Math.abs(document.querySelector('.site-footer').getBoundingClientRect().bottom-innerHeight)<2 && document.documentElement.scrollHeight<=innerHeight+1"), true, 'Short content keeps the footer at the bottom of the viewport');
   await evaluate("document.querySelector('.site-footer a').click()");
   await until(() => evaluate("document.querySelector('.statistics-page') !== null"));

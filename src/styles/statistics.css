@@ -1,6 +1,4 @@
 /* Statistics share the planner palette and segment frames. Only the physical counter has its own dark windows. */
-.counting-office .office-header { margin-inline: var(--planner-content-inset); }
-.counting-office .office-header .description { margin-bottom: 0; }
 .counting-office .office-instrument-label h2 { margin: 0; padding: 0; border: 0; font-size: 12px; }
 .counting-office .statistics-grid { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0; }
 .counting-office .statistic-card { position: relative; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 4px 12px; min-width: 0; padding-block: 16px; border-bottom: 1px solid var(--border); }

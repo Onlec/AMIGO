@@ -15,7 +15,7 @@ const icons = {
 
 export default function StatisticIcon({ id }) {
   return <span className="office-statistic-icon" aria-hidden="true">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" data-statistic-icon={id}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" data-statistic-icon={id}>
       {icons[id]}
     </svg>
   </span>;
