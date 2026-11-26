@@ -12,7 +12,10 @@ import { createServer } from 'vite';
 const profile = await mkdtemp(join(tmpdir(), 'amigo-browser-'));
 process.env.VITE_SUPABASE_URL = '';
 process.env.VITE_SUPABASE_PUBLISHABLE_KEY = '';
-const server = await createServer({ server: { host: '127.0.0.1', port: 0 }, clearScreen: false });
+const server = await createServer({ server: { host: '127.0.0.1', port: 0 }, clearScreen: false,
+  plugins:[{name:'ui-vote-fixture',enforce:'pre',resolveId(source,importer){
+    if (source.endsWith('/onlineVoting.js') && importer?.includes('/src/')) return join(process.cwd(),'tests/fixtures/online-voting.js');
+  }}] });
 await server.listen();
 const origin = server.resolvedUrls.local[0];
 const browser = spawn(process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', [
@@ -98,7 +101,7 @@ try {
   assert.equal(await evaluate('pollData.readLocal(oldTestPoll).then(row => row === undefined)'), true, 'Production rollout ignores the old test cache');
   assert.equal(await evaluate('pollData.pendingPolls().then(ids => ids.includes(oldTestPoll))'), false, 'Old pending test creations cannot enter the new client queue');
   assert.equal(await evaluate("import('/src/data/voterSession.js').then(data => data.readVoterSession(oldTestPoll))"), null, 'Old voter sessions do not sign users into the live rollout');
-  await until(() => evaluate("document.body.textContent.includes('Jouw gegevens')"));
+  await until(() => evaluate("document.querySelector('.voter-credentials') !== null"));
   await evaluate("window.ballotSegment = () => document.querySelector('.voter-availability'); window.participationBody = () => ballotSegment().querySelector('.collapsible-segment__body'); window.loginBody = () => document.querySelector('.voter-credentials').closest('.collapsible-segment').querySelector('.collapsible-segment__body')");
   await evaluate(`window.recordMotion = (action, readBody = participationBody) => new Promise(resolve => {
     const samples = [];
@@ -332,18 +335,18 @@ try {
   assert.ok(voteMotion.every(frame => frame.phase === 'idle'), 'Automatic votes and local updates do not close the segment');
   await until(() => evaluate("document.querySelector('.date-cards [role=radio]').getAttribute('aria-checked') === 'true'"));
   let queue = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)');
-  assert.equal(queue.length, 1, 'Click automatically queues a vote');
-  assert.deepEqual(queue[0].body.changes, { '2027-01-10': 'yes' });
+  assert.equal(queue.length, 0, 'Online votes never enter the durable queue');
+  assert.deepEqual(await evaluate('fixtureOnlineVotes.at(-1).changes'), { '2027-01-10': 'yes' });
   await evaluate("document.querySelector('.date-cards [role=radio]').click()");
   await until(() => evaluate("document.querySelector('.date-cards [role=radio]').getAttribute('aria-checked') === 'false'"));
   queue = await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)');
-  assert.equal(queue[1].body.changes['2027-01-10'], 'none', 'Click again clears the last vote');
+  assert.equal(await evaluate("fixtureOnlineVotes.at(-1).changes['2027-01-10']"), 'none', 'Click again clears the confirmed vote');
   const resetMotion = await evaluate("recordMotion(() => { const button = [...document.querySelectorAll('button')].find(button => button.textContent === 'Afmelden'); button.focus(); button.click(); }, loginBody)");
   assert.ok(resetMotion.some(frame => frame.height < 1 && frame.signedIn === 'true'), 'Old voter remains until fully closed');
   await until(() => evaluate("ballotSegment().dataset.open === 'false'"));
   await until(() => evaluate("participationBody().getBoundingClientRect().height === 0"));
   assert.equal(await evaluate("document.activeElement === document.querySelector('.voter-credentials input')"), true, 'Switching voter focuses the name field');
-  assert.equal((await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)')).length, 2, 'Switching preserves queued votes');
+  assert.equal((await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue)')).length, 0, 'Switching voter leaves no queued votes');
   await evaluate(`(() => {
     const inputs = document.querySelectorAll('.voter-credentials input');
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -357,8 +360,25 @@ try {
   await evaluate(`pollData.updateLocal(fixturePoll, row => {
     const login = row.queue.pop();
     row.loginResults[login.operation] = { rejection: 'Wachtwoord klopt niet.' };
+    row.notices.push('Wachtwoord klopt niet.', 'Wachtwoord klopt niet.');
   })`);
-  await until(() => evaluate("document.body.textContent.includes('Wachtwoord klopt niet.')"));
+  await until(() => evaluate("document.querySelector('.voter-credentials [role=alert]')?.textContent === " + JSON.stringify(t('login.credentialsMismatch'))));
+  assert.equal(await evaluate("document.querySelectorAll('.planner-page > .error').length"), 0, 'No error banners below the heading');
+  assert.equal(await evaluate("document.querySelectorAll('.planner-page .error').length"), 1, 'Cached duplicate login failures only appear once at the form');
+  await evaluate("(() => {const select=document.querySelector('.language-select');select.value='en-GB';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await until(() => evaluate("document.querySelector('.voter-credentials [role=alert]')?.textContent === " + JSON.stringify(t('login.credentialsMismatch', {}, 'en-GB'))));
+  assert.equal(await evaluate("document.querySelectorAll('.planner-page .error').length"), 1, 'English login feedback is also shown once');
+  await evaluate("(() => {const select=document.querySelector('.language-select');select.value='nl-BE';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+  await evaluate("document.querySelector('.voter-credentials button[type=submit]').click()");
+  await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.some(command => command.kind === 'signIn'))"));
+  await evaluate(`pollData.updateLocal(fixturePoll, row => {
+    const login = row.queue.pop();
+    const rejection = {key:'sync.rejection',params:{operation:{key:'login.signIn',params:{}},date:'',detail:{key:'server.nameTaken',params:{}}}};
+    row.loginResults[login.operation] = {rejection};
+    row.notices.push(rejection,rejection);
+  })`);
+  await until(() => evaluate("document.querySelector('.voter-credentials [role=alert]')?.textContent === " + JSON.stringify(t('login.credentialsMismatch'))));
+  assert.equal(await evaluate("document.querySelectorAll('.planner-page .error').length"), 1, 'A reused name has the same neutral message without accumulating banners');
   assert.equal(await evaluate("ballotSegment().dataset.open"), 'false', 'Rejected login cannot unlock ballot');
   assert.equal(await evaluate(`(() => {
     const row = { base: { status: 'open', dates: {}, votes: {} }, queue: [
@@ -569,7 +589,8 @@ try {
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel') === null"));
   await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]:not(:disabled)').click()");
-  await until(() => evaluate(`pollData.readLocal(fixturePoll).then(row => row.queue.length === ${beforeReopenedVote + 1} && row.queue.at(-1).kind === 'ballot')`));
+  await until(() => evaluate("document.querySelector('.voter-ballot .date-cards [aria-checked=true]') !== null"));
+  assert.equal(await evaluate('pollData.readLocal(fixturePoll).then(row => row.queue.length)'),beforeReopenedVote,'Voting after reopening does not queue a ballot');
   await evaluate("pollData.enqueue(fixturePoll, 'close', { day: '2027-04-12' })");
   await until(() => evaluate("document.querySelector('.final-date') !== null"));
   assert.equal(await evaluate("document.querySelector('.final-date--reveal') === null && document.querySelector('.poll-confetti') === null"), true, 'A later external confirmation does not replay the previous local celebration');
@@ -682,7 +703,7 @@ try {
     if (enabled) {
       assert.equal(identity.voter, snapshot.organizerVoter, 'Participation activates the own ballot');
       assert.equal(snapshot.votes[identity.voter].votesJson, '{}', 'New or renewed participation starts with no answers');
-      await evaluate("pollData.enqueue(fixturePoll, 'ballot', { voter: JSON.parse(sessionStorage.getItem('amigo-planner-live-v1:voter:' + fixturePoll)).voter, changes: { '2027-01-10': 'yes' } })");
+      await evaluate("pollData.updateLocal(fixturePoll,row=>{row.base=pollData.project(row);row.queue=[];const voter=JSON.parse(sessionStorage.getItem('amigo-planner-live-v1:voter:'+fixturePoll)).voter;row.base.votes[voter].votesJson=JSON.stringify({'2027-01-10':'yes'});})");
       await until(() => evaluate("pollData.readLocal(fixturePoll).then(row => Object.values(pollData.project(row).votes).some(v => v.name === 'Maker' && JSON.parse(v.votesJson)['2027-01-10'] === 'yes'))"));
     } else {
       assert.equal(identity.voter, null, 'Opting out clears the active ballot without signing out');

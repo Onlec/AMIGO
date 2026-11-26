@@ -141,7 +141,7 @@ try {
     await data.updateLocal(id,row=>{
       row.base={title:'My own title',description:'My own description',status:'open',organizer:true,organizerVoter:voter,
         dates:{'2026-12-04':{date:'2026-12-04',time:'18:30'}},votes:{[voter]:{name:'My own name',votesJson:'{"2026-12-04":"yes"}'}}};
-      row.queue=[{operation:'eeeeeeee-1111-4111-8111-111111111111',kind:'ballot',body:{voter,proof:'b'.repeat(64),changes:{'2026-12-04':'yes'}}}];
+      row.queue=[{operation:'eeeeeeee-1111-4111-8111-111111111111',kind:'edit',body:{title:'My own title',added:[],removed:[]}}];
       row.notices=[];
     });
     sessions.rememberVoterSession(id,{voter,proof:'b'.repeat(64),name:'My own name',organizer:true});

@@ -3,7 +3,7 @@ import test, { afterEach } from 'node:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { parse } from '@babel/parser';
 import { availableLocales, DEFAULT_LOCALE, detectLocale, getLocale, setLocale, t, message, translateMessage, formatNumber, formatCurrency, parseNumber } from '../src/i18n/index.js';
-import { errorMessage } from '../src/i18n/errors.js';
+import { errorMessage, loginRejection, isLoginNotice } from '../src/i18n/errors.js';
 import { formatDay, formatTime, getWeekdays, formatMonth } from '../src/utils/dates.js';
 afterEach(() => setLocale(DEFAULT_LOCALE));
 
@@ -49,6 +49,22 @@ test('Belgian dates, 24-hour clock, numbers, currency and strict decimal parsing
   assert.equal(parseNumber('1.234,50'), 1234.5);
   assert.equal(parseNumber('-0,43'), -0.43);
   for (const invalid of ['', '12abc', '1,2,3']) assert.ok(Number.isNaN(parseNumber(invalid)));
+});
+
+test('login feedback does not infer sign-in versus new registration and stays local', () => {
+  for (const locale of ['en-GB','nl-BE']) {
+    setLocale(locale);
+    for (const text of ['Wachtwoord klopt niet.', 'Deze naam is al in gebruik. Kies je bestaande stem of gebruik een andere naam.']) {
+      assert.equal(translateMessage(loginRejection(errorMessage({message:text}))), t('login.credentialsMismatch'));
+    }
+    const cached = message('sync.rejection',{operation:message('login.signIn'),date:'',detail:message('server.wrongPassword')});
+    assert.equal(translateMessage(loginRejection(cached)), t('login.credentialsMismatch'));
+    assert.equal(translateMessage(loginRejection('Wachtwoord klopt niet.')), t('login.credentialsMismatch'));
+    assert.equal(isLoginNotice(cached), true);
+    assert.equal(isLoginNotice('Wachtwoord klopt niet.', {old:{rejection:'Wachtwoord klopt niet.'}}), true);
+    assert.equal(isLoginNotice(message('sync.rejection',{operation:message('operation.ballot')})), false);
+    assert.equal(translateMessage(loginRejection(message('server.sessionMissing'))), t('server.sessionMissing'));
+  }
 });
 
 test('British English formatting and English fallback for missing Dutch text', () => {

@@ -3,6 +3,7 @@ import { message } from './index.js';
 // The RPC currently returns Dutch messages. Map that contract to stable client keys.
 // Keep the server's fixed message contract separate from editable translations.
 const serverKeys = new Map([
+  ['Vernieuw de pagina om online te stemmen.', 'vote.updateRequired'],
   ['De gekozen datum blijft behouden.', 'server.keepDate'],
   ['De prikker is gesloten of verwijderd.', 'server.closedOrRemoved'],
   ['De prikker is gesloten.', 'server.closed'],
@@ -30,4 +31,19 @@ export function errorMessage(error) {
   const removedDate = /^De datum (\d{4}-\d{2}-\d{2}) is verwijderd\. Controleer je keuzes\.$/.exec(error?.message || '');
   if (removedDate) return message('server.specificDateRemoved', { date: removedDate[1] });
   return message('error.generic');
+}
+
+const credentialErrors = new Set(['server.wrongPassword', 'server.nameTaken']);
+
+export function loginRejection(rejection) {
+  const detail = rejection?.key === 'sync.rejection' ? rejection.params?.detail : rejection;
+  const resolved = typeof detail === 'string' ? errorMessage({message: detail}) : detail;
+  return credentialErrors.has(resolved?.key) ? message('login.credentialsMismatch') : detail;
+}
+
+export function isLoginNotice(notice, loginResults = {}) {
+  if (notice?.params?.operation?.key === 'login.signIn' || notice?.key === 'login.credentialsMismatch') return true;
+  // Receipts identify already cached duplicates, including older text notices.
+  return Object.values(loginResults).some(result => result.rejection
+    && JSON.stringify(result.rejection) === JSON.stringify(notice));
 }

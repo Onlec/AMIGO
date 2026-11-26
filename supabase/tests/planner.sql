@@ -89,10 +89,17 @@ declare
   op uuid := gen_random_uuid();
   close_op uuid := gen_random_uuid();
   reopen_op uuid := gen_random_uuid();
-  body jsonb := jsonb_build_object('voter',voter,'proof',repeat('b',64));
+  body jsonb := jsonb_build_object('voter',voter,'proof',repeat('b',64),'submissionMode','online');
   snapshot jsonb;
   old_kind text;
 begin
+  assert (public.amigo_read(p)#>>array['votes',voter::text,'votesJson'])::jsonb='{}'::jsonb;
+  begin
+    perform public.amigo_submit_ballot(p,gen_random_uuid(),(body-'submissionMode') || '{"changes":{"2027-01-01":"yes"}}');
+    raise exception using errcode='XX000',message='An old queued vote was accepted';
+  exception when raise_exception then
+    assert sqlerrm='Vernieuw de pagina om online te stemmen.';
+  end;
   assert (public.amigo_read(p)#>>array['votes',voter::text,'votesJson'])::jsonb='{}'::jsonb;
   perform public.amigo_submit_ballot(p,op,body || '{"changes":{"2027-01-01":"yes"}}');
   perform public.amigo_submit_ballot(p,op,body || '{"changes":{"2027-01-01":"no"}}');
@@ -200,7 +207,7 @@ declare
   participation jsonb := jsonb_build_object('voter',own,'proof',repeat('d',64),'enabled',true);
 begin
   perform public.amigo_edit(p,gen_random_uuid(),jsonb_build_object('organizerParticipation',participation));
-  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',own,'proof',repeat('d',64),'changes','{"2027-01-01":"yes"}'::jsonb));
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('submissionMode','online','voter',own,'proof',repeat('d',64),'changes','{"2027-01-01":"yes"}'::jsonb));
   perform public.amigo_edit(p,off_op,jsonb_build_object('organizerParticipation',participation || '{"enabled":false}'));
   assert public.amigo_read(p)->>'organizerVoter' is null;
   assert not (public.amigo_read(p)->'votes' ? own::text);
@@ -244,10 +251,10 @@ begin
   perform public.amigo_sign_in(p,gen_random_uuid(),jsonb_build_object('name','Maker','organizerProof',repeat('a',64)));
   perform public.amigo_edit(p,gen_random_uuid(),'{"title":"Planner test","added":[],"removed":[]}');
   assert (select last_activity_at from amigo.polls where id=p)=baseline;
-  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',voter,'proof',repeat('b',64),'changes','{"2027-01-01":"yes"}'::jsonb));
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('submissionMode','online','voter',voter,'proof',repeat('b',64),'changes','{"2027-01-01":"yes"}'::jsonb));
   assert (select last_activity_at from amigo.polls where id=p)>baseline;
   update amigo.polls set last_activity_at=baseline where id=p;
-  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('voter',voter,'proof',repeat('b',64),'changes','{"2027-01-01":"yes"}'::jsonb));
+  perform public.amigo_submit_ballot(p,gen_random_uuid(),jsonb_build_object('submissionMode','online','voter',voter,'proof',repeat('b',64),'changes','{"2027-01-01":"yes"}'::jsonb));
   assert (select last_activity_at from amigo.polls where id=p)=baseline;
   perform public.amigo_apply(expired,gen_random_uuid(),'close','{"day":"2027-01-01"}');
   update amigo.polls set last_activity_at=now()-interval '14 days' where id=expired;

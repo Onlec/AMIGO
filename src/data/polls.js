@@ -1,5 +1,6 @@
 import { openDB } from 'idb';
 import { PLANNER_STORAGE_NAMESPACE } from '../config.js';
+import { message } from '../i18n/index.js';
 
 let database;
 const updates = new EventTarget();
@@ -25,6 +26,15 @@ export function watchPoll(id, callback) {
 export async function readLocal(id) { return (await db()).get('polls', id); }
 export async function pendingPolls() {
   return (await (await db()).getAll('polls')).filter(row => row.queue.length).map(row => row.id);
+}
+
+export async function discardQueuedBallots(id) {
+  const row = await readLocal(id);
+  if (!row?.queue.some(item => item.kind === 'ballot')) return;
+  await updateLocal(id,current => {
+    current.queue = current.queue.filter(item => item.kind !== 'ballot');
+    if (!current.notices.some(notice => notice?.key === 'vote.discarded')) current.notices.push(message('vote.discarded'));
+  });
 }
 
 export async function updateLocal(id, change) {
@@ -62,19 +72,6 @@ export function project(row) {
       case 'lockOrganizer':
         poll.organizer = false;
         break;
-      case 'ballot': {
-        // Project automatic saves only for participants confirmed by sign-in.
-        const participant = poll.votes[body.voter];
-        if (poll.status !== 'open' || !participant) break;
-        const choices = JSON.parse(participant.votesJson || '{}');
-        for (const [day, value] of Object.entries(body.changes || {})) {
-          if (!poll.dates[day]) continue;
-          if (value === 'none') delete choices[day];
-          else choices[day] = value;
-        }
-        participant.votesJson = JSON.stringify(choices);
-        break;
-      }
       case 'edit':
         if (poll.status === 'closed' && (body.added.length || body.removed.length)) break;
         if (body.removed.includes(poll.finalDateId)) break;
@@ -112,6 +109,7 @@ export function project(row) {
 }
 
 export async function enqueue(id, kind, body) {
+  if (kind === 'ballot') throw Object.assign(new Error('Votes cannot be queued'), {localizationKey:'vote.connectionRequired'});
   const operation = crypto.randomUUID();
   await updateLocal(id, row => {
     row.queue.push({ operation, kind, body });

@@ -1,7 +1,8 @@
 import { t, message, translateMessage } from '../i18n/index.js';
-import { errorMessage } from '../i18n/errors.js';
-import React, { useEffect, useRef, useState } from 'react';
+import { errorMessage, loginRejection } from '../i18n/errors.js';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { enqueue } from '../data/polls.js';
+import { submitVote, votingStatus, watchVoting } from '../data/onlineVoting.js';
 import { ballotStorageKey, voterSession } from '../data/voterSession.js';
 import { hashPassword } from '../utils/password.js';
 import { parseVotes } from '../utils/votes.js';
@@ -21,6 +22,9 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
   const segment = useRef(null);
   const availability = useRef(null);
   const handledLogin = useRef(null);
+  const votePending = useRef(false);
+  const connection = useSyncExternalStore(useCallback(listener => watchVoting(pollId,listener),[pollId]),
+    useCallback(() => votingStatus(pollId),[pollId]));
 
   const [id] = Object.entries(participants).find(([, person]) => normalize(person.name) === normalize(name)) || [];
   const activePerson = participants[session?.voter];
@@ -30,6 +34,9 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
   const outcome = submission && loginResults?.[submission.operation];
   const pending = Boolean(submission && !outcome);
   const locked = busy || pending;
+  useEffect(() => {
+    if (connection === 'ready') setError(current => current?.key?.startsWith('vote.') ? '' : current);
+  },[connection]);
 
   useEffect(() => {
     if (!submission || !outcome?.session || outcome.rejection || handledLogin.current === submission.operation) return;
@@ -89,17 +96,20 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
   }
 
   async function castVote(day, value) {
-    if (!votingSignedIn || !votingOpen || readOnly) return;
+    if (!votingSignedIn || !votingOpen || readOnly || votePending.current) return;
+    if (connection !== 'ready') return setError(message('vote.connectionRequired'));
     setError('');
+    votePending.current = true;
     setSaving(count => count + 1);
     try {
-      await enqueue(pollId, 'ballot', {
+      await submitVote(pollId, {
         voter: session.voter, proof: session.proof,
         changes: { [day]: value },
       });
     } catch (err) {
-      setError(message('error.vote', { detail: errorMessage(err) }));
+      setError(err.localizationKey ? message(err.localizationKey) : message('error.vote', { detail: errorMessage(err) }));
     } finally {
+      votePending.current = false;
       setSaving(count => count - 1);
     }
   }
@@ -134,17 +144,18 @@ export default function VoterForm({ pollId, dates, participants, loginResults, s
                 {signedIn && <button type="button" className="btn-secondary" disabled={busy || saving > 0} onClick={reset}>{t('login.signOut')}</button>}
               </div>
             </div>
-            {outcome?.rejection && <p role="alert" className="error">{translateMessage(outcome.rejection)}</p>}
+            {outcome?.rejection && <p role="alert" className="error">{translateMessage(loginRejection(outcome.rejection))}</p>}
           </fieldset>
         </form>
         {!signedIn && error && <p role="alert" className="error">{translateMessage(error)}</p>}
       </CollapsibleSegment>
       <div ref={availability} className="voter-availability" data-open={availabilityOpen}>
         <CollapsibleSegment title={t('vote.section')} open={availabilityOpen}>
-          <div className="voter-ballot" role="region" aria-label={t('vote.availability')} tabIndex={-1}>
-            <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly} />
+          <div className="voter-ballot" role="region" aria-label={t('vote.availability')} tabIndex={-1} aria-busy={saving > 0 || connection === 'checking' || undefined}>
+            <VoteCalendar key={session?.voter || 'guest'} dates={dates} myVotes={parseVotes(activePerson?.votesJson)} onVote={castVote} disabled={readOnly || connection !== 'ready' || saving > 0} />
           </div>
-          {signedIn && error && <p role="alert" className="error">{translateMessage(error)}</p>}
+          {signedIn && (error ? <p role="alert" className="error">{translateMessage(error)}</p>
+            : !readOnly && connection !== 'ready' && connection !== 'saving' && <p role="status" className="description">{t(connection === 'checking' ? 'vote.checking' : 'vote.connectionRequired')}</p>)}
         </CollapsibleSegment>
       </div>
     </div>

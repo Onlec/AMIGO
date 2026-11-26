@@ -1,32 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-import { pendingPolls, readLocal, updateLocal } from './polls.js';
+import { pendingPolls, readLocal, updateLocal, discardQueuedBallots } from './polls.js';
 import { message } from '../i18n/index.js';
-import { errorMessage } from '../i18n/errors.js';
-
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const client = url && key ? createClient(url, key) : null;
-let signingIn;
-
-async function connect() {
-  if (!client) throw Object.assign(new Error('Supabase is not configured'), { localizationKey: 'sync.notConfigured' });
-  async function ensureSession() {
-    const { data, error } = await client.auth.getSession();
-    if (error) throw error;
-    if (data.session) return;
-    const result = await client.auth.signInAnonymously();
-    if (result.error) throw result.error;
-  }
-  signingIn ??= (navigator.locks
-    ? navigator.locks.request('amigo-session', ensureSession)
-    : ensureSession()).finally(() => { signingIn = null; });
-  await signingIn;
-}
-async function rpc(name, params) {
-  const { data, error } = await client.rpc(name, params);
-  if (error) throw error;
-  return data;
-}
+import { errorMessage, loginRejection } from '../i18n/errors.js';
+import { client, connect, rpc } from './backend.js';
+import { setVotingStatus } from './onlineVoting.js';
 
 const statuses = new Map();
 const events = new EventTarget();
@@ -46,12 +22,18 @@ const labels = { signIn: 'login.signIn', lockOrganizer: 'operation.logout', ball
   removeVoter: 'operation.removeVoter' };
 
 async function synchronize(id) {
-  if (!supportedId.test(id)) return status(id, 'sync.missing');
-  if (!navigator.onLine) return status(id, 'sync.offline');
+  await discardQueuedBallots(id);
+  if (!supportedId.test(id)) { setVotingStatus(id,'unavailable'); return status(id, 'sync.missing'); }
+  if (!navigator.onLine) { setVotingStatus(id,'offline'); return status(id, 'sync.offline'); }
   await connect();
   let row = await readLocal(id);
   while (row?.queue.length) {
     const command = row.queue[0];
+    if (command.kind === 'ballot') {
+      await discardQueuedBallots(id);
+      row = await readLocal(id);
+      continue;
+    }
     let rejection;
     let loginSession;
     try {
@@ -59,8 +41,6 @@ async function synchronize(id) {
         loginSession = await rpc('amigo_sign_in', { p: id, operation: command.operation, body: command.body });
       } else if (command.kind === 'lockOrganizer') {
         await rpc('amigo_lock_organizer', { p: id, operation: command.operation });
-      } else if (command.kind === 'ballot') {
-        await rpc('amigo_submit_ballot', { p: id, operation: command.operation, body: command.body });
       } else if (command.kind === 'edit') {
         await rpc('amigo_edit', { p: id, operation: command.operation, body: command.body });
       } else {
@@ -68,8 +48,10 @@ async function synchronize(id) {
       }
     } catch (error) {
       if (!['P0001','23503','23505','23514','23502','22007','22P02'].includes(error.code)) throw error;
-      rejection = message('sync.rejection', { operation: message(labels[command.kind] || 'common.change'),
-        date: command.body.day ? ' (' + command.body.day + ')' : '', detail: errorMessage(error) });
+      rejection = command.kind === 'signIn'
+        ? error.code === '23505' ? message('login.credentialsMismatch') : loginRejection(errorMessage(error))
+        : message('sync.rejection', { operation: message(labels[command.kind] || 'common.change'),
+          date: command.body.day ? ' (' + command.body.day + ')' : '', detail: errorMessage(error) });
     }
     // Keep the command until both its receipt and the new snapshot can be read.
     const base = await rpc('amigo_read', { p: id });
@@ -80,12 +62,13 @@ async function synchronize(id) {
       if (command.kind === 'signIn') {
         (current.loginResults ??= {})[command.operation] = { session: loginSession, rejection };
       }
-      if (rejection) current.notices.push(rejection);
+      if (rejection && command.kind !== 'signIn') current.notices.push(rejection);
     });
     row = await readLocal(id);
   }
   const base = await rpc('amigo_read', { p: id });
   await updateLocal(id, current => { current.base = base; current.missing = base === null; });
+  setVotingStatus(id,base && navigator.onLine ? 'ready' : 'unavailable');
   status(id, base ? 'sync.synced' : 'sync.missing');
 }
 
@@ -103,7 +86,10 @@ export function sync(id) {
   };
   job.promise = Promise.resolve().then(() => navigator.locks
     ? navigator.locks.request('amigo-sync-' + id, work) : work())
-    .catch(error => status(id, client ? 'sync.deferred' : 'sync.notConfigured', { detail: errorMessage(error) }))
+    .catch(error => {
+      setVotingStatus(id,navigator.onLine ? 'unavailable' : 'offline');
+      status(id, client ? 'sync.deferred' : 'sync.notConfigured', { detail: errorMessage(error) });
+    })
     .finally(() => running.delete(id));
   return job.promise;
 }
@@ -129,20 +115,21 @@ export function follow(id) {
   const timer = setInterval(refresh, 30000);
   window.addEventListener('online', refresh);
   window.addEventListener('offline', refresh);
+  const visible = () => { if (document.visibilityState === 'visible') refresh(); };
+  document.addEventListener('visibilitychange',visible);
   return () => {
     stopped = true;
     clearInterval(timer);
     window.removeEventListener('online', refresh);
     window.removeEventListener('offline', refresh);
+    document.removeEventListener('visibilitychange',visible);
     if (subscription) client.removeChannel(subscription);
   };
 }
 
 export function startSync() {
   async function flush() {
-    if (navigator.onLine) {
-      for (const id of await pendingPolls()) await sync(id);
-    }
+    for (const id of await pendingPolls()) await sync(id);
   }
   const retry = () => flush().catch(error => console.warn('Lokale synchronisatie:', error.message));
   window.addEventListener('amigo-queued', event => sync(event.detail));

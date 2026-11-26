@@ -1,5 +1,5 @@
 import { t, message, translateMessage } from '../i18n/index.js';
-import { errorMessage } from '../i18n/errors.js';
+import { errorMessage, isLoginNotice } from '../i18n/errors.js';
 import { formatProposal } from '../utils/dates.js';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
@@ -155,7 +155,7 @@ export default function PollPage({ pollId, share }) {
     enqueue(pollId, kind, body).catch(err => setStorageError(message('error.localSave', { detail: errorMessage(err) })));
   }
 
-  const notices = row?.notices || [];
+  const notices = (row?.notices || []).filter(notice => !isLoginNotice(notice, row?.loginResults));
   if (!poll) {
     const statusText = row?.missing ? t('poll.deleted')
       : status?.key === 'sync.offline' ? t('poll.notCached') : translateMessage(status);
@@ -197,8 +197,6 @@ export default function PollPage({ pollId, share }) {
         <h1>{poll.title}</h1>
         <SharePollButton poll={poll} dates={dates} votes={votes} />
       </div>
-      {storageError && <p role="alert" className="error">{translateMessage(storageError)}</p>}
-      {notices.map((notice, index) => <p className="error" key={index}>{t('poll.rejected', { detail: translateMessage(notice) })}</p>)}
       {poll.description && <p className="description">{poll.description}</p>}
 
       {poll.status === 'closed' && finalDate && !['saving', 'waiting'].includes(celebration?.phase) && (
@@ -214,7 +212,7 @@ export default function PollPage({ pollId, share }) {
         session={session} onSelect={selectVoter} votingOpen={showBallot} readOnly={editing} />
 
       <div className="form poll-results">
-        <CollapsibleSegment title={t('results.section')} open={hasDates && hasVoters}>
+        <CollapsibleSegment title={t('results.section')} open={hasDates && Boolean(hasVoters || storageError || notices.length)}>
           <div className="vote-grid-scroll" role="region" aria-label={t('results.heading')} tabIndex={0}>
             <VoteGrid
               dates={dates}
@@ -231,6 +229,8 @@ export default function PollPage({ pollId, share }) {
               : row.queue.length ? t('sync.changesPending') : ''}
             {' '}{row.queue.length && status?.key === 'sync.synced' ? '' : translateMessage(status)}
           </p>
+          {storageError && <p role="alert" className="error">{translateMessage(storageError)}</p>}
+          {notices.map((notice, index) => <p role="alert" className="error" key={index}>{t('poll.rejected', { detail: translateMessage(notice) })}</p>)}
         </CollapsibleSegment>
       </div>
 
