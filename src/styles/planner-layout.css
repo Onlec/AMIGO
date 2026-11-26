@@ -1,6 +1,7 @@
 /* Shared layout for the approved planner wireframe; the tool index keeps its own layout. */
 .planner-page,
-.planner-header {
+.planner-header,
+.site-footer {
   --planner-width: 760px;
   --planner-gutter: 24px;
   --planner-inset: 16px;
@@ -172,7 +173,7 @@
 .planner-page .calendar-header .calendar-title { min-width: 0; text-align: center; }
 
 @media (max-width: 600px) {
-  .planner-page, .planner-header { --planner-gutter: 12px; --planner-inset: 12px; }
+  .planner-page, .planner-header, .site-footer { --planner-gutter: 12px; --planner-inset: 12px; }
   .planner-page { padding-top: 24px; }
   .planner-page h1 { font-size: 28px; }
   .planner-header nav { gap: 8px; }

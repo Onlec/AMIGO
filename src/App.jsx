@@ -3,6 +3,8 @@ import SiteHeader from './components/SiteHeader.jsx';
 import HomePage from './components/HomePage.jsx';
 import CreatePollPage from './components/CreatePollPage.jsx';
 import PollPage from './components/PollPage.jsx';
+import StatisticsPage from './components/StatisticsPage.jsx';
+import SiteFooter from './components/SiteFooter.jsx';
 import { PLANNER_ONLY } from './config.js';
 import { useLocale } from './i18n/react.js';
 import { t } from './i18n/index.js';
@@ -16,6 +18,7 @@ function getRoute() {
   if (params.get('page') === 'planner') {
     return { name: 'planner' };
   }
+  if (params.get('page') === 'statistics') return { name: 'statistics' };
   return { name: PLANNER_ONLY ? 'planner' : 'home' };
 }
 
@@ -23,7 +26,7 @@ export default function App() {
   const locale = useLocale();
   const [route, setRoute] = useState(getRoute);
   useEffect(() => {
-    if (route.name !== 'home') document.title = t('app.documentTitle');
+    if (route.name !== 'home') document.title = t(route.name === 'statistics' ? 'statistics.documentTitle' : 'app.documentTitle');
   }, [route.name, locale]);
 
   function showShare(pollId, link) {
@@ -32,7 +35,7 @@ export default function App() {
   }
 
   if (route.name === 'home') {
-    return <HomePage />;
+    return <><HomePage /><SiteFooter /></>;
   }
 
   return (
@@ -40,6 +43,8 @@ export default function App() {
       <SiteHeader />
       {route.name === 'poll' && <PollPage pollId={route.pollId} share={route.share} />}
       {route.name === 'planner' && <CreatePollPage onCreated={showShare} />}
+      {route.name === 'statistics' && <StatisticsPage />}
+      <SiteFooter />
     </>
   );
 }

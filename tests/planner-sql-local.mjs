@@ -43,15 +43,47 @@ try {
   `);
   const names = (await readdir('supabase/migrations')).filter(name => name.endsWith('.sql')).sort();
   for (const name of names) {
+    if (name === '202611260002_statistics.sql') {
+      // Existing data must be counted once when statistics are introduced.
+      await database.exec(`
+        select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+        select public.amigo_apply('eeeeeeee-1111-4111-8111-111111111111',gen_random_uuid(),'createPoll',
+          jsonb_build_object('title','Statistics baseline','description','','organizerName','Maker',
+            'proof',repeat('a',64),'voter','eeeeeeee-2222-4222-8222-222222222222','voterProof',repeat('b',64),
+            'dates','{"2027-01-02":{},"2027-01-04":{}}'::jsonb));
+        select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+        select public.amigo_sign_in('eeeeeeee-1111-4111-8111-111111111111',gen_random_uuid(),
+          jsonb_build_object('voter','eeeeeeee-3333-4333-8333-333333333333','name','Guest','proof',repeat('c',64)));
+        select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+        select public.amigo_submit_ballot('eeeeeeee-1111-4111-8111-111111111111',gen_random_uuid(),
+          jsonb_build_object('voter','eeeeeeee-2222-4222-8222-222222222222','proof',repeat('b',64),
+            'submissionMode','online','changes','{"2027-01-02":"yes","2027-01-04":"no"}'::jsonb));
+        select public.amigo_submit_ballot('eeeeeeee-1111-4111-8111-111111111111',gen_random_uuid(),
+          jsonb_build_object('voter','eeeeeeee-3333-4333-8333-333333333333','proof',repeat('c',64),
+            'submissionMode','online','changes','{"2027-01-02":"yes","2027-01-04":"maybe"}'::jsonb));
+        select public.amigo_apply('eeeeeeee-1111-4111-8111-111111111111',gen_random_uuid(),'close','{"day":"2027-01-02"}');
+      `);
+    }
     const sql = (await readFile(join('supabase/migrations', name), 'utf8'))
       .replace('create extension if not exists pg_cron with schema pg_catalog;', '-- Scheduling stub replaces the pg_cron extension.');
     try { await database.exec(sql); }
     catch (error) { throw new Error('Migration failed: ' + name, { cause: error }); }
+    if (name === '202611260002_statistics.sql') {
+      const baseline = (await database.query('select public.amigo_statistics() as data')).rows[0].data;
+      assert.deepEqual({ ...baseline, startedAt: null }, { startedAt: null, planners: 1, registrations: 2,
+        answers: 4, maybeAnswers: 1, mondayAnswers: 2, mondayNoAnswers: 1, finalizedPlanners: 1, weekendDates: 1, unanimousDates: 1 });
+      await database.exec("delete from amigo.polls where id='eeeeeeee-1111-4111-8111-111111111111';");
+      assert.deepEqual((await database.query('select public.amigo_statistics() as data')).rows[0].data, baseline);
+      console.log('PASS: statistics backfill counts existing data once and survives cascading planner deletion.');
+    }
   }
   console.log('PASS: all ' + names.length + ' migrations apply to fresh PostgreSQL (Realtime/Cron stubbed).');
   try { await database.exec(await readFile('supabase/tests/planner.sql', 'utf8')); }
   catch (error) { throw new Error('Planner SQL regression failed', { cause: error }); }
   console.log('PASS: current planner SQL regression, including permissions, retries, votes, final dates, participation, expiry and rejected obsolete APIs.');
+  try { await database.exec(await readFile('supabase/tests/statistics.sql', 'utf8')); }
+  catch (error) { throw new Error('Statistics SQL regression failed', { cause: error }); }
+  console.log('PASS: anonymous statistics permissions, successful actions, retries, rollbacks, unanimity, reopening and expiry.');
   await database.exec(`
     select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
     select public.amigo_apply('aaaaaaaa-1111-4111-8111-111111111111',gen_random_uuid(),'createPoll',

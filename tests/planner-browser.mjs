@@ -482,11 +482,11 @@ try {
   await evaluate("document.querySelector('.voter-ballot .date-cards [role=radio]').click()");
   assert.equal(await evaluate("pollData.readLocal(fixturePoll).then(row => row.queue.length)"), queueBeforeFinalVote, 'Readonly card controls cannot clear an answer');
   assert.equal(await evaluate("document.querySelector('.organizer-panel').closest('.unlock-form') !== null"), true, 'Final-date selection also stays in the organizer segment');
-  assert.equal(await evaluate("document.querySelector('.voter-ballot [aria-label=\"Sorteer kaarten\"]') === null"), true, 'Sorting is limited to organizer final-date selection');
+  assert.equal(await evaluate("document.querySelector('.voter-ballot .organizer-card-sort') === null"), true, 'Sorting is limited to organizer final-date selection');
   await evaluate("pollData.updateLocal(fixturePoll, row => { for (let n = 0; n < 5; n++) row.base.votes['sort-' + n] = { name: 'Sort ' + n, votesJson: '{\"2027-04-12\":\"yes\"}' }; })");
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.organizer-panel .date-cards > li')].map(card => card.dataset.day)"), ['2027-01-10', '2027-04-12'], 'Cards initially show earliest date first');
   await evaluate("document.querySelector('.organizer-panel .date-cards button').click()");
-  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Datum').click()");
+  await evaluate("[...document.querySelectorAll('.organizer-panel .organizer-card-sort button')].find(button => button.textContent === 'Datum').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel .date-cards > li').dataset.day === '2027-04-12'"));
   assert.equal(await evaluate("document.querySelector('.organizer-panel .date-cards button[aria-pressed=true]').closest('li').dataset.day"), '2027-01-10', 'Sorting preserves the chosen date');
   for (const mobile of [false, true]) {
@@ -504,7 +504,7 @@ try {
     })()`), true, 'Date buttons align beside dates and footer clears last card on desktop and mobile');
   }
   await command('Emulation.clearDeviceMetricsOverride');
-  await evaluate("[...document.querySelectorAll('.organizer-panel [aria-label=\"Sorteer kaarten\"] button')].find(button => button.textContent === 'Meeste ja').click()");
+  await evaluate("[...document.querySelectorAll('.organizer-panel .organizer-card-sort button')].find(button => button.textContent === 'Meeste ja').click()");
   await until(() => evaluate("document.querySelector('.organizer-panel .date-cards > li').dataset.day === '2027-01-10'"));
   await evaluate("pollData.updateLocal(fixturePoll, row => { for (let n = 0; n < 5; n++) delete row.base.votes['sort-' + n]; })");
   await evaluate("[...document.querySelectorAll('.organizer-panel button')].find(button => button.textContent === 'Annuleren').click()");
