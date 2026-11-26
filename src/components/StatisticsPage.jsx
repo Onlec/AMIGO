@@ -1,7 +1,7 @@
 import React from 'react';
 import { getLocale, t } from '../i18n/index.js';
 import { loadStatistics, useStatistics } from '../data/statistics.js';
-import { STATISTIC_TOTALS, STATISTIC_RATIOS, STATISTIC_JOKES, statisticMeasurement } from '../utils/statistics.js';
+import { STATISTIC_TOTALS, STATISTIC_RATIOS, statisticMeasurement } from '../utils/statistics.js';
 import { MasterCounter, MeasurementStatus } from './StatisticsInstruments.jsx';
 import StatisticIcon from './StatisticIcon.jsx';
 
@@ -45,12 +45,10 @@ export default function StatisticsPage() {
       <div className="form statistics-sections" aria-busy={status === 'loading' || status === 'idle'}>
         <StatisticGroup title={t('statistics.totals')} number="01" items={STATISTIC_TOTALS} data={data} status={status} />
         <StatisticGroup title={t('statistics.human')} number="02" items={STATISTIC_RATIOS} data={data} status={status} />
-        <StatisticGroup title={t('statistics.nonsense')} number="03" items={STATISTIC_JOKES} data={data} status={status} />
         <fieldset className="office-nameplate">
-          <legend>04 — {t('statistics.nameplate')}</legend>
+          <legend>03 — {t('statistics.nameplate')}</legend>
           <dl>
             <div><dt>{t('statistics.notePrivacy')}</dt><dd>{t('statistics.privacy')}</dd></div>
-            <div><dt>{t('statistics.noteHumour')}</dt><dd>{t('statistics.jokeNote')}</dd></div>
             <div><dt>{t('statistics.noteBaseline')}</dt><dd>{data ? t('statistics.baseline', {
               date: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeZone: 'Europe/Amsterdam' }).format(new Date(data.startedAt)),
             }) : '—'}</dd></div>

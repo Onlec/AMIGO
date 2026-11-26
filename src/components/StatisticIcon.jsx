@@ -9,8 +9,6 @@ const icons = {
   monday: <><rect x="4" y="5" width="16" height="15" rx="1" /><path d="M8 3v4m8-4v4M4 10h16m-12 4 8 4m0-4-8 4" /></>,
   weekend: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></>,
   agreement: <><circle cx="12" cy="12" r="9" /><path d="m7 12 3 3 7-7" /></>,
-  goats: <><path d="M9 7C5 7 5 3 7 2m8 5c4 0 4-4 2-5M8 8 3 7l2 5 3 1m8-5 5-1-2 5-3 1M8 8l1 10 3 3 3-3 1-10-4-2-4 2Zm2 5h.1m3.8 0h.1M11 17h2" /></>,
-  meetings: <><circle cx="7" cy="6" r="2" /><circle cx="17" cy="6" r="2" /><path d="M3 13v-1a4 4 0 0 1 8 0m2 0a4 4 0 0 1 8 0v1M5 14h14M7 14v7m10-7v7M3 17h3m12 0h3" /></>,
 };
 
 export default function StatisticIcon({ id }) {
