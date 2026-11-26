@@ -18,12 +18,11 @@ export default function SiteFooter() {
   const { data, status } = useStatistics();
   const items = footerStatistics(data);
   const [offset, setOffset] = useState(() => Math.floor(Math.random() * 1000000));
-  const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(() => !document.hidden);
   const reduced = useReducedMotion();
-  const stopped = paused || hovered || focused || !visible || reduced;
+  const stopped = hovered || focused || !visible || reduced;
   const id = items[offset % items.length];
   const joke = STATISTIC_JOKES.includes(id);
 
@@ -44,18 +43,16 @@ export default function SiteFooter() {
         onFocusCapture={() => setFocused(true)}
         onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
         <div className="footer-statistic" aria-live="off">
+          <span className="footer-statistic__prefix">{t('statistics.footerPrefix')}</span>
           {status === 'loading' || status === 'idle' ? <span className="footer-statistic__loading">{t('statistics.loading')}</span> : (
-            <div className="footer-statistic__slide" key={id} data-statistic={id}>
-              <span className="footer-statistic__kind lab">{t(joke ? 'statistics.justForFun' : 'statistics.realFigure')}</span>
+            <div className="footer-statistic__slide" key={id} data-statistic={id}
+              title={(joke ? t('statistics.justForFun') + ' — ' : '') + t('statistics.' + id + '.label') + ': ' + statisticValue(id, data)}>
               <span className="footer-statistic__text">{t('statistics.' + id + '.label')}: <strong>{statisticValue(id, data)}</strong></span>
             </div>
           )}
         </div>
         <div className="site-footer__actions">
-          {!reduced && <button type="button" className="footer-statistic__pause" aria-pressed={paused}
-            aria-label={t(paused ? 'statistics.resume' : 'statistics.pause')} title={t(paused ? 'statistics.resume' : 'statistics.pause')}
-            onClick={() => setPaused(value => !value)}><span aria-hidden="true">{paused ? '▶' : 'Ⅱ'}</span></button>}
-          <a href="?page=statistics">{t('statistics.footerLink')} <span aria-hidden="true">↗</span></a>
+          <a href="?page=statistics">{t('statistics.footerLink')}</a>
         </div>
       </div>
     </footer>

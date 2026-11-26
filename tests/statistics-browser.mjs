@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer as httpServer } from 'node:http';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'vite';
@@ -89,6 +89,12 @@ try {
     };
     window.clearInterval=id=>{footerTimers.delete(id);originalClear(id);};
     window.advanceFooter=()=>{for(const callback of footerTimers.values())callback();};
+    window.counterAnimations=[];
+    const originalAnimate=Element.prototype.animate;
+    Element.prototype.animate=function(frames,options){
+      if(this.classList.contains('office-counter__roll'))counterAnimations.push(options.duration);
+      return originalAnimate.call(this,frames,options);
+    };
   ` });
   await command('Page.navigate', { url: origin + '?page=statistics' });
   await until(() => evaluate("document.querySelector('.statistics-page') !== null"));
@@ -99,14 +105,23 @@ try {
   await evaluate('document.fonts.ready');
   assert.equal(state.calls, 1, 'The page and footer share a single fetch');
   assert.equal(state.auth, 0, 'Public statistics do not create a login');
-  assert.equal(await evaluate('document.title'), 'AMIGO — Statistics');
+  assert.equal(await evaluate('document.title'), 'AMIGO · FIG. 03 — The Counting Office');
   assert.equal(await evaluate("document.querySelectorAll('.statistics-page .statistic-card').length"), 10);
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent"), '25%');
+  assert.equal(await evaluate("document.querySelector('.office-gauge__needle').getAttribute('transform')"), 'rotate(-45 120 125)');
+  assert.equal(await evaluate("document.querySelector('.office-counter .office-sr-only').textContent"), 'Answers recorded: 1,000');
+  assert.equal(await evaluate('counterAnimations.length'), 6);
+  assert.equal(await evaluate('counterAnimations.every(duration=>duration<=1200)'), true);
+  assert.equal(await evaluate("document.querySelectorAll('.office-weekend__days > span').length"), 7);
+  assert.equal(await evaluate("document.querySelectorAll('.office-weekend .is-weekend').length"), 2);
+  assert.equal(await evaluate("document.querySelector('[data-statistic=goats]').dataset.state"), 'notApplicable');
+  await pause(1250);
+  assert.equal(await evaluate("document.querySelector('.office-counter').getAnimations({subtree:true}).length"), 0, 'Counter animation finishes without looping');
   const slide = () => evaluate("document.querySelector('.footer-statistic__slide').dataset.statistic");
   assert.equal(await slide(), 'planners', 'Initial selection uses the random offset');
   await until(() => evaluate('footerTimers.size === 1'));
   await evaluate('advanceFooter()'); await until(async () => await slide() === 'registrations');
-  assert.equal(await evaluate("document.querySelector('.statistics-page h1').textContent"), 'Small plans. Big numbers.', 'Only the footer rotates');
+  assert.equal(await evaluate("document.querySelector('.statistics-page h1').textContent"), 'The Counting Office', 'Only the footer rotates');
 
   await evaluate("document.querySelector('.site-footer__inner').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}))");
   await until(() => evaluate('footerTimers.size === 0'));
@@ -115,10 +130,7 @@ try {
   await until(() => evaluate('footerTimers.size === 1'));
   await evaluate("document.querySelector('.site-footer a').focus()");
   await until(() => evaluate('footerTimers.size === 0'));
-  await evaluate("document.activeElement.blur(); document.querySelector('.footer-statistic__pause').click()");
-  await until(() => evaluate("document.querySelector('.footer-statistic__pause').getAttribute('aria-pressed') === 'true'"));
-  assert.equal(await evaluate('footerTimers.size'), 0);
-  await evaluate("document.querySelector('.footer-statistic__pause').click()");
+  await evaluate("document.activeElement.blur()");
   await until(() => evaluate('footerTimers.size === 1'));
   await evaluate("Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))");
   await until(() => evaluate('footerTimers.size === 0'));
@@ -129,32 +141,61 @@ try {
   await until(() => evaluate('footerTimers.size === 0'));
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.footer-statistic__slide')).animationName"), 'none');
   assert.equal(await evaluate("document.querySelector('.footer-statistic__pause') === null"), true);
+  assert.equal(await evaluate("document.querySelector('.footer-statistic__prefix').textContent"), 'Statistic:');
 
   for (const locale of ['en-GB', 'nl-BE']) {
     await evaluate(`import('/src/i18n/index.js').then(module=>module.setLocale(${JSON.stringify(locale)}))`);
     for (const theme of ['light', 'dark']) {
       await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);
-      for (const width of [320, 390, 720, 1440]) {
+      for (const width of [320, 375, 390, 720, 768, 1440]) {
         await command('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
         await pause(50);
         const problems = await evaluate(`(()=>{
           const issues=[];
           if(document.documentElement.scrollWidth>innerWidth+1)issues.push('page overflow');
-          for(const node of document.querySelectorAll('.statistic-card,.site-footer__inner')){
+          if(document.querySelector('.site-footer').getBoundingClientRect().height>40)issues.push('footer is not compact');
+          for(const node of document.querySelectorAll('.statistic-card,.site-footer__inner,.office-master,.office-nameplate,.office-header,.office-register-heading')){
             if(node.scrollWidth>node.clientWidth+1)issues.push(node.className+' overflow');
+          }
+          for(const digit of document.querySelectorAll('.office-counter__window')){
+            const visibleDigit=digit.querySelector('.office-counter__roll > span:last-child');
+            if(visibleDigit.scrollWidth>digit.clientWidth+1)issues.push('counter digit clipped');
           }
           return issues;
         })()`);
         assert.deepEqual(problems, [], `${locale} ${theme} ${width}px`);
+        if (process.argv.includes('--screenshots') && locale === 'en-GB' && [375,1440].includes(width)) {
+          await mkdir('docs/counting-office', { recursive: true });
+          await evaluate("scrollTo({top:0,behavior:'instant'})");
+          const metrics = await command('Page.getLayoutMetrics');
+          const screenshot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true,
+            clip: { x: 0, y: 0, width, height: metrics.cssContentSize.height, scale: 1 } });
+          await writeFile(`docs/counting-office/${theme}-${width}.png`, Buffer.from(screenshot.data, 'base64'));
+        }
       }
     }
   }
+  assert.equal(await evaluate('counterAnimations.length'), 6, 'Theme, language and layout changes never replay the counter');
+
+  assert.equal(await evaluate(`(()=>{
+    const footer=document.querySelector('.site-footer').getBoundingClientRect();
+    const main=document.querySelector('main').getBoundingClientRect();
+    return footer.top>=main.bottom-1 && footer.top>innerHeight;
+  })()`), true, 'Long content pushes the footer below the viewport without overlap');
+  await evaluate('scrollTo(0,document.documentElement.scrollHeight)');
+  await pause(500);
+  assert.equal(await evaluate("Math.abs(document.querySelector('.site-footer').getBoundingClientRect().bottom-innerHeight)<2"), true, 'The footer is reachable at the end of long content');
 
   await evaluate("document.querySelector('.site-header')?.blur()");
   await command('Page.navigate', { url: origin });
   await until(() => evaluate("document.querySelector('.planner-page:not(.statistics-page)') !== null && document.querySelector('.footer-statistic__slide') !== null"));
+  await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 2400, deviceScaleFactor: 1, mobile: false });
+  await pause(100);
+  assert.equal(await evaluate("Math.abs(document.querySelector('.site-footer').getBoundingClientRect().bottom-innerHeight)<2 && document.documentElement.scrollHeight<=innerHeight+1"), true, 'Short content keeps the footer at the bottom of the viewport');
   await evaluate("document.querySelector('.site-footer a').click()");
   await until(() => evaluate("document.querySelector('.statistics-page') !== null"));
+  await until(() => evaluate("document.querySelector('.office-counter__digits') !== null"));
+  assert.equal(await evaluate('counterAnimations.length'), 0, 'Reduced motion immediately shows final digits without animating');
   assert.equal(new URL(await evaluate('location.href')).searchParams.get('page'), 'statistics');
   await evaluate('history.back()');
   await until(() => evaluate("document.querySelector('.planner-page:not(.statistics-page)') !== null"));
@@ -163,16 +204,39 @@ try {
   await command('Page.navigate', { url: origin + '?page=statistics' });
   await until(() => evaluate("document.querySelector('.statistics-error') !== null"));
   assert.equal(await evaluate("document.querySelector('[data-statistic=planners] dd').textContent"), '—', 'An unavailable count is not zero');
-  assert.equal(await evaluate("document.querySelector('.footer-statistic__kind').textContent"), 'Voor de grap');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=planners]').dataset.state"), 'unavailable');
+  assert.equal(await evaluate("document.querySelector('.office-counter__digits') === null"), true);
+  assert.ok(await evaluate("document.querySelector('.footer-statistic__slide').title.includes('Voor de grap')"));
   state.fail = false;
   state.data = { ...state.data, answers: 0, mondayAnswers: 0, finalizedPlanners: 0, maybeAnswers: 0,
     mondayNoAnswers: 0, weekendDates: 0, unanimousDates: 0 };
   await evaluate("document.querySelector('.statistics-error button').click()");
   await until(() => evaluate("document.querySelector('[data-statistic=answers] dd').textContent === '0'"));
-  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent"), 'Nog even verzamelen');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt]').dataset.state"), 'collecting');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] .office-collection__label').textContent"), 'Nog even verzamelen');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] [role=progressbar]').getAttribute('aria-valuenow')"), '0');
+  assert.equal(await evaluate("document.querySelector('.office-gauge__needle') === null"), true);
+  assert.equal(await evaluate("[...document.querySelectorAll('.office-counter__roll > span:last-child')].map(node=>node.textContent).join('')"), '000000');
   assert.equal(await evaluate("document.querySelector('.statistics-error') === null"), true);
   assert.equal(state.auth, 0);
-  console.log('PASS: public statistics, one shared fetch, random rotating footer, hover/focus/pause/hidden-tab controls, reduced motion, EN/NL, both themes, responsive layouts, navigation, errors and retry.');
+  const reload = () => evaluate("import('/src/data/statistics.js').then(module=>module.loadStatistics(true))");
+  state.data = { ...state.data, answers: 9, maybeAnswers: 4 };
+  await reload();
+  await until(() => evaluate("document.querySelector('[data-statistic=doubt] [role=progressbar]')?.getAttribute('aria-valuenow') === '9'"));
+  assert.equal(await evaluate("document.querySelectorAll('[data-statistic=doubt] .office-progress .is-filled').length"), 9);
+  assert.equal(await evaluate("document.querySelector('.office-gauge__needle') === null"), true);
+  state.data = { ...state.data, answers: 10, maybeAnswers: 0 };
+  await reload();
+  await until(() => evaluate("document.querySelector('[data-statistic=doubt]').dataset.state === 'measured'"));
+  assert.ok(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent.includes('0')"));
+  assert.equal(await evaluate("document.querySelector('.office-gauge__needle').getAttribute('transform')"), 'rotate(-90 120 125)');
+  state.data = { ...state.data, answers: Number.MAX_SAFE_INTEGER };
+  await reload();
+  await until(() => evaluate("document.querySelectorAll('.office-counter__window').length === 16"));
+  await command('Emulation.setDeviceMetricsOverride', { width: 375, height: 1000, deviceScaleFactor: 1, mobile: false });
+  assert.equal(await evaluate("document.documentElement.scrollWidth<=innerWidth+1"), true, 'Large counters stay within mobile bounds');
+  assert.equal(await evaluate('counterAnimations.length'), 0, 'Retry and new readings do not replay a counter already shown');
+  console.log('PASS: Counting Office values, statuses, gauge, honest weekend strip, one-time/reduced-motion counter, large digits, EN/NL, responsive themes, unchanged compact footer, navigation, errors and retry.');
 } finally {
   state.releases.splice(0).forEach(resolve => resolve());
   socket?.close(); browser.kill(); await server.close();

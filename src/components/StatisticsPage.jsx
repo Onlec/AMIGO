@@ -1,50 +1,74 @@
 import React from 'react';
 import { getLocale, t } from '../i18n/index.js';
 import { loadStatistics, useStatistics } from '../data/statistics.js';
-import { STATISTIC_TOTALS, STATISTIC_RATIOS, STATISTIC_JOKES, statisticValue } from '../utils/statistics.js';
+import { STATISTIC_TOTALS, STATISTIC_RATIOS, STATISTIC_JOKES, statisticMeasurement } from '../utils/statistics.js';
+import { MasterCounter, MeasurementStatus, IndecisionGauge, WeekendStrip } from './StatisticsInstruments.jsx';
 
-function StatisticGroup({ title, items, data, status }) {
+function StatisticGroup({ title, number, items, data, status }) {
   return (
-    <fieldset className="statistics-section">
-      <legend>{title}</legend>
+    <section className="statistics-section" aria-labelledby={'office-register-' + number}>
+      <div className="office-register-heading">
+        <span className="office-register-number" aria-hidden="true">{number}</span>
+        <h2 id={'office-register-' + number}>{title}</h2>
+        <span className="office-register-rule" aria-hidden="true" />
+      </div>
       <dl className="statistics-grid">
-        {items.map(id => (
-          <div className="statistic-card" key={id} data-statistic={id}>
-            <dt>{t('statistics.' + id + '.label')}</dt>
-            <dd className="statistic-card__value">{statisticValue(id, data)}</dd>
+        {items.map((id, index) => {
+          const measurement = statisticMeasurement(id, data, status);
+          const collecting = measurement.state === 'collecting';
+          const joke = STATISTIC_JOKES.includes(id);
+          return <div className="statistic-card" key={id} data-statistic={id} data-state={measurement.state}>
+            <dt><span className="office-record-number" aria-hidden="true">{number}.{String(index + 1).padStart(2, '0')}</span>{t('statistics.' + id + '.label')}</dt>
+            <dd className={'statistic-card__value' + (collecting ? ' statistic-card__value--collecting' : '')}>
+              {collecting ? <span aria-hidden="true">—</span> : measurement.value}
+              {joke && <span className="office-seal">{t(id === 'goats' ? 'statistics.sealed' : 'statistics.locked')}</span>}
+            </dd>
+            <dd className="office-card-instrument">
+              {id === 'doubt' && <IndecisionGauge ratio={measurement.ratio} />}
+              {id === 'weekend' && <WeekendStrip />}
+              <MeasurementStatus measurement={measurement} />
+            </dd>
             <dd className="statistic-card__description">{t('statistics.' + id + '.description')}</dd>
-          </div>
-        ))}
+          </div>;
+        })}
       </dl>
-      {status === 'loading' && <p className="statistics-section__loading">{t('statistics.loading')}</p>}
-    </fieldset>
+    </section>
   );
 }
 
 export default function StatisticsPage() {
   const { data, status, fetchedAt } = useStatistics();
   return (
-    <main className="planner-page statistics-page">
-      <div className="eyebrow">{t('statistics.eyebrow')}</div>
-      <h1>{t('statistics.title')}</h1>
-      <p className="description">{t('statistics.intro')}</p>
+    <main className="planner-page statistics-page counting-office">
+      <header className="office-header">
+        <div className="office-header__top"><span className="eyebrow">{t('statistics.eyebrow')}</span><span className="office-edition">{t('statistics.officeEdition')}</span></div>
+        <h1>{t('statistics.title')}</h1>
+        <p className="description">{t('statistics.intro')}</p>
+      </header>
+      {status === 'error' && <div className="statistics-error" role="alert">
+        <p>{t('statistics.error')}</p>
+        <button type="button" className="btn-secondary" onClick={() => loadStatistics(true)}>{t('statistics.retry')}</button>
+      </div>}
+      <MasterCounter value={data?.answers ?? null} status={status} />
       <div className="statistics-sections" aria-busy={status === 'loading' || status === 'idle'}>
-        {status === 'error' && <div className="statistics-error" role="alert">
-          <p>{t('statistics.error')}</p>
-          <button type="button" className="btn-secondary" onClick={() => loadStatistics(true)}>{t('statistics.retry')}</button>
-        </div>}
-        <StatisticGroup title={t('statistics.totals')} items={STATISTIC_TOTALS} data={data} status={status} />
-        <StatisticGroup title={t('statistics.human')} items={STATISTIC_RATIOS} data={data} />
-        <StatisticGroup title={t('statistics.nonsense')} items={STATISTIC_JOKES} />
+        <StatisticGroup title={t('statistics.totals')} number="01" items={STATISTIC_TOTALS} data={data} status={status} />
+        <StatisticGroup title={t('statistics.human')} number="02" items={STATISTIC_RATIOS} data={data} status={status} />
+        <StatisticGroup title={t('statistics.nonsense')} number="03" items={STATISTIC_JOKES} data={data} status={status} />
       </div>
-      <p className="statistics-note">{t('statistics.jokeNote')}</p>
-      <p className="statistics-note">{t('statistics.privacy')}</p>
-      {data && <p className="statistics-note">{t('statistics.baseline', {
-        date: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeZone: 'Europe/Amsterdam' }).format(new Date(data.startedAt)),
-      })}</p>}
-      {fetchedAt && <p className="statistics-note">{t('statistics.fetchedAt', {
-        time: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short', hour12: false }).format(fetchedAt),
-      })}</p>}
+      <section className="office-nameplate" aria-labelledby="office-nameplate-title">
+        <div className="office-nameplate__heading"><h2 id="office-nameplate-title">{t('statistics.nameplate')}</h2><span aria-hidden="true">FIG. 03 / AMIGO</span></div>
+        <dl>
+          <div><dt>{t('statistics.notePrivacy')}</dt><dd>{t('statistics.privacy')}</dd></div>
+          <div><dt>{t('statistics.noteHumour')}</dt><dd>{t('statistics.jokeNote')}</dd></div>
+          <div><dt>{t('statistics.noteBaseline')}</dt><dd>{data ? t('statistics.baseline', {
+            date: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeZone: 'Europe/Amsterdam' }).format(new Date(data.startedAt)),
+          }) : '—'}</dd></div>
+          <div><dt>{t('statistics.noteFetched')}</dt><dd>{fetchedAt ? t('statistics.fetchedAt', {
+            time: new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short', hour12: false }).format(fetchedAt),
+          }) : '—'}</dd></div>
+        </dl>
+        <p className="office-principle">{t('statistics.principle')}</p>
+      </section>
     </main>
   );
 }

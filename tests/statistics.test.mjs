@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setLocale, t } from '../src/i18n/index.js';
-import { footerStatistics, statisticValue } from '../src/utils/statistics.js';
+import { footerStatistics, statisticValue, statisticMeasurement } from '../src/utils/statistics.js';
 
 const data = { planners: 1234, registrations: 2000, answers: 100, maybeAnswers: 25,
   mondayAnswers: 10, mondayNoAnswers: 4, finalizedPlanners: 10, weekendDates: 8, unanimousDates: 3 };
@@ -25,4 +25,26 @@ test('footer never turns unavailable measurements into zero or insufficient samp
   assert.equal(footerStatistics(data).length, 10);
   assert.deepEqual(footerStatistics({ ...data, answers: 0, mondayAnswers: 0, finalizedPlanners: 0 }),
     ['planners', 'registrations', 'answers', 'finalizedPlanners', 'goats', 'meetings']);
+});
+
+test('instrument metadata preserves real zeros, threshold boundaries and unavailable versus unmeasured states', () => {
+  assert.equal(statisticMeasurement('planners', { ...data, planners: 0 }).state, 'measured');
+  assert.equal(statisticMeasurement('planners', { ...data, planners: 0 }).value, '0');
+  assert.equal(statisticMeasurement('answers', null, 'loading').state, 'reading');
+  assert.equal(statisticMeasurement('answers', null, 'error').state, 'unavailable');
+  assert.equal(statisticMeasurement('goats', null, 'error').state, 'notApplicable');
+  for (const [id, denominator, numerator] of [['doubt','answers','maybeAnswers'], ['monday','mondayAnswers','mondayNoAnswers'],
+    ['weekend','finalizedPlanners','weekendDates'], ['agreement','finalizedPlanners','unanimousDates']]) {
+    const collecting = statisticMeasurement(id, { ...data, [denominator]: 9 });
+    assert.equal(collecting.state, 'collecting');
+    assert.equal(collecting.ratio, null);
+    assert.equal(collecting.observations, 9);
+    assert.equal(collecting.threshold, 10);
+    for (const count of [0, 5, 10]) {
+      const measured = statisticMeasurement(id, { ...data, [denominator]: 10, [numerator]: count });
+      assert.equal(measured.state, 'measured');
+      assert.equal(measured.ratio, count / 10);
+      assert.equal(measured.value, statisticValue(id, { ...data, [denominator]: 10, [numerator]: count }));
+    }
+  }
 });
