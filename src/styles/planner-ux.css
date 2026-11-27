@@ -1,0 +1,28 @@
+.planner-page .planner-field > .field-help { grid-row: 3; margin: 0; color: var(--muted); font: 400 12px/1.6 var(--font-body); text-transform: none; letter-spacing: normal; }
+.planner-page .planner-field > .field-help.error { color: var(--error); }
+.planner-page p.field-help { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.planner-page .date-time-fields { display: grid; gap: 12px; margin-top: 16px; }
+.planner-page .date-time-fields .date-row { margin: 0; }
+.planner-page .date-row--untimed { grid-template-columns: minmax(0,1fr) 40px; }
+.planner-page .date-row--untimed > span { grid-column: 1; }
+.planner-page .date-row--untimed > button { grid-column: 2; }
+.planner-page .time-bulk-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 12px; }
+.planner-page .time-bulk-row label { min-width: 0; }
+.planner-page .time-bulk-row input { width: 100%; margin: 0; }
+.planner-page .text-button { width: auto; min-height: 0; border: 0; padding: 0; background: transparent; color: var(--ink); text-decoration: underline; font: inherit; }
+.planner-page .action-feedback p { margin: 0 0 12px; }
+.planner-page .draft-notice { font-size: 13px; color: var(--muted); }
+.planner-page .voting-progress { margin-inline-start: auto; font-size: 12px; }
+.planner-page .vote-local-feedback { margin-inline-start: auto; font-size: 12px; color: var(--muted); }
+.planner-page .calendar-day-button--vote { position: relative; }
+.planner-page .calendar-vote-feedback { position: absolute; inset-inline-end: 2px; bottom: 2px; font-size: 9px; }
+.planner-page .poll-heading > .share-poll { margin-top: 2px; }
+.planner-page .share-poll { position: relative; }
+.planner-page .share-panel { position: absolute; inset-inline-end: 0; top: calc(100% + 8px); z-index: 20; display: grid; gap: 12px; width: min(320px,calc(100vw - 52px)); padding: 12px; border: 1.5px solid var(--ink); background: var(--surface); }
+.planner-page .share-panel > button { width: 100%; }
+.planner-page .share-panel .description { margin: 0; font-size: 12px; }
+.planner-page .share-panel label { font-size: 12px; }
+.planner-page .share-panel textarea { display: block; width: 100%; min-width: 0; margin-top: 8px; resize: none; background: var(--bg); color: var(--ink); border: 1px solid var(--border); }
+.planner-page .remove-voter-confirm { display: grid; gap: 8px; min-width: 128px; padding-top: 8px; white-space: normal; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 360px) { .planner-page .time-bulk-row { grid-template-columns: minmax(0,1fr); } }

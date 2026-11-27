@@ -1,73 +1,73 @@
-import { t, message, translateMessage } from '../i18n/index.js';
-import { errorMessage } from '../i18n/errors.js';
-import { formatDay } from '../utils/dates.js';
 import React, { useState } from 'react';
+import { t } from '../i18n/index.js';
+import { formatDay } from '../utils/dates.js';
+import { normalizedDates, hasMissingTimes, affectedAnswers } from '../utils/planner.js';
 import MonthCalendar from './MonthCalendar.jsx';
+import DateTimeFields from './DateTimeFields.jsx';
+import PlannerField from './PlannerField.jsx';
+import ActionFeedback from './ActionFeedback.jsx';
 
-export default function EditPollPanel({ poll, initiallyParticipating = false, onSave, onCancel }) {
-  const [original] = useState(poll);
-  const [originalParticipation] = useState(initiallyParticipating);
-  const [title, setTitle] = useState(original.title);
-  const [description, setDescription] = useState(original.description);
-  const [days, setDays] = useState(() => new Set(Object.keys(original.dates)));
-  const [participating, setParticipating] = useState(initiallyParticipating);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const datesLocked = poll.status === 'closed';
-  const added = [...days].filter(day => !original.dates[day]);
-  const removed = Object.keys(original.dates).filter(day => !days.has(day));
-  const changes = { added, removed };
-  if (title.trim() !== original.title) changes.title = title.trim();
-  if (description.trim() !== original.description) changes.description = description.trim();
-  if (participating !== originalParticipation) changes.participating = participating;
-  const dirty = added.length || removed.length || 'title' in changes || 'description' in changes || 'participating' in changes;
-
-  function toggle(day) {
-    if (datesLocked) return;
-    const next = new Set(days);
-    if (next.has(day)) next.delete(day);
-    else next.add(day);
-    setDays(next);
+export default function EditPollPanel({ poll, initiallyParticipating=false, onSave, onCancel, action }) {
+  const [original]=useState(poll);
+  const [title,setTitle]=useState(original.title);
+  const [description,setDescription]=useState(original.description);
+  const [dates,setDates]=useState(original.dates);
+  const [enabled,setEnabled]=useState(original.timesEnabled ?? Object.values(original.dates).some(info=>info.time));
+  const [defaultTime,setDefaultTime]=useState(original.defaultTime || '');
+  const [participating,setParticipating]=useState(initiallyParticipating);
+  const [confirm,setConfirm]=useState(false);
+  const [error,setError]=useState('');
+  const locked=action.locked;
+  const datesLocked=poll.status==='closed';
+  const nextDates=normalizedDates(dates,enabled);
+  const removed=Object.keys(original.dates).filter(day=>!dates[day]);
+  const added=Object.keys(dates).filter(day=>!original.dates[day]);
+  const changed=Object.keys(dates).filter(day=>original.dates[day] && (original.dates[day].time || '')!==nextDates[day].time);
+  const dateDirty=removed.length || added.length || changed.length || enabled!==(original.timesEnabled ?? Object.values(original.dates).some(info=>info.time)) || defaultTime!==(original.defaultTime || '');
+  const changes={added,removed};
+  if (title.trim()!==original.title) changes.title=title.trim();
+  if (description.trim()!==original.description) changes.description=description.trim();
+  if (participating!==initiallyParticipating) changes.participating=participating;
+  if (dateDirty) Object.assign(changes,{timesEnabled:enabled,defaultTime:enabled?defaultTime:'',times:Object.fromEntries(Object.entries(nextDates).map(([day,info])=>[day,info.time]))});
+  const answers=affectedAnswers(poll,removed,changed,initiallyParticipating&&!participating);
+  function updateDates(next) {
+    setDates(next);setConfirm(false);
+    setError(current=>current==='validation.oneDate'&&!Object.keys(next).length?current:current==='times.required'&&hasMissingTimes(next,enabled)?current:'');
   }
-
+  function toggle(day) {
+    if (datesLocked || locked) return;
+    const next={...dates};
+    if(next[day])delete next[day];else next[day]={date:day,time:enabled?defaultTime:''};
+    updateDates(next);
+  }
   async function submit(event) {
     event.preventDefault();
-    if (!title.trim()) return setError(message('validation.titleRequired'));
-    if (datesLocked && (added.length || removed.length)) return setError(message('organizer.reopenForDates'));
-    if (removed.includes(poll.finalDateId)) return setError(message('organizer.keepFinalDate'));
-    setSaving(true);
-    try {
-      if (dirty) await onSave(changes);
-      onCancel();
-    } catch (err) {
-      setError(message('error.localSave', { detail: errorMessage(err) }));
-      setSaving(false);
-    }
+    if(locked)return;
+    if(!title.trim()){setError('validation.titleRequired');document.getElementById('edit-title')?.focus();return;}
+    if(!Object.keys(dates).length)return setError('validation.oneDate');
+    if(dateDirty && hasMissingTimes(dates,enabled))return setError('times.required');
+    if(dateDirty && datesLocked)return setError('organizer.reopenForDates');
+    if((answers>0 || (initiallyParticipating&&!participating)) && !confirm){setConfirm(true);return;}
+    await onSave(changes);
   }
-
-  return (
-    <section className="organizer-panel">
-      <h2>{t('organizer.edit')}</h2>
-      <form className="form" onSubmit={submit}>
-        <label className="planner-field"><span className="field-caption">{t('common.title')}</span><input required value={title} onChange={e => setTitle(e.target.value)} /></label>
-        <label className="planner-field"><span className="field-caption">{t('common.description')}</span><textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
-        <label className="participation-choice">
-          <input type="checkbox" checked={participating} disabled={saving} onChange={e => setParticipating(e.target.checked)} />{t('create.participate')}</label>
-        {originalParticipation && !participating && <p className="description">{t('organizer.removeOwnVotes')}</p>}
-        {datesLocked && <p className="description">{t('organizer.datesLocked')}</p>}
-        <div role="group" aria-label={t('organizer.possibleDates')}>
-          <MonthCalendar disabled={saving || datesLocked} initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day, number) => (
-            <button type="button" className={`calendar-day-button ${days.has(day) ? 'is-selected' : ''}`}
-              aria-label={formatDay(day)} aria-pressed={days.has(day)} disabled={saving || datesLocked || day === poll.finalDateId}
-              onClick={() => toggle(day)}>{number}</button>
-          )} />
-        </div>
-        {error && <p className="error" role="alert">{translateMessage(error)}</p>}
-        <div className="edit-actions">
-          <button type="submit" disabled={saving}>{t('common.save')}</button>
-          <button type="button" className="btn-secondary" disabled={saving} onClick={onCancel}>{t('common.cancel')}</button>
-        </div>
-      </form>
-    </section>
-  );
+  return <section className="organizer-panel"><h2>{t('organizer.edit')}</h2>
+    <form className="form" onSubmit={submit} noValidate aria-busy={locked || undefined}>
+      <PlannerField id="edit-title" label={t('common.title')} value={title} disabled={locked} onChange={e=>{setTitle(e.target.value);if(e.target.value.trim())setError(current=>current==='validation.titleRequired'?'':current);}} />
+      <PlannerField id="edit-description" label={t('common.description')} multiline rows={3} value={description} disabled={locked} onChange={e=>setDescription(e.target.value)} />
+      <label className="participation-choice"><input type="checkbox" checked={participating} disabled={locked} onChange={e=>{setParticipating(e.target.checked);setConfirm(false);}} />{t('create.participate')}</label>
+      {datesLocked && <p className="description">{t('organizer.datesLocked')}</p>}
+      <div role="group" aria-label={t('organizer.possibleDates')}>
+        <MonthCalendar disabled={locked||datesLocked} initialMonthFrom={Object.keys(original.dates).sort()[0]} renderDay={(day,number)=><button type="button" disabled={locked||datesLocked}
+          aria-label={formatDay(day)} aria-pressed={Boolean(dates[day])} className={'calendar-day-button '+(dates[day]?'is-selected':'')} onClick={()=>toggle(day)}>{number}</button>} />
+      </div>
+      <DateTimeFields dates={dates} onChange={updateDates} enabled={enabled} onEnabled={value=>{setEnabled(value);setConfirm(false);if(!value)setError(current=>current==='times.required'?'':current);}} defaultTime={defaultTime}
+        onDefaultTime={setDefaultTime} disabled={locked||datesLocked} />
+      {(removed.length>0 || answers>0 || (initiallyParticipating&&!participating)) && <p className="description">{t('edit.impact',{dates:removed.length,answers})}{initiallyParticipating&&!participating?' '+t('organizer.removeOwnVotes'):''}</p>}
+      {error && <p className="error" role="alert">{t(error)}</p>}
+      <ActionFeedback action={action} />
+      {confirm && <p className="description" role="status">{t('edit.confirmDestructive')}</p>}
+      <div className="edit-actions"><button type="submit" disabled={locked}>{locked?t('action.saving'):confirm?t('common.confirm'):t('common.save')}</button>
+        <button type="button" className="btn-secondary" disabled={locked} onClick={confirm?()=>setConfirm(false):onCancel}>{confirm?t('common.back'):t('common.cancel')}</button></div>
+    </form>
+  </section>;
 }

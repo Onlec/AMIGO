@@ -20,9 +20,9 @@ export function parseVotes(votesJson) {
 }
 
 const VOTE_EMOJI = { yes: '🟩', maybe: '🟨', no: '🟥', none: '⬜' };
-function hasVoted(votesJson) {
+function hasVoted(votesJson, dates) {
   const myVotes = parseVotes(votesJson);
-  return Object.values(myVotes).some((value) => value !== 'none');
+  return Object.keys(dates).some(day => ['yes','maybe','no'].includes(myVotes[day]));
 }
 
 // Bouwt een kopieerbare voortgangs-/resultaattekst op: titel, een
@@ -38,7 +38,7 @@ export function buildShareText(poll, dates, votes, pollUrl) {
   const votedNames = [];
   const pendingNames = [];
   voterEntries.forEach(([, voter]) => {
-    if (hasVoted(voter.votesJson)) {
+    if (hasVoted(voter.votesJson, dates)) {
       votedNames.push(voter.name);
     } else {
       pendingNames.push(voter.name);

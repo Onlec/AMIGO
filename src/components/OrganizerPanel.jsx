@@ -1,10 +1,10 @@
-import { t, message, translateMessage } from '../i18n/index.js';
-import { errorMessage } from '../i18n/errors.js';
+import { t } from '../i18n/index.js';
 import { formatDay, formatTime, formatProposal } from '../utils/dates.js';
 import React, { useMemo, useState } from 'react';
 import DateChoices from './DateChoices.jsx';
 import SegmentedControl from './SegmentedControl.jsx';
 import { parseVotes, VOTE_ICONS, voteLabel } from '../utils/votes.js';
+import ActionFeedback from './ActionFeedback.jsx';
 
 function computeTally(dates, votes) {
   const counts = {};
@@ -22,7 +22,7 @@ function computeTally(dates, votes) {
   return counts;
 }
 
-export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfirm, onCancel }) {
+export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfirm, onCancel, action }) {
   const [selectedDateId, setSelectedDateId] = useState(finalDateId || '');
   const [sort, setSort] = useState('date');
   const tally = useMemo(() => computeTally(dates, votes), [dates, votes]);
@@ -31,18 +31,10 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
 
   const selected = dates[selectedDateId];
   const counts = tally[selectedDateId];
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const saving = action.locked;
 
   async function handleConfirm() {
-    setSaving(true);
-    try {
-      await onConfirm(selectedDateId);
-      onCancel();
-    } catch (err) {
-      setError(message('error.localSave', { detail: errorMessage(err) }));
-      setSaving(false);
-    }
+    if(!saving) await onConfirm(selectedDateId);
   }
 
   return (
@@ -55,7 +47,7 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
             options={[{ value: 'date', label: t('common.date') }, { value: 'attendance', label: t('organizer.mostYes') }]} />
         </div>
       } renderCard={day => (
-          <button type="button" aria-pressed={day === selectedDateId} onClick={() => setSelectedDateId(day)}>
+          <button type="button" disabled={saving} aria-pressed={day === selectedDateId} onClick={() => setSelectedDateId(day)}>
             {day === selectedDateId ? t('common.selected') : t('common.select')}
           </button>
       )} renderCardSummary={day => (
@@ -67,19 +59,20 @@ export default function OrganizerPanel({ dates, votes, finalDateId = '', onConfi
           ))}
         </span>
       )} renderDay={(day, number) => (
-        <button type="button" aria-label={formatDay(day)} aria-pressed={day === selectedDateId}
+        <button type="button" disabled={saving} aria-label={formatDay(day)} aria-pressed={day === selectedDateId}
           className={'calendar-day-button ' + (day === selectedDateId ? 'is-selected' : '')}
           onClick={() => setSelectedDateId(day)}>
           {number}<small>{formatTime(dates[day].time)}</small>
         </button>
       )} />
-      {error && <p className="error" role="alert">{translateMessage(error)}</p>}
+      <ActionFeedback action={action} />
       <div className="edit-actions">
         {selected && <p className="organizer-selection-summary" role="status">
           <span className="date-selection-badge">{formatProposal(selected.date, selected.time)}</span>
           <span className="organizer-selection-tally">{t('organizer.tally', counts)}</span>
+          {Object.keys(votes).length-counts.yes-counts.maybe-counts.no>0 && <span className="organizer-selection-tally">{t('organizer.unanswered',{count:Object.keys(votes).length-counts.yes-counts.maybe-counts.no})}</span>}
         </p>}
-        <button type="button" onClick={handleConfirm} disabled={!selected || selectedDateId === finalDateId || saving}>{t('common.confirm')}</button>
+        <button type="button" onClick={handleConfirm} disabled={!selected || selectedDateId === finalDateId || saving}>{t(saving?'action.saving':'common.confirm')}</button>
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>{t('common.cancel')}</button>
       </div>
     </section>

@@ -132,7 +132,7 @@ try {
   assert.equal(await evaluate("document.querySelector('.planner-page input').value"),'Onvoltooide prikker');
   assert.equal(await evaluate("localStorage.getItem('amigo-locale')"),'nl-BE');
   await evaluate('location.reload()');
-  await until(() => evaluate("document.querySelector('.planner-page input')?.value === '' && document.querySelector('.language-select')?.value === 'nl-BE'"));
+  await until(() => evaluate("document.querySelector('.planner-page input')?.value === 'Onvoltooide prikker' && document.querySelector('.language-select')?.value === 'nl-BE'"));
   assert.equal(await evaluate("document.querySelector('.language-select').value"),'nl-BE');
   await evaluate(`(async () => {
     const data=await import('/src/data/polls.js');
@@ -149,6 +149,7 @@ try {
   })()`);
   await command('Page.navigate',{url:origin+'?poll=cccccccc-1111-4111-8111-111111111111'});
   await until(()=>evaluate("document.querySelector('.voter-ballot .date-cards [aria-checked=true]') !== null"));
+  await until(()=>evaluate("import('/src/data/polls.js').then(data=>data.readLocal('cccccccc-1111-4111-8111-111111111111')).then(row=>row.queue.length===0)"));
   const snapshot=await evaluate("import('/src/data/polls.js').then(data=>data.readLocal('cccccccc-1111-4111-8111-111111111111')).then(row=>JSON.stringify({queue:row.queue,base:row.base,session:sessionStorage.getItem('amigo-planner-live-v1:voter:cccccccc-1111-4111-8111-111111111111')}))");
   await selectLocale('en-GB');
   assert.equal(await evaluate("document.querySelector('h1').textContent"),'My own title');
@@ -156,7 +157,7 @@ try {
   assert.equal(await evaluate("import('/src/data/polls.js').then(data=>data.readLocal('cccccccc-1111-4111-8111-111111111111')).then(row=>JSON.stringify({queue:row.queue,base:row.base,session:sessionStorage.getItem('amigo-planner-live-v1:voter:cccccccc-1111-4111-8111-111111111111')}))"),snapshot);
   await selectLocale('nl-BE');
   assert.equal(await evaluate("document.querySelector('.voter-ballot .date-cards [aria-checked=true]').getAttribute('aria-label')"),'✓ Ja');
-  console.log('PASS: English default, EN/NL switching and persistence, both responsive headers, 10 calculators and list tools in both languages, preserved numeric input, votes, sessions and offline queue.');
+  console.log('PASS: English default, EN/NL switching and persistence, both responsive headers, 10 calculators/list tools, recovered draft, confirmed votes/sessions and retirement of old queued actions.');
 } finally {
   socket?.close();
   browser.kill();

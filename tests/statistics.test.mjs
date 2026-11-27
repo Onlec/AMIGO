@@ -48,3 +48,15 @@ test('instrument metadata preserves real zeros, threshold boundaries and unavail
     }
   }
 });
+
+test('planning habits use the creation cohort, timed multi-date denominator and a numeric average',()=>{
+  setLocale('en-GB');
+  const planning={...data,newPlanners:20,singleDatePlanners:5,untimedPlanners:10,multiDateTimedPlanners:10,uniformTimePlanners:8,initialDateOptions:55};
+  assert.equal(statisticValue('singleOption',planning),'25%');
+  assert.equal(statisticValue('timeless',planning),'50%');
+  assert.equal(statisticValue('sameTime',planning),'80%');
+  assert.equal(statisticValue('choiceStress',planning),'2.8');
+  assert.equal(statisticMeasurement('sameTime',{...planning,multiDateTimedPlanners:9}).state,'collecting');
+  assert.equal(statisticMeasurement('singleOption',data).state,'collecting');
+  assert.ok(footerStatistics(planning).includes('sameTime'));
+});

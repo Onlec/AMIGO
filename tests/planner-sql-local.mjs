@@ -84,6 +84,9 @@ try {
   try { await database.exec(await readFile('supabase/tests/statistics.sql', 'utf8')); }
   catch (error) { throw new Error('Statistics SQL regression failed', { cause: error }); }
   console.log('PASS: anonymous statistics permissions, successful actions, retries, rollbacks, unanimity, reopening and expiry.');
+  try { await database.exec(await readFile('supabase/tests/guided-planner.sql', 'utf8')); }
+  catch (error) { throw new Error('Guided planner SQL regression failed', { cause: error }); }
+  console.log('PASS: online action receipts, single dates, optional/bulk times, atomic invalidation, stale votes, cohort statistics and expiry.');
   await database.exec(`
     select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
     select public.amigo_apply('aaaaaaaa-1111-4111-8111-111111111111',gen_random_uuid(),'createPoll',

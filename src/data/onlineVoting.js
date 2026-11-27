@@ -51,8 +51,9 @@ export async function submitVote(id,body) {
     check();
     writeStarted = true;
     await rpc('amigo_submit_ballot',{p:id,operation:crypto.randomUUID(),body:{...body,submissionMode:'online'}},controller.signal);
-    await read();
+    const result = await read();
     confirmed = true;
+    return result;
   };
   try {
     const deadline = new Promise((_,reject) => {
@@ -63,7 +64,7 @@ export async function submitVote(id,body) {
     });
     const request = navigator.locks
       ? navigator.locks.request('amigo-sync-'+id,{signal:controller.signal},work) : work();
-    await Promise.race([request,deadline]);
+    return await Promise.race([request,deadline]);
   } catch (error) {
     if (businessErrors.has(error.code) || error.localizationKey) throw error;
     throw failure(writeStarted ? 'vote.unconfirmed' : 'vote.connectionRequired');

@@ -3,6 +3,11 @@ import { message } from './index.js';
 // The RPC currently returns Dutch messages. Map that contract to stable client keys.
 // Keep the server's fixed message contract separate from editable translations.
 const serverKeys = new Map([
+  ['Kies minstens één datum.', 'validation.oneDate'],
+  ['Vul een geldig tijdstip in.', 'times.required'],
+  ['Vul een tijdstip in voor elke datum.', 'times.required'],
+  ['Het tijdstip is gewijzigd. Controleer de datum opnieuw.', 'vote.refreshRequired'],
+  ['Deze opdracht is niet geldig.', 'action.invalid'],
   ['Vernieuw de pagina om online te stemmen.', 'vote.updateRequired'],
   ['De gekozen datum blijft behouden.', 'server.keepDate'],
   ['De prikker is gesloten of verwijderd.', 'server.closedOrRemoved'],

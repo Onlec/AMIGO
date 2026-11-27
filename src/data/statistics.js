@@ -22,6 +22,9 @@ export function loadStatistics(retry = false) {
     if (!data || !Number.isFinite(Date.parse(data.startedAt)) || !['planners','registrations','answers','maybeAnswers','mondayAnswers',
       'mondayNoAnswers','finalizedPlanners','weekendDates','unanimousDates'].every(key =>
       Number.isSafeInteger(data[key]) && data[key] >= 0)) throw new Error('Invalid statistics');
+    if(data.planningStartedAt && (!Number.isFinite(Date.parse(data.planningStartedAt)) ||
+      !['newPlanners','singleDatePlanners','untimedPlanners','multiDateTimedPlanners','uniformTimePlanners','initialDateOptions']
+        .every(key=>Number.isSafeInteger(data[key])&&data[key]>=0))) throw new Error('Invalid planning statistics');
     publish({ status: 'ready', data, fetchedAt: new Date() });
   }).catch(() => publish({ status: 'error', data: null, fetchedAt: null }))
     .finally(() => { request = null; });

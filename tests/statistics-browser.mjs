@@ -11,6 +11,8 @@ const state = { calls: 0, auth: 0, fail: false, hold: true, releases: [], data: 
   startedAt: '2026-11-26T09:00:00Z', planners: 120, registrations: 540, answers: 1000,
   maybeAnswers: 250, mondayAnswers: 100, mondayNoAnswers: 60,
   finalizedPlanners: 80, weekendDates: 60, unanimousDates: 20,
+  planningStartedAt:'2026-11-27T09:00:00Z',newPlanners:20,singleDatePlanners:5,untimedPlanners:10,
+  multiDateTimedPlanners:10,uniformTimePlanners:8,initialDateOptions:60,
 } };
 const backend = httpServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -80,7 +82,7 @@ try {
   await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   // Advance only the footer clock, keeping animations and network work real.
   await command('Page.addScriptToEvaluateOnNewDocument', { source: `
-    Math.random=()=>0.6;
+    Math.random=()=>0;
     const originalInterval=window.setInterval, originalClear=window.clearInterval;
     window.footerTimers=new Map(); let timer=1000000000;
     window.setInterval=(callback,delay,...args)=>{
@@ -106,14 +108,18 @@ try {
   assert.equal(state.calls, 1, 'The page and footer share a single fetch');
   assert.equal(state.auth, 0, 'Public statistics do not create a login');
   assert.equal(await evaluate('document.title'), 'AMIGO · FIG. 03 — The Counting Office');
-  assert.equal(await evaluate("document.querySelectorAll('.statistics-page .statistic-card').length"), 8);
+  assert.equal(await evaluate("document.querySelectorAll('.statistics-page .statistic-card').length"), 12);
   assert.equal(await evaluate("document.querySelector('[data-statistic=doubt] dd').textContent"), '25%');
   assert.equal(await evaluate("document.querySelector('.office-counter .office-sr-only').textContent"), 'Answers recorded: 1,000');
   assert.equal(await evaluate('counterAnimations.length'), 6);
   assert.equal(await evaluate('counterAnimations.every(duration=>duration<=1200)'), true);
   assert.equal(await evaluate("document.querySelectorAll('.office-flap,.office-seal').length"), 0, 'No redundant measured tags or decorative seals');
-  assert.equal(await evaluate("document.querySelectorAll('.statistics-sections > fieldset > legend').length"), 3, 'Statistics use the planner segment structure');
-  assert.equal(await evaluate("document.querySelectorAll('.statistic-card svg[data-statistic-icon]').length"), 8, 'Every statistic has a line icon');
+  assert.equal(await evaluate("document.querySelectorAll('.statistics-sections > fieldset > legend').length"), 4, 'Statistics use the planner segment structure');
+  assert.equal(await evaluate("document.querySelectorAll('.statistic-card svg[data-statistic-icon]').length"), 12, 'Every statistic has a line icon');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=singleOption] dd').textContent"),'25%');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=timeless] dd').textContent"),'50%');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=sameTime] dd').textContent"),'80%');
+  assert.equal(await evaluate("document.querySelector('[data-statistic=choiceStress] dd').textContent"),'3');
   assert.equal(await evaluate("document.querySelector('.office-record-number') === null"), true, 'Numbered tiles have been removed');
   assert.equal(await evaluate("document.querySelector('.statistics-page [data-statistic=goats],.statistics-page [data-statistic=meetings]') === null"), true, 'The full page only shows real statistics');
   await pause(1250);

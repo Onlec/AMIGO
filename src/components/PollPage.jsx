@@ -2,7 +2,9 @@ import { t, message, translateMessage } from '../i18n/index.js';
 import { errorMessage, isLoginNotice } from '../i18n/errors.js';
 import { formatProposal } from '../utils/dates.js';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { enqueue, project, readLocal, watchPoll } from '../data/polls.js';
+import { project, readLocal, watchPoll } from '../data/polls.js';
+import { usePlannerAction, revokeOrganizer } from '../data/actions.js';
+import ActionFeedback from './ActionFeedback.jsx';
 import { follow, syncStatus, watchStatus } from '../data/sync.js';
 import { readVoterSession, rememberVoterSession } from '../data/voterSession.js';
 import VoterForm from './VoterForm.jsx';
@@ -22,6 +24,7 @@ export default function PollPage({ pollId, share }) {
   const [row, setRow] = useState(null);
   const [status, setStatus] = useState('');
   const [storageError, setStorageError] = useState('');
+  const action = usePlannerAction('manage:'+pollId, () => setMode('view'));
   useEffect(() => {
     let live = true;
     async function refresh() {
@@ -52,10 +55,7 @@ export default function PollPage({ pollId, share }) {
 
   useEffect(() => {
     if (!celebration || !poll) return;
-    const operationIndex = row.queue.findIndex(item => item.operation === celebration.operation);
-    const superseded = row.queue.slice(operationIndex + 1).some(item => ['close', 'reopen'].includes(item.kind));
-    if (celebration.operation && poll.finalDateId !== celebration.day
-        && (celebration.phase === 'revealed' || operationIndex < 0 || superseded)) {
+    if (poll.finalDateId !== celebration.day) {
       setCelebration(null);
       return;
     }
@@ -91,18 +91,10 @@ export default function PollPage({ pollId, share }) {
   }, [celebration]);
 
   async function confirmFinalDate(day) {
-    setCelebration({ day, phase: 'saving' });
-    try {
-      const operation = await enqueue(pollId, 'close', { day });
-      // Keep the operation and its projected snapshot together, even if the
-      // IndexedDB watcher or server acknowledgement arrives in the same frame.
-      const next = await readLocal(pollId);
-      setRow(next);
-      setCelebration({ day, phase: 'waiting', operation });
-    } catch (error) {
-      setCelebration(null);
-      throw error;
-    }
+    return action.run(pollId, 'close', { day }, async result => {
+      setRow(await readLocal(pollId)); setMode('view');
+      if (result.poll?.finalDateId === day) setCelebration({day,phase:'waiting',operation:crypto.randomUUID()});
+    });
   }
   const selectVoter = useCallback(next => {
     rememberVoterSession(pollId, next);
@@ -112,7 +104,7 @@ export default function PollPage({ pollId, share }) {
       setMode('view');
       if (organizerAuthorized || editing) {
         setOrganizerSignedOut(true);
-        enqueue(pollId, 'lockOrganizer', {}).catch(err => setStorageError(message('error.logout', { detail: errorMessage(err) })));
+        revokeOrganizer(pollId).catch(err => setStorageError(message('error.logout', { detail: errorMessage(err) })));
       }
     }
   }, [pollId, organizerAuthorized, editing]);
@@ -134,7 +126,7 @@ export default function PollPage({ pollId, share }) {
   }, [poll, session, pollId]);
 
   async function savePoll(changes) {
-    if (!('participating' in changes)) return enqueue(pollId, 'edit', changes);
+    if (!('participating' in changes)) return action.run(pollId, 'edit', changes, () => setMode('view'));
     const { participating, ...details } = changes;
     let credentials = session.participation || (session.voter && session.proof
       ? { voter: session.voter, proof: session.proof } : null);
@@ -143,16 +135,14 @@ export default function PollPage({ pollId, share }) {
       proof: Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join(''),
     };
     const next = { ...session, participation: credentials };
-    rememberVoterSession(pollId, next);
-    setSession(next);
-    return enqueue(pollId, 'edit', { ...details, organizerParticipation: {
+    return action.run(pollId, 'edit', { ...details, organizerParticipation: {
       ...credentials, voter: participating ? credentials.voter : organizerVoterId || credentials.voter,
       name: session.name || votes[session.voter]?.name, enabled: participating,
-    } });
+    } }, () => {rememberVoterSession(pollId,next);setSession(next);setMode('view');});
   }
 
   function save(kind, body) {
-    enqueue(pollId, kind, body).catch(err => setStorageError(message('error.localSave', { detail: errorMessage(err) })));
+    return action.run(pollId, kind, body, () => { if(kind==='reopen')setCelebration(null); });
   }
 
   const notices = (row?.notices || []).filter(notice => !isLoginNotice(notice, row?.loginResults));
@@ -173,10 +163,9 @@ export default function PollPage({ pollId, share }) {
             <legend>{t('share.link')}</legend>
             <div className="planner-fields">
               <label className="planner-field"><span className="field-caption">{t('share.link')}</span><input readOnly type="url" value={link} onFocus={e => e.target.select()} /></label>
-              <p role="status" className="description">{row.base ? t('share.ready') : t('share.pending')}</p>
               <div className="edit-actions">
-                <CopyButton text={link} label={t('common.copyLink')} secondary />
-                <a className="btn" href={link}>{t('share.openPoll')}</a>
+                <CopyButton text={link} label={t('common.copyLink')} />
+                <a className="btn btn-secondary" href={link}>{t(session?.voter?'share.voteNow':'share.openPoll')}</a>
               </div>
             </div>
           </fieldset>
@@ -208,7 +197,7 @@ export default function PollPage({ pollId, share }) {
         </div>
       )}
 
-      <VoterForm pollId={pollId} dates={dates} participants={votes} loginResults={row.loginResults}
+      <VoterForm pollId={pollId} dates={dates} participants={votes}
         session={session} onSelect={selectVoter} votingOpen={showBallot} readOnly={editing} />
 
       <div className="form poll-results">
@@ -219,16 +208,11 @@ export default function PollPage({ pollId, share }) {
               votes={votes}
               finalDateId={poll.finalDateId}
               currentVoterId={voterId}
-              canManage={mode === 'edit' && organizerAuthorized}
+              canManage={mode === 'edit' && organizerAuthorized && !action.locked}
               onRemoveVoter={voter => { if (mode === 'edit' && organizerAuthorized) save('removeVoter', { voter }); }}
             />
           </div>
-          <p role="status" className="description poll-results__status">
-            {row.queue.some(item => ['create', 'createPoll'].includes(item.kind))
-              ? t('sync.createPending')
-              : row.queue.length ? t('sync.changesPending') : ''}
-            {' '}{row.queue.length && status?.key === 'sync.synced' ? '' : translateMessage(status)}
-          </p>
+          {status && status.key !== 'sync.synced' && <p role="status" className="description poll-results__status">{translateMessage(status)}</p>}
           {storageError && <p role="alert" className="error">{translateMessage(storageError)}</p>}
           {notices.map((notice, index) => <p role="alert" className="error" key={index}>{t('poll.rejected', { detail: translateMessage(notice) })}</p>)}
         </CollapsibleSegment>
@@ -239,14 +223,15 @@ export default function PollPage({ pollId, share }) {
         onReopen={() => { if (organizerAuthorized) save('reopen', {}); }}
         onEdit={() => setMode('edit')} onChooseFinal={hasDates ? () => setMode('final') : null}>
         {mode === 'edit' && (
-          <EditPollPanel poll={poll} initiallyParticipating={Boolean(organizerVoterId)} onSave={savePoll}
+          <EditPollPanel poll={poll} action={action} initiallyParticipating={Boolean(organizerVoterId)} onSave={savePoll}
             onCancel={() => setMode('view')} />
         )}
         {mode === 'final' && (
-          <OrganizerPanel dates={dates} votes={votes} finalDateId={poll.finalDateId} onConfirm={confirmFinalDate}
+          <OrganizerPanel action={action} dates={dates} votes={votes} finalDateId={poll.finalDateId} onConfirm={confirmFinalDate}
             onCancel={() => setMode('view')} />
         )}
       </OrganizerUnlock>
+      {organizerAuthorized && !editing && <ActionFeedback action={action} />}
 
     </div>
   );

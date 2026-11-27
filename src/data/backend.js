@@ -26,7 +26,7 @@ export async function rpc(name, params, signal) {
   signal?.addEventListener('abort', abort, {once:true});
   if (signal?.aborted) abort();
   try {
-    // Application queues retry non-voting commands; vote writes must never retry.
+    // Never automatically retry a write after an ambiguous HTTP response.
     const {data,error} = await client.rpc(name,params).retry(false).abortSignal(controller.signal);
     if (error) throw error;
     return data;

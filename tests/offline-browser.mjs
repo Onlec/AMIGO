@@ -7,12 +7,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { build } from 'vite';
+import { createPlannerBackend } from './fixtures/planner-backend.mjs';
 
-process.env.VITE_SUPABASE_URL = '';
-process.env.VITE_SUPABASE_PUBLISHABLE_KEY = '';
+const backend = await createPlannerBackend();
+process.env.VITE_SUPABASE_URL = backend.url;
+process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'production-fixture';
 const output = await build({ logLevel: 'silent', build: { write: false } });
 const files = new Map(output.output.map(item => ['/' + item.fileName, item.type === 'chunk' ? item.code : item.source]));
-const mime = { js: 'text/javascript', css: 'text/css', html: 'text/html', woff2: 'font/woff2' };
+const mime = { js: 'text/javascript', css: 'text/css', html: 'text/html', woff2: 'font/woff2', svg:'image/svg+xml' };
 const server = createServer((request, response) => {
   const path = new URL(request.url, 'http://localhost').pathname;
   if (path === '/index.html') { response.writeHead(308, { Location: '/' }); response.end(); return; }
@@ -114,6 +116,7 @@ try {
   socket?.close();
   browser.kill();
   await new Promise(resolve => server.close(resolve));
+  await backend.close();
   await pause(500);
   await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

@@ -82,19 +82,21 @@ export default function DateChoices({ dates, firstUnanswered, renderCard, render
         ) : (
           <div className="date-choices__cards">
             <ul className="date-cards">
-              {cardDays.map(day => (
+              {cardDays.map(day => {
+                const meta=renderCardMeta?.(day);
+                return (
                 <li key={day} data-day={day}>
                   <strong className={renderCardSummary ? 'date-card-heading' : undefined}>
                     <span>{formatDay(day, true)}</span>
                     {renderCardSummary?.(day)}
                   </strong>
                   {renderCard(day)}
-                  {(dates[day].time || renderCardMeta) && <div className="date-card-meta">
+                  {(dates[day].time || meta) && <div className="date-card-meta">
                     {dates[day].time && <span>{formatTime(dates[day].time)}</span>}
-                    {renderCardMeta?.(day)}
+                    {meta}
                   </div>}
                 </li>
-              ))}
+              );})}
             </ul>
           </div>
         )}

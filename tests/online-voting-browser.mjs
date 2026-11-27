@@ -105,9 +105,9 @@ try {
   await evaluate(yes+'.click()');
   assert.equal(await evaluate("pollData.enqueue(pollId,'ballot',{changes:{}}).then(()=>false,()=>true)"),true,'Even programmatic callers cannot queue votes');
   fixture.state.poll.votes[fixture.voter].votesJson='{"2026-12-04":"no"}';
-  await evaluate("pollData.updateLocal(pollId,row=>{row.queue.push({operation:crypto.randomUUID(),kind:'lockOrganizer',body:{}},{operation:crypto.randomUUID(),kind:'ballot',body:{voter:voterId,proof:'b'.repeat(64),changes:{'2026-12-04':'yes'}}});});window.dispatchEvent(new CustomEvent('amigo-queued',{detail:pollId}))");
+  await evaluate("pollData.updateLocal(pollId,row=>{row.queue.push({operation:crypto.randomUUID(),kind:'edit',body:{title:'Old offline title',added:[],removed:[]}},{operation:crypto.randomUUID(),kind:'ballot',body:{voter:voterId,proof:'b'.repeat(64),changes:{'2026-12-04':'yes'}}});});import('/src/data/sync.js').then(module=>module.sync(pollId))");
   await until(async()=>await queued()===0);
-  assert.deepEqual(await evaluate("pollData.readLocal(pollId).then(row=>row.queue.map(item=>item.kind))"),['lockOrganizer'],'Discarding votes preserves unrelated queued commands');
+  assert.deepEqual(await evaluate("pollData.readLocal(pollId).then(row=>row.queue.map(item=>item.kind))"),[],'Historical content commands are no longer replayed');
   assert.equal(fixture.state.writes.length,1);
   fixture.state.holdReads=true;
   const priorReads=fixture.state.reads;
@@ -118,7 +118,7 @@ try {
   await ready();
   assert.equal(await evaluate(yes+".getAttribute('aria-checked')"),'false','The newer desktop choice survives reconnect');
   assert.equal(fixture.state.writes.length,1,'Reconnection never sends an old mobile vote');
-  assert.equal(fixture.state.otherWrites,1,'Other queued commands still synchronize');
+  assert.equal(fixture.state.otherWrites,0,'No queued command is submitted on reconnect');
 
   fixture.state.failReads=true;
   await evaluate("import('/src/data/sync.js').then(module=>module.sync(pollId))");

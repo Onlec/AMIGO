@@ -1,6 +1,6 @@
 import { t } from '../i18n/index.js';
 import { formatProposal } from '../utils/dates.js';
-import React from 'react';
+import React, { useState } from 'react';
 import { voteLabel, VOTE_ICONS, parseVotes } from '../utils/votes.js';
 
 function sortDateEntries(dates) {
@@ -11,6 +11,7 @@ function sortDateEntries(dates) {
 // gebeurt via <VoteCalendar>; `canManage` (enkel waar voor de ontgrendelde
 // organisator in de bewerkmodus) voegt een kolom toe om deelnemers te verwijderen.
 export default function VoteGrid({ dates, votes, currentVoterId, finalDateId, canManage, onRemoveVoter }) {
+  const [removing,setRemoving]=useState(null);
   const dateEntries = sortDateEntries(dates);
   const voterEntries = Object.entries(votes);
 
@@ -50,11 +51,16 @@ export default function VoteGrid({ dates, votes, currentVoterId, finalDateId, ca
                   <button
                     type="button"
                     className="btn-danger"
-                    onClick={() => onRemoveVoter(voterId)}
+                    onClick={() => setRemoving(voterId)}
                     aria-label={t('results.removeVoter', { name: voter.name })}
                   >
                     ✕
                   </button>
+                  {removing===voterId && <div className="remove-voter-confirm">
+                    <span>{t('results.removeVoter',{name:voter.name})}?</span>
+                    <button type="button" onClick={()=>{onRemoveVoter(voterId);setRemoving(null);}}>{t('common.confirm')}</button>
+                    <button type="button" className="btn-secondary" onClick={()=>setRemoving(null)}>{t('common.cancel')}</button>
+                  </div>}
                 </td>
               )}
             </tr>

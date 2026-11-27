@@ -17,7 +17,7 @@ begin
   assert not has_table_privilege('anon','amigo.statistics','select');
   assert not has_table_privilege('authenticated','amigo.statistics','update');
   assert not has_function_privilege('authenticated','amigo.count_statistics()','execute');
-  assert (select count(*) from jsonb_object_keys(before_stats))=10;
+  assert (select count(*) from jsonb_object_keys(before_stats))=17;
   assert not (before_stats ?| array['pollId','name','title','description','verifier','actor']);
 
   body := jsonb_build_object('title','Statistics regression','description','Private description',

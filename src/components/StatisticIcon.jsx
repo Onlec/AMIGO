@@ -9,6 +9,10 @@ const icons = {
   monday: <><rect x="4" y="5" width="16" height="15" rx="1" /><path d="M8 3v4m8-4v4M4 10h16m-12 4 8 4m0-4-8 4" /></>,
   weekend: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></>,
   agreement: <><circle cx="12" cy="12" r="9" /><path d="m7 12 3 3 7-7" /></>,
+  singleOption:<><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4m8-4v4M4 10h16m-9 4 2-1v5"/></>,
+  timeless:<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M4 20 20 4"/></>,
+  sameTime:<><circle cx="8" cy="10" r="6"/><path d="M8 7v3l2 1m5-3a6 6 0 1 1-7 9m8-4v3l2 1"/></>,
+  choiceStress:<><path d="M4 5h16M4 12h16M4 19h16"/><circle cx="8" cy="5" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="19" r="2"/></>,
 };
 
 export default function StatisticIcon({ id }) {

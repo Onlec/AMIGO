@@ -1,139 +1,55 @@
-import { pendingPolls, readLocal, updateLocal, discardQueuedBallots } from './polls.js';
+import { pendingPolls, updateLocal, discardPendingActions } from './polls.js';
 import { message } from '../i18n/index.js';
-import { errorMessage, loginRejection } from '../i18n/errors.js';
+import { errorMessage } from '../i18n/errors.js';
 import { client, connect, rpc } from './backend.js';
+import { flushLogout } from './actions.js';
 import { setVotingStatus } from './onlineVoting.js';
 
-const statuses = new Map();
-const events = new EventTarget();
-export function syncStatus(id) { return statuses.get(id) || ''; }
-function status(id, key, params = {}) {
-  statuses.set(id, message(key, params));
-  events.dispatchEvent(new Event(id));
+const statuses=new Map();
+const events=new EventTarget();
+export function syncStatus(id){return statuses.get(id)||'';}
+function status(id,key,params={}){statuses.set(id,message(key,params));events.dispatchEvent(new Event(id));}
+export function watchStatus(id,listener){events.addEventListener(id,listener);return()=>events.removeEventListener(id,listener);}
+const supportedId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+async function synchronize(id){
+  await discardPendingActions(id);
+  if(!supportedId.test(id)){setVotingStatus(id,'unavailable');return status(id,'sync.missing');}
+  if(!navigator.onLine){setVotingStatus(id,'offline');return status(id,'sync.offline');}
+  await connect();await flushLogout(id);
+  const base=await rpc('amigo_read',{p:id});
+  await updateLocal(id,row=>{row.base=base;row.missing=base===null;});
+  setVotingStatus(id,base&&navigator.onLine?'ready':'unavailable');
+  status(id,base?'sync.synced':'sync.missing');
 }
-export function watchStatus(id, listener) {
-  events.addEventListener(id, listener);
-  return () => events.removeEventListener(id, listener);
-}
-
-const supportedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const labels = { signIn: 'login.signIn', lockOrganizer: 'operation.logout', ballot: 'operation.ballot',
-  createPoll: 'common.create', edit: 'organizer.edit', close: 'operation.close', reopen: 'operation.reopen',
-  removeVoter: 'operation.removeVoter' };
-
-async function synchronize(id) {
-  await discardQueuedBallots(id);
-  if (!supportedId.test(id)) { setVotingStatus(id,'unavailable'); return status(id, 'sync.missing'); }
-  if (!navigator.onLine) { setVotingStatus(id,'offline'); return status(id, 'sync.offline'); }
-  await connect();
-  let row = await readLocal(id);
-  while (row?.queue.length) {
-    const command = row.queue[0];
-    if (command.kind === 'ballot') {
-      await discardQueuedBallots(id);
-      row = await readLocal(id);
-      continue;
-    }
-    let rejection;
-    let loginSession;
-    try {
-      if (command.kind === 'signIn') {
-        loginSession = await rpc('amigo_sign_in', { p: id, operation: command.operation, body: command.body });
-      } else if (command.kind === 'lockOrganizer') {
-        await rpc('amigo_lock_organizer', { p: id, operation: command.operation });
-      } else if (command.kind === 'edit') {
-        await rpc('amigo_edit', { p: id, operation: command.operation, body: command.body });
-      } else {
-        await rpc('amigo_apply', { p: id, ...command });
-      }
-    } catch (error) {
-      if (!['P0001','23503','23505','23514','23502','22007','22P02'].includes(error.code)) throw error;
-      rejection = command.kind === 'signIn'
-        ? error.code === '23505' ? message('login.credentialsMismatch') : loginRejection(errorMessage(error))
-        : message('sync.rejection', { operation: message(labels[command.kind] || 'common.change'),
-          date: command.body.day ? ' (' + command.body.day + ')' : '', detail: errorMessage(error) });
-    }
-    // Keep the command until both its receipt and the new snapshot can be read.
-    const base = await rpc('amigo_read', { p: id });
-    await updateLocal(id, current => {
-      current.base = base;
-      current.missing = base === null;
-      current.queue = current.queue.filter(item => item.operation !== command.operation);
-      if (command.kind === 'signIn') {
-        (current.loginResults ??= {})[command.operation] = { session: loginSession, rejection };
-      }
-      if (rejection && command.kind !== 'signIn') current.notices.push(rejection);
-    });
-    row = await readLocal(id);
-  }
-  const base = await rpc('amigo_read', { p: id });
-  await updateLocal(id, current => { current.base = base; current.missing = base === null; });
-  setVotingStatus(id,base && navigator.onLine ? 'ready' : 'unavailable');
-  status(id, base ? 'sync.synced' : 'sync.missing');
-}
-
-const running = new Map();
-export function sync(id) {
-  const active = running.get(id);
-  if (active) { active.again = true; return active.promise; }
-  const job = { again: false };
-  running.set(id, job);
-  const work = async () => {
-    do {
-      job.again = false;
-      await synchronize(id);
-    } while (job.again);
-  };
-  job.promise = Promise.resolve().then(() => navigator.locks
-    ? navigator.locks.request('amigo-sync-' + id, work) : work())
-    .catch(error => {
-      setVotingStatus(id,navigator.onLine ? 'unavailable' : 'offline');
-      status(id, client ? 'sync.deferred' : 'sync.notConfigured', { detail: errorMessage(error) });
-    })
-    .finally(() => running.delete(id));
+const running=new Map();
+export function sync(id){
+  const active=running.get(id);
+  if(active){active.again=true;return active.promise;}
+  const job={again:false};running.set(id,job);
+  const work=async()=>{do{job.again=false;await synchronize(id);}while(job.again);};
+  job.promise=Promise.resolve().then(()=>navigator.locks?navigator.locks.request('amigo-sync-'+id,work):work())
+    .catch(error=>{setVotingStatus(id,navigator.onLine?'unavailable':'offline');status(id,client?'sync.deferred':'sync.notConfigured',{detail:errorMessage(error)});})
+    .finally(()=>running.delete(id));
   return job.promise;
 }
-
-export function follow(id) {
-  let subscription;
-  let stopped = false;
-  let joining = false;
-  async function refresh() {
+export function follow(id){
+  let subscription,stopped=false,joining=false;
+  async function refresh(){
     await sync(id);
-    if (stopped || joining || subscription || !client || syncStatus(id)?.key !== 'sync.synced') return;
-    joining = true;
-    try {
-      await client.realtime.setAuth();
-      if (stopped) return;
-      subscription = client.channel('amigo:' + id, { config: { private: true } })
-        .on('broadcast', { event: 'changed' }, () => sync(id))
-        .subscribe(state => { if (state === 'SUBSCRIBED') sync(id); });
-    } catch (error) { status(id, 'sync.liveDeferred', { detail: errorMessage(error) }); }
-    finally { joining = false; }
+    if(stopped||joining||subscription||!client||syncStatus(id)?.key!=='sync.synced')return;
+    joining=true;
+    try{
+      await client.realtime.setAuth();if(stopped)return;
+      subscription=client.channel('amigo:'+id,{config:{private:true}})
+        .on('broadcast',{event:'changed'},()=>sync(id)).subscribe(state=>{if(state==='SUBSCRIBED')sync(id);});
+    }catch(error){status(id,'sync.liveDeferred',{detail:errorMessage(error)});}finally{joining=false;}
   }
-  refresh();
-  const timer = setInterval(refresh, 30000);
-  window.addEventListener('online', refresh);
-  window.addEventListener('offline', refresh);
-  const visible = () => { if (document.visibilityState === 'visible') refresh(); };
-  document.addEventListener('visibilitychange',visible);
-  return () => {
-    stopped = true;
-    clearInterval(timer);
-    window.removeEventListener('online', refresh);
-    window.removeEventListener('offline', refresh);
-    document.removeEventListener('visibilitychange',visible);
-    if (subscription) client.removeChannel(subscription);
-  };
+  refresh();const timer=setInterval(refresh,30000);
+  const visible=()=>{if(document.visibilityState==='visible')refresh();};
+  window.addEventListener('online',refresh);window.addEventListener('offline',refresh);document.addEventListener('visibilitychange',visible);
+  return()=>{stopped=true;clearInterval(timer);window.removeEventListener('online',refresh);window.removeEventListener('offline',refresh);document.removeEventListener('visibilitychange',visible);if(subscription)client.removeChannel(subscription);};
 }
-
-export function startSync() {
-  async function flush() {
-    for (const id of await pendingPolls()) await sync(id);
-  }
-  const retry = () => flush().catch(error => console.warn('Lokale synchronisatie:', error.message));
-  window.addEventListener('amigo-queued', event => sync(event.detail));
-  window.addEventListener('online', retry);
-  setInterval(retry, 30000);
-  retry();
+export function startSync(){
+  // Retire historical queues without replaying them. New writes are always direct.
+  pendingPolls().then(ids=>Promise.all(ids.map(discardPendingActions))).catch(error=>console.warn('Local cache:',error.message));
 }
